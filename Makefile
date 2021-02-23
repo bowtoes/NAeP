@@ -1,44 +1,42 @@
 .POSIX:
 .SUFFIXES:
+# Makefiles are stupidly finicky good god
 
 include config.mk
 
-# Makefiles are stupidly finicky good god
+# put output build files into defined directories
 ASS:=$(addprefix $(ASSDIR)/,$(patsubst $(SRCDIR)/%,%,$(SRC:.c=.s)))
 INT:=$(addprefix $(INTDIR)/,$(patsubst $(SRCDIR)/%,%,$(SRC:.c=.e)))
 OBJ:=$(addprefix $(OBJDIR)/,$(patsubst $(SRCDIR)/%,%,$(SRC:.c=.o)))
 
-all: options setup $(PROJECT)
+all: options setup NAeP
 setup:
 	@mkdir -pv $(dir $(ASS)) 2>/dev/null || printf ""
 	@mkdir -pv $(dir $(INT)) 2>/dev/null || printf ""
 	@mkdir -pv $(dir $(OBJ)) 2>/dev/null || printf ""
 options:
-	@echo "$(PROJECT) Build options:"
+	@echo "NAeP Build options:"
 	@echo "CFLAGS        = $(CFLAGS)"
 	@echo "CPPFLAGS      = $(CPPFLAGS)"
 	@echo "STCPPFLAGS    = $(STCPPFLAGS)"
-	@echo "$(PROJECT)_CFLAGS   = $($(PROJECT)_CFLAGS)"
-	@echo "$(PROJECT)_CPPFLAGS = $($(PROJECT)_CPPFLAGS)"
-	@echo "$(PROJECT)_LDFLAGS  = $($(PROJECT)_LDFLAGS)"
+	@echo "NAeP_CFLAGS   = $(NAeP_CFLAGS)"
+	@echo "NAeP_CPPFLAGS = $(NAeP_CPPFLAGS)"
+	@echo "NAeP_LDFLAGS  = $(NAeP_LDFLAGS)"
 	@echo "CC            = $(CC)"
-	@echo "SRC $(SRC)"
-	@echo "HDR $(HDR)"
-	@echo "OBJ $(OBJ)"
 
 $(ASSDIR)/%.s: %.c Makefile config.mk
-	$(CC) $($(PROJECT)_CPPFLAGS) $($(PROJECT)_CFLAGS) -S $< -o $@
+	$(CC) $(NAeP_CPPFLAGS) $(NAeP_CFLAGS) -S $< -o $@
 $(INTDIR)/%.e: %.c Makefile config.mk
-	$(CC) $($(PROJECT)_CPPFLAGS) $($(PROJECT)_CFLAGS) -E $< -o $@
+	$(CC) $(NAeP_CPPFLAGS) $(NAeP_CFLAGS) -E $< -o $@
 $(OBJDIR)/%.o: $(SRCDIR)/%.c Makefile config.mk
-	$(CC) $($(PROJECT)_CPPFLAGS) $($(PROJECT)_CFLAGS) -c $< -o $@
+	$(CC) $(NAeP_CPPFLAGS) $(NAeP_CFLAGS) -c $< -o $@
 
 $(ASS): $(HDR)
 $(INT): $(HDR)
 $(OBJ): $(HDR)
 
-$(PROJECT): $(OBJ)
-	$(CC) $^ -o $(OUTDIR)/$@ $($(PROJECT)_LDFLAGS)
+NAeP: $(OBJ)
+	$(CC) $^ -o $(OUTDIR)/$@ $(NAeP_LDFLAGS)
 
 ass: setup options $(ASS) ;
 int: setup options $(INT) ;
@@ -51,11 +49,11 @@ clean:
 	@rmdir -pv $(ASSDIR) > /dev/null 2>&1 || printf ""
 	@rmdir -pv $(INTDIR) > /dev/null 2>&1 || printf ""
 	@rmdir -pv $(OBJDIR) > /dev/null 2>&1 || printf ""
-	@rm -fv $(OUTDIR)/$(PROJECT)
+	@rm -fv $(OUTDIR)/NAeP
 
 install: all
-	@cp -fv $(PROJECT) $(prefix)/bin
+	@cp -fv NAeP $(prefix)/bin
 uninstall:
-	@rm -fv $(prefix)/bin/$(PROJECT)
+	@rm -fv $(prefix)/bin/NAeP
 
 .PHONY: setup options ass int obj all clean install

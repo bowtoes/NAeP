@@ -1,19 +1,15 @@
-# Get name of project automatically (or overwrite it if you prefer)
-CURDIR=$(PWD)
-PROJECT=$(notdir $(CURDIR))
-
-$(PROJECT)_MAJOR=0
-$(PROJECT)_MINOR=0
-$(PROJECT)_REVIS=0
+NAeP_MAJOR=0
+NAeP_MINOR=0
+NAeP_REVIS=0
 
 ### Directory locations relative to project root
 SRCDIR=src
-# Where generated/compiled output files will live, with directory structures
-# matching that of $(SRCDIR)
+# Where generated/compiled output files will live, with directory trees
+# matching $(SRCDIR)
 INTDIR=$(SRCDIR)
 ASSDIR=$(SRCDIR)
 OBJDIR=$(SRCDIR)
-# Root directory of all output directories
+# Where to put final executable
 OUTDIR=.
 
 ### Some defaults for C
@@ -27,17 +23,17 @@ WRNS=-Wall -Wextra\
 	 -Wno-unused-function -Wno-sign-compare -Wno-misleading-indentation -Wno-comment\
 
 # compiler 'define' arguments
-DEFS=-D$(shell echo $(PROJECT) | tr a-z A-Z)_MAJOR=$($(PROJECT)_MAJOR)\
-	 -D$(shell echo $(PROJECT) | tr a-z A-Z)_MINOR=$($(PROJECT)_MINOR)\
-	 -D$(shell echo $(PROJECT) | tr a-z A-Z)_REVIS=$($(PROJECT)_REVIS)\
-	 -DNeDEBUGGING -DNeLOGGING\
-	 -D_POSIX_C_SOURCE=200112L -D_FILE_OFFSET_BITS=64
+DEFS= -DNAeP_MAJOR=$(NAeP_MAJOR)\
+			-DNAeP_MINOR=$(NAeP_MINOR)\
+			-DNAeP_REVIS=$(NAeP_REVIS)\
+			-DNeDEBUGGING -DNeLOGGING\
+			-D_POSIX_C_SOURCE=200112L -D_FILE_OFFSET_BITS=64
 
-$(PROJECT)_CFLAGS=-std=c11 -g $(WRNS) $(INCS) $(CFLAGS)
-$(PROJECT)_CPPFLAGS=$(DEFS) $(STCPPFLAGS) $(CPPFLAGS)
-$(PROJECT)_LDFLAGS=$(LDFLAGS) -logg -lvorbis
+NAeP_CFLAGS=-std=c11 -g $(WRNS) $(INCS) $(CFLAGS)
+NAeP_CPPFLAGS=$(DEFS) $(STCPPFLAGS) $(CPPFLAGS)
+NAeP_LDFLAGS=$(LDFLAGS) -logg -lvorbis
 
-# find source files to compile and headers to check for changes
+# which source files to compile and headers to check for changes
 # should be specified relative to CURDIR
 SRC:=\
 	src/common/NeDebugging.c\
@@ -59,4 +55,5 @@ HDR:=\
 	src/wisp/NeWisp.h\
 
 # Set to whatever, I use /addtl on for custom programs
+# Default location is usually /usr or /usr/local
 prefix=/addtl
