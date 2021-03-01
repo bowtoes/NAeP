@@ -4,55 +4,51 @@
 #include <string.h> /* memcmp() */
 #include "common/NeDebugging.h"
 #include "common/NeMisc.h"
+#include "common/NeTypes.h"
 
-NeSz
-NeStrlen(const char *const str, NeSz max)
-{
-	NeSz i = 0;
-	if (!str || !max)
-		return 0;
-	for (char a = str[0]; i < max && a != 0; ++i, a = str[i]);
-	return i;
-}
 
+/* should this allocation be automatically chunked? */
 void *
 NeSafeAlloc(void *cur, NeSz size, int zero)
 {
 	if (!size) {
-		if (cur)
+		NeDEBUGN("SIZE 0");
+		if (cur) {
+			NeDEBUGN(" FREEING");
 			free(cur);
+		}
+		NeDEBUG("");
 		return NULL;
 	}
-	if (!cur) {
-		if (zero) {
-			if (!(cur = calloc(1, size)))
-				NeTRACE("Failed to calloc %zu bytes : %m", size);
-		} else {
-			if (!(cur = malloc(size)))
-				NeTRACE("Failed to malloc %zu bytes : %m", size);
-		}
-	} else {
-		if (zero) {
+	if (zero) {
+		NeDEBUGN("ZEROING %3zu", size);
+		if (cur) {
+			NeDEBUGN(" FREEING");
 			free(cur);
-			if (!(cur = calloc(1, size)))
-				NeTRACE("Failed to calloc %zu bytes : %m", size);
-		} else {
-			if (!(cur = realloc(cur, size)))
-				NeTRACE("Failed to realloc %zu bytes : %m", size);
 		}
+		NeDEBUG("");
+		NeASSERTM(cur = calloc(1, size), "Failed to calloc %zu bytes : %m", size);
+	} else if (!cur) {
+		NeDEBUG("MALLOCING %3zu", size);
+		NeASSERTM(cur = malloc(size), "Failed to malloc %zu bytes : %m", size);
+	} else {
+		NeDEBUG("REALLOCING %3zu", size);
+		NeASSERTM(cur = realloc(cur, size), "Failed to realloc %zu bytes : %m", size);
 	}
 
 	return cur;
 }
 
 void
-NeReverse(NeBy *const buf, NeSz buflen)
+NeReverse(void *const buf, NeSz buflen)
 {
+	NeBy *const b = (NeBy *const)buf;
 	if (!buf || !buflen)
 		return;
 	for (NeSz i = 0; i < buflen / 2; ++i)
-		NeSWAP(buf[i], buf[buflen - 1 - i]);
+		NeSWAP(b[i], b[buflen - 1 - i]);
 }
+
 void
 NeReverseElements(NeBy *const buf, NeSz elcount, NeSz elsize)
 {
@@ -67,36 +63,48 @@ NeReverseElements(NeBy *const buf, NeSz elcount, NeSz elsize)
 }
 
 NeSz
-NeCopy(NeBy *const dst, NeSz dstlen,
-             const NeBy *const src, NeSz srclen,
+NeSlice(void *const dst, NeSz dstlen,
+             const void *const src, NeSz srclen,
              NeOf start, NeOf end)
 {
 	NeSz i = 0;
+	NeBy *const d = (NeBy *const)dst;
+	const NeBy *const s = (const NeBy *const)src;
 	/* can't copy any bytes */
 	if (!src || !dst || !srclen || !dstlen)
-		return 0;
-	/* no length of bytes to copy */
-	if (start == end)
 		return 0;
 
 	start = NeSmartMod(start, srclen, 1);
 	end = NeSmartMod(end, srclen, 1);
+	/* no length of bytes to copy */
+	if (start == end)
+		return 0;
 
 	if (start > end) {
-		for (NeOf k = start; k >= end && i < dstlen; --k, ++i)
-			dst[i] = src[k];
+		for (NeOf k = start - 1; k >= end && i < dstlen; --k, ++i)
+			d[i] = s[k];
 	} else {
 		for (NeOf k = start; k < end && i < dstlen; ++k, ++i)
-			dst[i] = src[k];
+			d[i] = s[k];
 	}
 	return i;
 }
 
+NeSz
+(NeCopy)(void *const dst, NeSz dstlen, const void *const src, NeSz srclen)
+{
+	NeSz mn = 0;
+	if (!dst || !src || !dstlen || !srclen)
+		return 0;
+	mn = dstlen < srclen ? dstlen : srclen;
+	memcpy(dst, src, mn);
+	return mn;
+}
+
 NeOf
 NeFind(const void *const hay, NeSz haysz,
-        const void *const ndl, NeSz ndlsz, NeSz iof)
+        const void *const ndl, NeSz ndlsz, NeOf iof)
 {
-	NeOf of = iof;
 	NeBy cmp;
 	const NeBy *const h = (const NeBy *const)hay,
 	           *const n = (const NeBy *const)ndl;
@@ -106,24 +114,23 @@ NeFind(const void *const hay, NeSz haysz,
 	if (!haysz || !ndlsz || ndlsz > haysz)
 		return haysz;
 
-	/* don't check the last ndlsz - 1 bytes, they can't match */
-	for (;of < haysz - (ndlsz - 1); ++of) {
+	/* don't enter the last ndlsz - 1 bytes, they can't match */
+	for (;iof < haysz - (ndlsz - 1); ++iof) {
 		cmp = 1;
-		for (NeSz i = 0; i < ndlsz; ++i)
-			cmp &= n[i] == h[i + of - iof];
+		for (NeOf i = 0; i < ndlsz; ++i)
+			cmp &= n[i] == h[i + iof];
 		if (cmp)
 			break;
 	}
 	if (!cmp)
 		return haysz;
-	return of;
+	return iof;
 }
 
 NeOf
 NeRfind(const void *const hay, NeSz haysz,
-		const void *const ndl, NeSz ndlsz, NeSz iofs)
+		const void *const ndl, NeSz ndlsz, NeOf iof)
 {
-	NeOf of = haysz - (ndlsz - 1) - 1;
 	NeBy cmp;
 	const NeBy *const h = (const NeBy *const)hay,
 	           *const n = (const NeBy *const)ndl;
@@ -133,14 +140,14 @@ NeRfind(const void *const hay, NeSz haysz,
 	if (!haysz || !ndlsz || ndlsz > haysz)
 		return haysz;
 
-	for (;of >= 0; --of) {
+	for (;iof>=ndlsz-1;--iof) {
 		cmp = 1;
-		for (NeSz i = 0; i < ndlsz; ++i)
-			cmp &= n[i] == h[i + of - iofs];
+		for (NeOf i = 0; i < ndlsz; ++i)
+			cmp &= n[i] == h[i + iof];
 		if (cmp)
 			break;
 	}
 	if (!cmp)
 		return haysz;
-	return of;
+	return iof;
 }

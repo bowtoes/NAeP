@@ -23,16 +23,16 @@ options:
 	@echo "$(PROJECT)_LDFLAGS  = $($(PROJECT)_LDFLAGS)"
 	@echo "CC            = $(CC)"
 
-$(ASSDIR)/%.s: %.c Makefile config.mk
+$(ASSDIR)/%.s: $(SRCDIR)/%.c
 	$(CC) $($(PROJECT)_CPPFLAGS) $($(PROJECT)_CFLAGS) -S $< -o $@
-$(INTDIR)/%.e: %.c Makefile config.mk
+$(INTDIR)/%.e: $(SRCDIR)/%.c
 	$(CC) $($(PROJECT)_CPPFLAGS) $($(PROJECT)_CFLAGS) -E $< -o $@
-$(OBJDIR)/%.o: $(SRCDIR)/%.c Makefile config.mk
+$(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $($(PROJECT)_CPPFLAGS) $($(PROJECT)_CFLAGS) -c $< -o $@
 
-$(ASS): $(HDR)
-$(INT): $(HDR)
-$(OBJ): $(HDR)
+$(ASS): $(HDR) Makefile config.mk
+$(INT): $(HDR) Makefile config.mk
+$(OBJ): $(HDR) Makefile config.mk
 
 $(PROJECT): $(OBJ)
 	$(CC) $^ -o $(OUTDIR)/$@ $($(PROJECT)_LDFLAGS)

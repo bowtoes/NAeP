@@ -22,28 +22,34 @@ CC=cc
 INCS=-I$(SRCDIR)\
 
 # compiler 'warning' arguments
-WRNS=-Wall -Wextra\
+WRNS=-Wall -Wextra -Wformat-security\
 	 -Werror=implicit-function-declaration\
-	 -Wno-unused-function -Wno-sign-compare -Wno-misleading-indentation -Wno-comment\
+	 -Wno-unused-function -Wno-unused-variable -Wno-unused-parameter\
+	 -Wno-sign-compare -Wno-misleading-indentation -Wno-comment\
 
 # compiler 'define' arguments
 DEFS=-D$(shell echo $(PROJECT) | tr a-z A-Z)_MAJOR=$($(PROJECT)_MAJOR)\
 	 -D$(shell echo $(PROJECT) | tr a-z A-Z)_MINOR=$($(PROJECT)_MINOR)\
 	 -D$(shell echo $(PROJECT) | tr a-z A-Z)_REVIS=$($(PROJECT)_REVIS)\
-	 -DNeDEBUGGING -DNeLOGGING\
+	 -DNeASSERTS -DNeLOGGING\
 	 -D_POSIX_C_SOURCE=200112L -D_FILE_OFFSET_BITS=64
 
-$(PROJECT)_CFLAGS=-std=c11 -g $(WRNS) $(INCS) $(CFLAGS)
+PRF=
+#PRF=-pg -no-pie
+OPT=-O3 -Ofast
+OPT=-g
+$(PROJECT)_CFLAGS=-std=c11 $(OPT) $(PRF) $(WRNS) $(INCS) $(CFLAGS)
 $(PROJECT)_CPPFLAGS=$(DEFS) $(STCPPFLAGS) $(CPPFLAGS)
-$(PROJECT)_LDFLAGS=$(LDFLAGS) -logg -lvorbis
+$(PROJECT)_LDFLAGS=$(LDFLAGS) -logg -lvorbis $(PRF)
 
 # find source files to compile and headers to check for changes
 # should be specified relative to CURDIR
 SRC:=\
 	src/common/NeDebugging.c\
 	src/common/NeLibrary.c\
-	src/common/NeMisc.c\
 	src/common/NeFile.c\
+	src/common/NeMisc.c\
+	src/common/NeStr.c\
 	src/main.c\
 	src/revorbc/revorbc.c\
 	src/wisp/NeWisp.c\
@@ -53,8 +59,9 @@ HDR:=\
 	src/common/NeTypes.h\
 	src/common/NeDebugging.h\
 	src/common/NeLibrary.h\
-	src/common/NeMisc.h\
 	src/common/NeFile.h\
+	src/common/NeMisc.h\
+	src/common/NeStr.h\
 	src/revorbc/revorbc.h\
 	src/wisp/NeWisp.h\
 

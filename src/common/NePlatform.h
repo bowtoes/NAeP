@@ -133,10 +133,5 @@ enum NePlatforms {
 #  error WEIRD SYSTEM
 #endif
 
-#if CHAR_MIN == 0
-#  define NeUNSIGNEDCHAR
-#elif CHAR_MIN < 0
-#  define NeSIGNEDCHAR
-#endif
 
 #endif /* NePlatform_h */

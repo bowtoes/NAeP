@@ -34,11 +34,12 @@ NeSmartMod(NeOf in, NeSz mod, NeOf of)
 NeSz
 NeDigitCount(NeOf n)
 {
-	NeSz c = 0;
+	NeSz c = 1;
 	if (n == 0)
-		return 1;
-	if (n < 0)
-		n = -(n + 1);
-	for (; n > 0; ++c, n /= 10);
+		return c;
+	if (n < 0) {
+		n = n == NeOFMIN ? -(n + 1) : -n;
+	}
+	while (n/=10) c++; /* teehee */
 	return c;
 }
