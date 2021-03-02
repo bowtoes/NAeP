@@ -45,25 +45,28 @@ $(PROJECT)_LDFLAGS=$(LDFLAGS) -logg -lvorbis $(PRF)
 # find source files to compile and headers to check for changes
 # should be specified relative to CURDIR
 SRC:=\
-	src/common/NeDebugging.c\
+	src/common/NeLogging.c\
 	src/common/NeLibrary.c\
 	src/common/NeFile.c\
 	src/common/NeMisc.c\
 	src/common/NeStr.c\
-	src/main.c\
-	src/revorbc/revorbc.c\
 	src/wisp/NeWisp.c\
+	src/revorbc/revorbc.c\
+	src/NeArg.c\
+	src/main.c\
 
 HDR:=\
 	src/common/NePlatform.h\
 	src/common/NeTypes.h\
 	src/common/NeDebugging.h\
+	src/common/NeLogging.h\
 	src/common/NeLibrary.h\
 	src/common/NeFile.h\
 	src/common/NeMisc.h\
 	src/common/NeStr.h\
-	src/revorbc/revorbc.h\
 	src/wisp/NeWisp.h\
+	src/revorbc/revorbc.h\
+	src/NeArg.h\
 
 # Set to whatever, I use /addtl on for custom programs
 prefix=/addtl

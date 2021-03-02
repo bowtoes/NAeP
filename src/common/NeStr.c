@@ -1,16 +1,18 @@
 #include "common/NeStr.h"
-#include "common/NePlatform.h"
 
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+
+#include "common/NePlatform.h"
+#include "common/NeDebugging.h"
+#include "common/NeLogging.h"
+#include "common/NeLibrary.h"
+#include "common/NeMisc.h"
+
 #if defined(NePLATFORMTYPE_POSIX) || defined(NePLATFORMTYPE_BSD)
 #include <strings.h>
 #endif
-
-#include "common/NeLibrary.h"
-#include "common/NeDebugging.h"
-#include "common/NeMisc.h"
 
 NeSz
 NeStrlen(const char *const str, NeSz max)
@@ -75,6 +77,8 @@ NeStrPrint(struct NeStr *dst, NeOf offset, NeSz strlen, const char *const fmt, .
 		dst->cstr[0] = 0;
 		dst->length = 0;
 		return 0;
+	} else if (strlen > NeBLOCKSIZE - 1) {
+		strlen = NeBLOCKSIZE - 1;
 	}
 
 	dst->cstr = NeSafeAlloc(dst->cstr, strlen + 1, 0);

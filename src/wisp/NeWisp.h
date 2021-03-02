@@ -3,7 +3,6 @@
 
 #include "common/NeFile.h"
 
-#define NeBLOCKSIZE 2048
 /* what looks to be max wisp file size in data files */
 #define NeMAXWEEMSIZE (1<<25)
 

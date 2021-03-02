@@ -29,13 +29,28 @@ embedded `.wem` (weem) files, with an incrementing numerical suffix on the origi
 wisp filename. Most of these files (though not all for some reason) can be converted
 to ogg with [ww2ogg][ww2ogg], and then re-encoded into a playable form with [revorb][revorbc].
 
-## Plan
-* [x] Extract weem files embedded in wisp files.  
-* [ ] Convert weem files to playable ogg files.  
-* [ ] Allow to revorb unplayable ogg files.  
-* [ ] Find and extract all weem files embedded and referenced in bank files.  
 * [ ] Video extraction? Maybe.  
-* [ ] All of the above stages executable differently through the use of command-line options.  
+
+## Capabilities
+What the program can/will be able to do:
+1. [ ] Wisp Extraction:  
+   * [x] Extract all weems embedded in arguments to separate, individual files.  
+   * [ ] Extract all weems AND convert those weems to oggs.  
+   * [ ] Convert all embedded weems to ogg files directly, without extracting them.  
+2. [ ] Bank Extraction:  
+    Same capabilities as wisp extraction, with one addition:  
+   * [ ] Recursive extraction: search all passed bank files for weems referenced in
+     other bank/wisp files passed on command-line.
+3. [ ] Weem-to-ogg Conversion:  
+   * [ ] All passed weems (and extracted weems, if specified) are converted to ogg,
+     either in-place or to separate files.
+4. [ ] Ogg Revorption:  
+    * [ ] All passed oggs (and generated oggs, if specified) are revorbed, either in-place
+     or to separate files (`..._revorb.ogg`).
+5. Videos:  
+    * Maybe? If so then:
+      * [ ] Video extraction.
+      * [ ] Audio rip from videos, either embedded or from extracted.
 
 ## Build
 I only have a linux system and do not have convenient access to a Windows system, so

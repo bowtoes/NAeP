@@ -3,6 +3,7 @@
 #include <stdlib.h> /* malloc() */
 #include <string.h> /* memcmp() */
 #include "common/NeDebugging.h"
+#include "common/NeLogging.h"
 #include "common/NeMisc.h"
 #include "common/NeTypes.h"
 

@@ -3,8 +3,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "common/NePlatform.h"
-#include "common/NeLibrary.h"
 #include "common/NeDebugging.h"
+#include "common/NeLogging.h"
+#include "common/NeLibrary.h"
 #include "common/NeMisc.h"
 #include "common/NeStr.h"
 

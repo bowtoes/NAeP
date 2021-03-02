@@ -3,6 +3,7 @@
 #include <stdlib.h> /* realloc, free */
 
 #include "common/NeDebugging.h"
+#include "common/NeLogging.h"
 #include "common/NeLibrary.h"
 
 /* After each RIFF data, there is guaranteed (unless it's EOF) to be one other RIFF

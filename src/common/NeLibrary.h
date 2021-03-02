@@ -6,6 +6,9 @@
 /* get element (size elementsize) idx in data */
 #define NeIDX(data, idx, elementsize) (((NeBy *)(data)) + ((idx) * (elementsize)))
 
+/* Should be used as maximum size alloced at once, though safe alloc doesn't
+   check */
+#define NeBLOCKSIZE 2048
 /* If size == 0, free cur if necessary and return NULL
  * if cur and zero, free cur and calloc
  * if cur and not zero, realloc cur
