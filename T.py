@@ -78,14 +78,18 @@ for i,a in enumerate(autos):
     cmdargs.append(arg)
 
 for i in range(len(cmdargs)):
-    arg = []
-    k = int((i)/2)%6
+    arg = ["-n"]
+    # set True to test log capabilities
+    if False:
+        k = int((i)/2)%6
 
-    if (i&1):[arg.append("-q") for _ in range(k)]
-    elif (i-1&1):
-        if(i-1&2):arg.append("-d")
-        else:arg.append("-Q")
-        if (i-1&4):arg.append("-c")
+        if (i&1):[arg.append("-q") for _ in range(k)]
+        elif (i-1&1):
+            if(i-1&2):arg.append("-d")
+            else:arg.append("-Q")
+            if (i-1&4):arg.append("-c")
+    else:
+        arg.append("");
 
     [cmdargs[i].insert(1+l, j) for l,j in enumerate(arg)]
 

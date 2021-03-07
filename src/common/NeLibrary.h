@@ -2,12 +2,7 @@
 #define NeLibrary_h
 
 #include "common/NeTypes.h"
-
-/* library errors */
-/* no error */
-#define NeLENONE 0
-/* invalid input */
-#define NeLEINVALID -1
+#include "common/NeErrors.h"
 
 /* get element (size elementsize) idx in data */
 #define NeIDX(data, idx, elementsize) (((NeBy *)(data)) + ((idx) * (elementsize)))

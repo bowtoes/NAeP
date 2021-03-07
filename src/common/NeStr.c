@@ -55,7 +55,7 @@ NeStrShallow(char *cstr, NeSz maxlen)
 }
 
 NeOf
-NeStrIndexOf(const struct NeStr hay, const struct NeStr ndl, NeSz iof)
+NeStrIndex(const struct NeStr hay, const struct NeStr ndl, NeSz iof)
 {
 	return NeFind(hay.cstr, hay.length, ndl.cstr, ndl.length, iof);
 }

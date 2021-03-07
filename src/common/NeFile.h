@@ -4,26 +4,7 @@
 #include <stdio.h>
 #include "common/NeTypes.h"
 #include "common/NeStr.h"
-
-/* file errors */
-/* no error */
-#define NeFENONE 0
-/* file doesn't exist */
-#define NeFEEXIST -1
-/* file isn't regular */
-#define NeFEREG -2
-/* generic stat error */
-#define NeFESTAT -3
-/* invalid mode */
-#define NeFEMODE -4
-/* could not open */
-#define NeFEOPEN -5
-/* generic read error */
-#define NeFEREAD -6
-/* read permission error */
-#define NeFERPERM -7
-/* write permission error */
-#define NeFEWPERM -8
+#include "common/NeErrors.h"
 
 extern const NeFcc WEEMCC;
 extern const NeFcc BANKCC;
@@ -98,4 +79,8 @@ NeOf NeFileSegment(struct NeFile *const file, void *dst,
 /* Writes datalen bytes into file at file position */
 /* Returns new file position */
 NeSz NeFileWrite(struct NeFile *const file, const void *const data, NeSz datalen);
+
+/* Closes the file and removes it from disk */
+int NeFileRemove(struct NeFile *const file);
+int NeFileRename(struct NeFile *const file, const char *const newpath);
 #endif /* NeFile_h */

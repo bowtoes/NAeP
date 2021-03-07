@@ -13,13 +13,12 @@ NeSz NeStrlen(const char *const str, NeSz max);
 /* Initialize a new string; can be done on top of an existing string */
 /* Str MUST be initialized (specifically, str.cstr must be NULL or a valid pointer) */
 /* Pass -1 for maxlen to have no maxlen */
-/* Return -1 on error */
 void NeStrNew(struct NeStr *const str, const char *const cstr, NeSz maxlen);
 void NeStrCopy(struct NeStr *const out, const struct NeStr src);
 /* Creates a NeStr without copying cstr, dangerous if cstr is supposed to be const */
 struct NeStr NeStrShallow(char *cstr, NeSz maxlen);
 
-NeOf NeStrIndexOf(const struct NeStr hay, const struct NeStr ndl, NeSz iof);
+NeOf NeStrIndex(const struct NeStr hay, const struct NeStr ndl, NeSz iof);
 NeOf NeStrRindex(const struct NeStr hay, const struct NeStr ndl, NeSz iof);
 
 /* printf into dst, return bytes printed, -1 if error */

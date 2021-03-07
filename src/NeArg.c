@@ -1,5 +1,6 @@
 #include "NeArg.h"
 
+#include "revorbc/revorbc.h"
 #include "wisp/NeWisp.h"
 
 struct NeArg *
@@ -35,6 +36,9 @@ NePrintArg(struct NeArg arg, NeSz maxarg)
 	NePREFIXN(pr, " ");
 	NePREFIXNST(pr, fm.fg, fm.bg, fm.st, "%8s", NeLogPrStr(arg.opt.loglevel));
 	NePREFIXN(pr, " log ");
+	if (arg.opt.dryrun) { NePREFIXNST(pr, NeClYellow, NeClNormal, NeStBold, "DRY RUN"); }
+	else                { NePREFIXNST(pr, NeClYellow, NeClNormal, NeStNone, "PROCESS"); }
+	NePREFIXN(pr, " ");
 	if (arg.opt.bankrecurse) { NePREFIXNST(pr, NeClGreen,   NeClNormal, NeStBold, "FULL"); }
 	else                     { NePREFIXNST(pr, NeClGreen,   NeClNormal, NeStNone, "  NO"); }
 	NePREFIXN(pr, " bank recurse ");
@@ -56,14 +60,15 @@ void
 NeDetectType(struct NeArg *arg, struct NeFile *f)
 {
 	NeFcc fcc;
-	if (NeFileStream(f, &fcc, 4) != NeFEREAD) {
+	if (NeFileStream(f, &fcc, 4) != NeERFREAD) {
 		if (fcc == WEEMCC) {
-			if (NeStrEndswith(f->ppp, NeStrShallow(".wsp", -1)))
+			if (NeStrEndswith(f->ppp, NeStrShallow(".wsp", 4)))
 				arg->opt.wisp = 1;
-			else if (NeStrEndswith(f->ppp, NeStrShallow(".wem", -1)))
+			else if (NeStrEndswith(f->ppp, NeStrShallow(".wem", 4)))
 				arg->opt.weem = 1;
 			else
 				arg->opt.wisp = 1;
+			/* assume wisp because wisps are a superset of weems */
 		} else if (fcc == BANKCC) {
 			arg->opt.bank = 1;
 		} else if (fcc == OGGSCC) {
@@ -77,6 +82,43 @@ NeDetectType(struct NeArg *arg, struct NeFile *f)
 }
 
 int
+NeRevorbOgg(struct NeArg arg, struct NeFile *f)
+{
+	struct NeFile out;
+	struct NeStr op;
+	int suc = 1;
+	if (!f || !f->stat.exist)
+		return 0;
+
+	if (!arg.opt.dryrun) {
+		NeStrCopy(&op, f->ppp);
+		NeStrMerge(&op, NeStrShallow(".tmp", 4));
+		if (NeFileOpen(&out, op.cstr, NeFileModeWrite) != NeERGNONE) {
+			NeERROR("Failed to open %s for revorb output : %m", op.cstr);
+			suc = 0;
+		} else if (revorb(f->file, out.file) != NeERGNONE) {
+			NeERROR("Failed to revorb %s", f->ppp.cstr);
+			suc = 0;
+		}
+		if (suc && arg.opt.rvbinplace)
+			NeDEBUG("TODO MOVE %s -> %s", op.cstr, f->ppp.cstr);
+		NeStrDel(&op);
+	} else {
+		NeNORMALN("Opened ");
+		NePREFIXNFG(NePrNormal, NeClCyan, "%s.tmp", f->ppp.cstr);
+		NePREFIX(NePrNormal, " for revorbtion output");
+		NeNORMALN("Moved ");
+		NePREFIXNFG(NePrNormal, NeClCyan, "%s.tmp", f->ppp.cstr);
+		NeNORMALN(" -> ");
+		if (arg.opt.rvbinplace)
+			NePREFIXFG(NePrNormal, NeClCyan, "%s", f->ppp.cstr);
+		else
+			NePREFIXFG(NePrNormal, NeClCyan, "%.*s_rvb.ogg", NeStrRindex(f->ppp, NeStrShallow(".", 1), f->ppp.length), f->ppp.cstr);
+	}
+
+	return suc;
+}
+int
 NeConvertWeem(struct NeArg arg, struct NeFile *f)
 {
 	return 0;
@@ -88,11 +130,6 @@ NeExtractWisp(struct NeArg arg, struct NeFile *f)
 }
 int
 NeExtractBank(struct NeArg arg, struct NeFile *f)
-{
-	return 0;
-}
-int
-NeRevorbOgg(struct NeArg arg, struct NeFile *f)
 {
 	return 0;
 }

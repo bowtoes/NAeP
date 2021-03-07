@@ -3,16 +3,6 @@
 
 #include "common/NeFile.h"
 
-/* wisp errors */
-/* no error */
-#define NeWENONE NeFENONE
-/* empty wisp */
-#define NeWEEMPTY -1
-/* generic wisp read error */
-#define NeWEREAD -2
-/* weem size error */
-#define NeWESIZE -3
-
 /* Appears to be max wisp file size in Automata */
 #define NeMAXWEEMSIZE (1<<25)
 

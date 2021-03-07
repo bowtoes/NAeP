@@ -65,13 +65,13 @@ NeSlice(void *const dst, NeSz dstlen,
 	const NeBy *const s = (const NeBy *const)src;
 	/* can't copy any bytes */
 	if (!src || !dst || !srclen || !dstlen)
-		return NeLEINVALID;
+		return NeERGINVALID;
 
 	start = NeSmartMod(start, srclen, 1);
 	end = NeSmartMod(end, srclen, 1);
 	/* no length of bytes to copy */
 	if (start == end)
-		return NeLENONE;
+		return NeERGNONE;
 
 	if (start > end) {
 		for (NeOf k = start - 1; k >= end && i < dstlen; --k, ++i)
@@ -103,7 +103,7 @@ NeFind(const void *const hay, NeSz haysz,
 	           *const n = (const NeBy *const)ndl;
 
 	if (!hay || !ndl)
-		return NeLEINVALID;
+		return NeERGINVALID;
 	if (!haysz || !ndlsz || ndlsz > haysz)
 		return haysz;
 
@@ -129,7 +129,7 @@ NeRfind(const void *const hay, NeSz haysz,
 	           *const n = (const NeBy *const)ndl;
 
 	if (!hay || !ndl)
-		return NeLEINVALID;
+		return NeERGINVALID;
 	if (!haysz || !ndlsz || ndlsz > haysz)
 		return haysz;
 

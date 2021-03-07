@@ -9,6 +9,7 @@
 #include "common/NeDebugging.h"
 #include "common/NeLogging.h"
 #include "common/NeLibrary.h"
+#include "common/NeErrors.h"
 
 int
 NeWispOpen(struct NeWisp *const dst, const char *const path)
@@ -28,10 +29,10 @@ NeWispOpen(struct NeWisp *const dst, const char *const path)
 	do {
 		NeSz pos = 0;
 		rd = NeFileStream(&wsp.file, blk, NeBLOCKSIZE);
-		if (rd != NeFENONE) { /* ferror */
+		if (rd == NeERFREAD) { /* ferror */
 			NeERROR("Error reading wisp");
-			err = NeWEREAD;
-		} else if ((pos = NeFind(blk, rd, "RIFF", 4, pos)) != NeLEINVALID) {
+			err = NeERWREAD;
+		} else if ((pos = NeFind(blk, rd, "RIFF", 4, pos)) != NeERGINVALID) {
 			if (pos < rd) { /* read file offset and position into wsp.wems */
 				struct NeWem w = {0};
 				w.offset = wsp.file.position - rd + pos;
@@ -40,10 +41,10 @@ NeWispOpen(struct NeWisp *const dst, const char *const path)
 						NeWARNING("Unexpected EOF");
 					else
 						NeERROR("Error reading weem size");
-					err = NeWEREAD;
+					err = NeERWREAD;
 				} else if (w.size > NeMAXWEEMSIZE) {
 					NeERROR("Read weem size too large : %zu (0x%08x)", w.size, w.size);
-					err = NeWESIZE;
+					err = NeERWSIZE;
 				} else {
 					wsp.wemCount++;
 					wsp.wems = NeSafeAlloc(wsp.wems, wsp.wemCount * sizeof(*wsp.wems), 0);
@@ -52,12 +53,12 @@ NeWispOpen(struct NeWisp *const dst, const char *const path)
 				}
 			}
 		} else {
-			err = NeWEREAD;
+			err = NeERWREAD;
 		}
 	} while (rd > 0 && !err);
 	if (wsp.wemCount == 0) {
 		NeERROR("%s contains no wems", wsp.file.ppp.cstr);
-		err = NeWEEMPTY;
+		err = NeERWEMPTY;
 	}
 
 	free(blk);

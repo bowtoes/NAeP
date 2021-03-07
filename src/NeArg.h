@@ -28,7 +28,7 @@ struct NeArgs {
 				NeBy autorvb:1;
 				NeBy rvbinplace:1;
 
-				NeBy unused:1;      /* b=16 */
+				NeBy dryrun:1;      /* b=16 */
 
 			} opt;
 			NeU2 options;
@@ -36,12 +36,13 @@ struct NeArgs {
 	} *args;
 	NeSz maxarg;
 	NeCt argcount;
+	NeBy argdigit;
 };
 
 struct NeArg *NeFindArg(struct NeArgs args, const char *const arg);
 void NePrintArg(struct NeArg arg, NeSz maxarg);
 
-void NeDetectType(struct NeArg *arg, struct NeFile *f);
+void  NeDetectType(struct NeArg *arg, struct NeFile *f);
 int NeConvertWeem(struct NeArg arg, struct NeFile *f);
 int NeExtractWisp(struct NeArg arg, struct NeFile *f);
 int NeExtractBank(struct NeArg arg, struct NeFile *f);

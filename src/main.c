@@ -47,6 +47,7 @@ static const char *const usg =
 "\n        -c, -color           Toggle color logging."
 "\n        -q, -quiet           Suppress all non-critical output."
 "\n        -Q, -qq, -too-quiet  Suppress all output."
+"\n        -n, -dry, -dryrun    Don't actually do anything, just log what would happen."
 ;
 
 static void printhelp()
@@ -111,6 +112,8 @@ int main(int argc, char **argv)
 			opt.loglevel = opt.loglevel - 1 < 0 ? 0 : opt.loglevel - 1; continue;
 		} else if (NeStrCmp(arg, 0, "-Q", "-qq", "-too-quiet", NULL)) {
 			NeTOGGLE(opt.logoff); continue;
+		} else if (NeStrCmp(arg, 0, "-n", "-dry", "-dryrun", NULL)) {
+			NeTOGGLE(opt.dryrun); continue;
 		} else if ((t = NeFindArg(args, arg))) {
 			t->opt = opt; opt = def; continue;
 		}
@@ -125,6 +128,7 @@ int main(int argc, char **argv)
 		args.args[args.argcount - 1] = narg;
 		opt = def; /* only for testing */
 	}
+	args.argdigit = NeDigitCount(args.argcount);
 
 	/* Process files */
 	if (args.argcount) {
@@ -133,8 +137,8 @@ int main(int argc, char **argv)
 		struct NeFile afile;
 		NeLogLevelSet(NePrDebug);
 		for (int i = 0; i < args.argcount; ++i, arg = &args.args[i]) {
-			//NeLogLevelSet(arg->opt.logdebug?NePrDebug:arg->opt.loglevel);
-			//NeLogColorState(arg->opt.logcolor);
+			NeLogLevelSet(arg->opt.logdebug?NePrDebug:arg->opt.loglevel);
+			NeLogColorState(arg->opt.logcolor);
 			NeFileStat(&stat, NULL, arg->arg.cstr);
 			if (!stat.exist || !stat.isreg || (!stat.canwt && (arg->opt.ogginplace || arg->opt.rvbinplace)) || !stat.canrd) {
 				NeWARNINGN("Cannot parse ");
@@ -150,22 +154,30 @@ int main(int argc, char **argv)
 					NePREFIXST(NePrWarning, NeClGreen, -1, NeStBold, "Cannot read file.");
 				continue;
 			}
-			if (NeFileOpen(&afile, arg->arg.cstr, NeFileModeReadWrite) != NeFENONE) {
+			if (NeFileOpen(&afile, arg->arg.cstr, NeFileModeReadWrite) != NeERGNONE) {
 				NeERRORN("Could not open ");
 				NePREFIXNST(NePrError, NeClCyan, -1, NeStBold, "%s", arg->arg.cstr);
 				NePREFIXN(NePrError, " for parsing.");
 				continue;
 			}
 			NeNORMALN("Parsing ");
-			//NePREFIXFG(NePrNormal, NeClCyan, "Parsing %-*s", args.maxarg, arg->arg.cstr);
+			NePREFIXNFG(NePrNormal, NeClMagenta, "%*i / %*i ", args.argdigit, i + 1, args.argdigit, args.argcount);
 			if ((arg->opt.oggs | arg->opt.weem | arg->opt.wisp | arg->opt.bank) == 0) {
 				NeDetectType(arg, &afile);
 			}
 			NePrintArg(*arg, args.maxarg);
 			if (arg->opt.oggs) {
+				NePREFIXFG(NePrNormal, NeClBlue, "%-*s", args.maxarg, arg->arg.cstr);
+				NeRevorbOgg(*arg, &afile);
 			} else if (arg->opt.weem) {
+				NePREFIXFG(NePrNormal, NeClGreen, "%-*s", args.maxarg, arg->arg.cstr);
+				NeConvertWeem(*arg, &afile);
 			} else if (arg->opt.wisp) {
+				NePREFIXFG(NePrNormal, NeClYellow, "%-*s", args.maxarg, arg->arg.cstr);
+				NeExtractWisp(*arg, &afile);
 			} else if (arg->opt.bank) {
+				NePREFIXFG(NePrNormal, NeClRed, "%-*s", args.maxarg, arg->arg.cstr);
+				NeExtractBank(*arg, &afile);
 			} else {
 				NeERRORN("Could not determine filetype for ");
 				NePREFIXNFG(NePrError, NeClCyan, "%s", arg->arg);
