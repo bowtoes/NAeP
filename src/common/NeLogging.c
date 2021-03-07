@@ -2,193 +2,94 @@
 
 #include <stdarg.h>
 
+const struct NeLogFmt NeFmtNormal   = {  NePrNormal,          0,       0,           0, 0, ""};
+const struct NeLogFmt NeFmtWarning  = { NePrWarning, NeClYellow,       0,  NeStBright, 0, "[Warning]"};
+const struct NeLogFmt NeFmtError    = {   NePrError,    NeClRed,       0,           0, 0, "[Error]"};
+const struct NeLogFmt NeFmtCritical = {NePrCritical,    NeClRed,       0, NeStReverse, 0, "[CRITICAL]"};
+const struct NeLogFmt NeFmtDebug    = {   NePrDebug, NeClYellow,       0, NeStReverse, 0, "[Debug]"};
+
+const struct NeLogFmt NeFmtClear    = { NePrCount,          0,          0,        0,          0, "[clear]"};
+      struct NeLogFmt NeFmtLast     = {NePrNormal, NeClNormal, NeClNormal, NeStNone, NeFnNormal, "[last]"};
+
+static NeBy loglevel = NePrDebug;
+#if defined(NeLOGCOLORS) && !defined(NeNOLOGCOLORS)
+static NeBy logcolor = 1;
+#else
+static NeBy logcolor = 0;
+#endif
+static NeSz logcount = 0;
+#if defined(NeLOGFLUSH) && !defined(NeNOLOGFLUSH)
+static FILE *lastloc = 0;
+#endif
+
+/* HIDEOUS */
+/* HIDEOUS */
+/* HIDEOUS */
+/* HIDEOUS */
+/* HIDEOUS */
+/* HIDEOUS */
+/* HIDEOUS */
+/* HIDEOUS */
 /* https://stackoverflow.com/questions/4842424/list-of-ansi-color-escape-sequences */
-const char *NeLogColorStr(enum NeLogColor cl)
-{
-	switch (cl) {
-		case NeColorBlack: return "Black";
-		case NeColorRed: return "Red";
-		case NeColorGreen: return "Green";
-		case NeColorYellow: return "Yellow";
-		case NeColorBlue: return "Blue";
-		case NeColorMagenta: return "Magenta";
-		case NeColorCyan: return "Cyan";
-		case NeColorWhite: return "White";
-		case NeColorNormal: return "Normal";
-		case NeColorDarkGrey: return "Dark Grey";
-		case NeColorLightRed: return "Light Red";
-		case NeColorLightGreen: return "Light Green";
-		case NeColorLightYellow: return "Light Yellow";
-		case NeColorLightBlue: return "Light Blue";
-		case NeColorLightMagenta: return "Light Magenta";
-		case NeColorLightCyan: return "Light Cyan";
-		case NeColorLightWhite: return "Light White";
-		default: return "Invalid";
+static int fgid(enum NeLogCl fg) {
+	switch (fg) {
+	case NeClBlack:      return 30; case NeClRed:          return 31;
+	case NeClGreen:      return 32; case NeClYellow:       return 33;
+	case NeClBlue:       return 34; case NeClMagenta:      return 35;
+	case NeClCyan:       return 36; case NeClWhite:        return 37;
+	case NeClDarkGrey:   return 90; case NeClLightRed:     return 91;
+	case NeClLightGreen: return 92; case NeClLightYellow:  return 93;
+	case NeClLightBlue:  return 94; case NeClLightMagenta: return 95;
+	case NeClLightCyan:  return 96; case NeClLightWhite:   return 97;
+	default: return 39;
 	}
 }
-const char *NeLogStyleStr(enum NeLogStyle st)
-{
+static int bgid(enum NeLogCl bg) {
+	return 10 + fgid(bg);
+}
+static int stid(enum NeLogSt st) {
 	switch (st) {
-		case NeStyleNormal: return "Normal";
-		case NeStyleBold: return "Bold";
-		case NeStyleDim: return "Dim";
-		case NeStyleItalics: return "Italics";
-		case NeStyleUnderline: return "Underline";
-		case NeStyleBlink: return "Blink";
-		case NeStyleFastBlink: return "Fast Blink";
-		case NeStyleReverse: return "Reverse";
-		case NeStyleConceal: return "Conceal";
-		case NeStyleStrikeout: return "Strikeout";
-		case NeStyleFraktur: return "Fraktur";
-		case NeStyleNoBold: return "No Bold";
-		case NeStyleNoBright: return "No Bright";
-		case NeStyleNoItalics: return "No Italics";
-		case NeStyleNoUnderline: return "No Underline";
-		case NeStyleNoBlink: return "No Blink";
-		case NeStyleNoReverse: return "No Reverse";
-		case NeStyleReveal: return "Reveal";
-		case NeStyleNoStrikeout: return "No Strikeout";
-		case NeStyleFrame: return "Frame";
-		case NeStyleCircle: return "Circle";
-		case NeStyleOverline: return "Overline";
-		case NeStyleNoFrame: return "No Frame";
-		case NeStyleNoOverline: return "No Overline";
-		case NeStyleIdeoUnderline: return "Ideogram Underline";
-		case NeStyleIdeoDoubleUnderline: return "Ideogram Double Underline";
-		case NeStyleIdeoOverline: return "Ideogram Overline";
-		case NeStyleIdeoDoubleOverline: return "Ideogram Double Overline";
-		case NeStyleIdeoStress: return "Ideogram Stress";
-		case NeStyleIdeoOff: return "Ideogram Off";
-		default: return "Invalid";
-	}
-}
-const char *NeLogFontStr(enum NeLogFont fn)
-{
-	switch (fn) {
-		case NeFontNormal: return "Normal";
-		case NeFont1: return "Alternate 1";
-		case NeFont2: return "Alternate 2";
-		case NeFont3: return "Alternate 3";
-		case NeFont4: return "Alternate 4";
-		case NeFont5: return "Alternate 5";
-		case NeFont6: return "Alternate 6";
-		case NeFont7: return "Alternate 7";
-		case NeFont8: return "Alternate 8";
-		case NeFont9: return "Alternate 9";
-		default: return "Invalid";
-	}
-}
-const char *NeLogPriorityStr(enum NeLogPriority pr)
-{
-	switch (pr) {
-		case NePriorityDebug: return "Debug";
-		case NePriorityNormal: return "Normal";
-		case NePriorityWarning: return "Warning";
-		case NePriorityError: return "Error";
-		case NePriorityCritical: return "Critical";
-		default: return "Invalid";
-	}
-}
-
-static const struct NeLogFormat    debug = {NeColorYellow,          0,             0, 0};
-static const struct NeLogFormat   normal = {            0,          0,             0, 0};
-static const struct NeLogFormat  warning = {NeColorYellow,          0, NeStyleBright, 0};
-static const struct NeLogFormat    error = {   NeColorRed,          0,             0, 0};
-static const struct NeLogFormat critical = { NeColorBlack, NeColorRed, NeStyleBright, 0};
-static const struct NeLogFormat    clear = {            0,          0,             0, 0};
-
-int NeForegroundIndex(struct NeLogFormat fmt) {
-	switch (fmt.foreground) {
-		case NeColorBlack: return 30;
-		case NeColorRed: return 31;
-		case NeColorGreen: return 32;
-		case NeColorYellow: return 33;
-		case NeColorBlue: return 34;
-		case NeColorMagenta: return 35;
-		case NeColorCyan: return 36;
-		case NeColorWhite: return 37;
-		case NeColorNormal: return 39;
-		case NeColorDarkGrey: return 90;
-		case NeColorLightRed: return 91;
-		case NeColorLightGreen: return 92;
-		case NeColorLightYellow: return 93;
-		case NeColorLightBlue: return 94;
-		case NeColorLightMagenta: return 95;
-		case NeColorLightCyan: return 96;
-		case NeColorLightWhite: return 97;
-		default: return 39;
-	}
-}
-int NeBackgroundIndex(struct NeLogFormat fmt) {
-	struct NeLogFormat t = {fmt.background, 0, 0, 0};
-	return NeForegroundIndex(t) + 10;
-}
-int NeStyleIndex(struct NeLogFormat fmt) {
-	switch (fmt.style) {
-		case NeStyleNormal: return 0;
-		case NeStyleBold: return 1;
-		case NeStyleDim: return 2;
-		case NeStyleItalics: return 3;
-		case NeStyleUnderline: return 4;
-		case NeStyleBlink: return 5;
-		case NeStyleFastBlink: return 6;
-		case NeStyleReverse: return 7;
-		case NeStyleConceal: return 8;
-		case NeStyleStrikeout: return 9;
-		case NeStyleFraktur: return 20;
-		case NeStyleNoBold: return 21;
-		case NeStyleNoBright: return 22;
-		case NeStyleNoItalics: return 23;
-		case NeStyleNoUnderline: return 24;
-		case NeStyleNoBlink: return 25;
-		case NeStyleNoReverse: return 27;
-		case NeStyleReveal: return 28;
-		case NeStyleNoStrikeout: return 29;
-		case NeStyleFrame: return 51;
-		case NeStyleCircle: return 52;
-		case NeStyleOverline: return 53;
-		case NeStyleNoFrame: return 54;
-		case NeStyleNoOverline: return 55;
-		case NeStyleIdeoUnderline: return 60;
-		case NeStyleIdeoDoubleUnderline: return 61;
-		case NeStyleIdeoOverline: return 62;
-		case NeStyleIdeoDoubleOverline: return 63;
-		case NeStyleIdeoStress: return 64;
-		case NeStyleIdeoOff: return 65;
+		case        NeStNone: return  0; case         NeStBold: return  1;
+		case         NeStDim: return  2; case      NeStItalics: return  3;
+		case       NeStUnder: return  4; case        NeStBlink: return  5;
+		case   NeStFastBlink: return  6; case      NeStReverse: return  7;
+		case     NeStConceal: return  8; case    NeStStrikeout: return  9;
+		case     NeStFraktur: return 20; case       NeStNoBold: return 21;
+		case    NeStNoBright: return 22; case    NeStNoItalics: return 23;
+		case     NeStNoUnder: return 24; case      NeStNoBlink: return 25;
+		case   NeStNoReverse: return 27; case       NeStReveal: return 28;
+		case NeStNoStrikeout: return 29; case        NeStFrame: return 51;
+		case      NeStCircle: return 52; case         NeStOver: return 53;
+		case     NeStNoFrame: return 54; case       NeStNoOver: return 55;
+		case      NeStIUnder: return 60; case NeStIDoubleUnder: return 61;
+		case       NeStIOver: return 62; case  NeStIDoubleOver: return 63;
+		case     NeStIStress: return 64; case         NeStIOff: return 65;
 		default: return 0;
 	}
 }
-int NeFontIndex(struct NeLogFormat fmt) {
-	switch (fmt.font) {
-		case NeFontNormal: return 10;
-		case NeFont1: return 11;
-		case NeFont2: return 12;
-		case NeFont3: return 13;
-		case NeFont4: return 14;
-		case NeFont5: return 15;
-		case NeFont6: return 16;
-		case NeFont7: return 17;
-		case NeFont8: return 18;
-		case NeFont9: return 19;
-		default: return 10;
-	}
+static int fnid(enum NeLogFn fn) {
+	if (fn >= 0 && fn < NeFnCount)
+		return fn + 10;
+	return 10;
 }
-#if defined(NePLATFORMTYPE_WINDOWS)
-#define clrstr ""
-#define fmtstr ""
-#define updatefmtstr(...) ""
-#else
-static const char *const clrstr = "\x1b[000;039;049;010m";
-static char fmtstr[] = "\x1b[000;039;049;010m";
-static const char *updatefmtstr(struct NeLogFormat format) {
-	return "";
-	snprintf(fmtstr, 19, "\x1b[%03i;%03i;%03i;%03im",
-			NeStyleIndex(format),
-			NeForegroundIndex(format),
-			NeBackgroundIndex(format),
-			NeFontIndex(format));
-	return fmtstr;
+
+char NeFmtStr[] = "\x1b[000;039;049;010m";
+#if defined(NeLOGCOLORS) && !defined(NeNOLOGCOLORS)
+const char *NeTextFormat(enum NeLogCl fg, enum NeLogCl bg, enum NeLogSt st, enum NeLogFn fn) {
+	if (fg == NeClLast) fg = NeFmtLast.fg;
+	if (bg == NeClLast) bg = NeFmtLast.bg;
+	if (st == NeStLast) st = NeFmtLast.st;
+	if (fn == NeFnLast) fn = NeFmtLast.fn;
+	snprintf(NeFmtStr, 19, "\x1b[%03i;%03i;%03i;%03im",
+			stid(st),
+			fgid(fg),
+			bgid(bg),
+			fnid(fn));
+	return NeFmtStr;
+}
 #endif
+static const char *updatefmtstr2(struct NeLogFmt fmt) {
+	return NeTextFormat(fmt.fg, fmt.bg, fmt.st, fmt.fn);
 }
 
 #define NeSNPRINTF(txt, pos, len, ...) {\
@@ -199,122 +100,211 @@ static const char *updatefmtstr(struct NeLogFormat format) {
 	NeOf tmp = vsnprintf((txt), (len), (fmt), lptr);\
 	if (tmp > 0) pos += tmp < (len) ? tmp : (len) - 1;\
 }
-static NeSz getlogprefix(enum NeLogPriority pri, char *txt, NeSz maxlen, FILE **loc) {
+
+/* TODO all of this is really hideous, and will be difficult (if at all possible)
+ * to port to windows */
+static NeSz getlogprefix(char *txt, NeSz maxlen, enum NeLogPr pr, FILE **loc, int pfx) {
 	NeSz wrt = 0;
-	switch (pri) {
-		case NePriorityDebug:
-			NeSNPRINTF(txt, wrt, maxlen, "%s[Debug]", updatefmtstr(debug));
-			*loc = stderr;
-			break;
-		case NePriorityWarning:
-			NeSNPRINTF(txt, wrt, maxlen, "%s[Warning]", updatefmtstr(warning));
-			*loc = stderr;
-			break;
-		case NePriorityError:
-			NeSNPRINTF(txt, wrt, maxlen, "%s[Error]", updatefmtstr(error));
-			*loc = stderr;
-			break;
-		case NePriorityCritical:
-			NeSNPRINTF(txt, wrt, maxlen, "%s[CRITICAL]", updatefmtstr(critical));
-			*loc = stderr;
-			break;
-		default:
-			*loc = stdout;
-			break;
-	}
-	NeSNPRINTF(txt + wrt, wrt, maxlen - wrt, "%s", clrstr);
+	*loc = stdout;
+	/* HIDEOUS */
+#if defined(NeLOGCOLORS) && !defined(NeNOLOGCOLORS)
+if (logcolor) {
+	if      (pr == NePrDebug)    { *loc = stderr; if (pfx) NeSNPRINTF(txt, wrt, maxlen, "%s%s"NeClrStr" ", updatefmtstr2(NeLogPrFmt(pr)), NeLogPrPfx(pr)); }
+	else if (pr == NePrWarning)  { *loc = stderr; if (pfx) NeSNPRINTF(txt, wrt, maxlen, "%s%s"NeClrStr" ", updatefmtstr2(NeLogPrFmt(pr)), NeLogPrPfx(pr)); }
+	else if (pr == NePrError)    { *loc = stderr; if (pfx) NeSNPRINTF(txt, wrt, maxlen, "%s%s"NeClrStr" ", updatefmtstr2(NeLogPrFmt(pr)), NeLogPrPfx(pr)); }
+	else if (pr == NePrCritical) { *loc = stderr; if (pfx) NeSNPRINTF(txt, wrt, maxlen, "%s%s"NeClrStr" ", updatefmtstr2(NeLogPrFmt(pr)), NeLogPrPfx(pr)); }
+} else {
+#endif
+	if      (pr == NePrDebug)    { *loc = stderr; if (pfx) NeSNPRINTF(txt, wrt, maxlen, "%s ", NeLogPrPfx(pr)); }
+	else if (pr == NePrWarning)  { *loc = stderr; if (pfx) NeSNPRINTF(txt, wrt, maxlen, "%s ", NeLogPrPfx(pr)); }
+	else if (pr == NePrError)    { *loc = stderr; if (pfx) NeSNPRINTF(txt, wrt, maxlen, "%s ", NeLogPrPfx(pr)); }
+	else if (pr == NePrCritical) { *loc = stderr; if (pfx) NeSNPRINTF(txt, wrt, maxlen, "%s ", NeLogPrPfx(pr)); }
+#if defined(NeLOGCOLORS) && !defined(NeNOLOGCOLORS)
+}
+#endif
 	return wrt;
 }
 
-NeSz
-NeLog(enum NeLogPriority priority,
-        enum NeLogColor fg, enum NeLogColor bg,
-        enum NeLogStyle style, enum NeLogFont font,
-        int nl, const char *const fmt, ...)
-{
-	NeSz wrt = 0;
-	va_list lptr;
-	char msg[NeMAXLOG];
-	FILE *location;
+#define NeLCSTATEOFF 0
+#define NeLCSTATEON 1
 
-	if (!fmt)
+void NeLogLevelSet(NeBy lvl) { loglevel = lvl; }
+void NeLogColorState(NeBy cl) { logcolor = cl; }
+void NeLogToggleColor() { logcolor = !logcolor; }
+NeSz NeLogCount() { return logcount; }
+
+NeSz
+NeLog(enum NeLogPr pr,
+        enum NeLogCl fg, enum NeLogCl bg,
+        enum NeLogSt st, enum NeLogFn fn,
+        int nl, int pf, const char *const fmt, ...)
+{
+	va_list lptr;
+	NeSz msgw = 0;
+	char msg[NeMAXLOG];
+	FILE *location = stdout;
+
+	if (pr == NePrLast) pr = NeFmtLast.pr;
+	if (fg == NeClLast) fg = NeFmtLast.fg;
+	if (bg == NeClLast) bg = NeFmtLast.bg;
+	if (st == NeStLast) st = NeFmtLast.st;
+	if (fn == NeFnLast) fn = NeFmtLast.fn;
+
+	if (!fmt || pr > loglevel)
 		return 0;
 
-	wrt += getlogprefix(priority, msg, NeMAXLOG, &location);
-	NeSNPRINTF(msg + wrt, wrt, NeMAXLOG - wrt, "%s", updatefmtstr((struct NeLogFormat){fg, bg, style, font}));
-	va_start(lptr, fmt);
-	NeVSNPRINTF(msg + wrt, wrt, NeMAXLOG - wrt, fmt, lptr);
-	va_end(lptr);
-	NeSNPRINTF(msg + wrt, wrt, NeMAXLOG - wrt, "%s", clrstr);
+	/* HIDEOUS */
+	/* HIDEOUS */
+	/* HIDEOUS */
+	msgw += getlogprefix(msg + msgw, NeMAXLOG - msgw, pr, &location, pf);
 
+	#if defined(NeLOGCOLORS) && !defined(NeNOLOGCOLORS)
+	if (logcolor)
+		NeSNPRINTF(msg + msgw, msgw, NeMAXLOG - msgw, "%s", NeTextFormat(fg, bg, st, fn));
+	#endif
+	va_start(lptr, fmt);
+	NeVSNPRINTF(msg + msgw, msgw, NeMAXLOG - msgw, fmt, lptr);
+	va_end(lptr);
+	#if defined(NeLOGCOLORS) && !defined(NeNOLOGCOLORS)
+	if (logcolor)
+		NeSNPRINTF(msg + msgw, msgw, NeMAXLOG - msgw, NeClrStr);
+	#endif
+
+	#if defined(NeLOGFLUSH) && !defined(NeNOLOGFLUSH)
+	if (location != lastloc) // location changed, flush to keep sequential order
+		fflush(lastloc);
+	#endif
 	if (nl)
 		fprintf(location, "%s\n", msg);
 	else
 		fprintf(location, "%s", msg);
-	return wrt;
+
+	NeFmtLast.pr = pr;
+	NeFmtLast.fg = fg;
+	NeFmtLast.bg = bg;
+	NeFmtLast.st = st;
+	NeFmtLast.fn = fn;
+	logcount++;
+	#if defined(NeLOGFLUSH) && !defined(NeNOLOGFLUSH)
+	lastloc = location;
+	#endif
+	return msgw;
 }
 
-#if 0
-NeSz
-NeLogData(enum NeLogPriority priority,
-        enum NeLogColor fg, enum NeLogColor bg,
-        enum NeLogStyle style, enum NeLogFont font,
-        const void *const data, NeSz len, int hx,
-        const char *const fmt, ...)
+/* HIDEOUS */
+const char *NeLogColorStr(enum NeLogCl cl)
 {
-	char msg[NeMAXLOG];
-	NeSz print = 0;
-	NeBy *d = (NeBy *)data;
-	va_list lptr;
-	FILE *location = stdout;
-
-	if (!data || !len)
-		return 0;
-
-	switch(priority) {
-		case NePriorityDebug:
-			location = stderr;
-			break;
-		case NePriorityNormal:
-			break;
-		case NePriorityWarning:
-			location = stderr;
-			print += snprintf(msg + print, NeMAXLOG - print, "Warning: ");
-			break;
-		case NePriorityError:
-			location = stderr;
-			print += snprintf(msg + print, NeMAXLOG - print, "Error: ");
-			break;
-		case NePriorityCritical:
-			location = stderr;
-			print += snprintf(msg + print, NeMAXLOG - print, "CRITICAL: ");
-			break;
-		default: fprintf(stderr, "Unknown log priority %i\n", priority);
-	};
-
-	if (fmt) {
-		va_start(lptr, fmt);
-		print += vsnprintf(msg + print, NeMAXLOG - print, fmt, lptr);
-		va_end(lptr);
+	switch (cl) {
+		case NeClBlack:        return "Black";
+		case NeClRed:          return "Red";
+		case NeClGreen:        return "Green";
+		case NeClYellow:       return "Yellow";
+		case NeClBlue:         return "Blue";
+		case NeClMagenta:      return "Magenta";
+		case NeClCyan:         return "Cyan";
+		case NeClWhite:        return "White";
+		case NeClNormal:       return "Normal";
+		case NeClDarkGrey:     return "Dark Grey";
+		case NeClLightRed:     return "Light Red";
+		case NeClLightGreen:   return "Light Green";
+		case NeClLightYellow:  return "Light Yellow";
+		case NeClLightBlue:    return "Light Blue";
+		case NeClLightMagenta: return "Light Magenta";
+		case NeClLightCyan:    return "Light Cyan";
+		case NeClLightWhite:   return "Light White";
+		default: return "Invalid";
 	}
-
-	for (NeSz i = 0; i < len - 1; ++i) {
-		if (hx) {
-			print += snprintf(msg + print, NeMAXLOG - print, "%02x ", d[i]);
-		} else {
-			print += snprintf(msg + print, NeMAXLOG - print, "%c", d[i]);
-		}
-	}
-	if (hx) {
-		print += snprintf(msg + print, NeMAXLOG - print, "%02x", d[len - 1]);
-	} else {
-		print += snprintf(msg + print, NeMAXLOG - print, "%c", d[len - 1]);
-	}
-
-	if (fmt)
-		fprintf(location, "%s", msg);
-	else
-		fprintf(location, "%s\n", msg);
-	return print;
 }
-#endif
+/* HIDEOUS */
+const char *NeLogStStr(enum NeLogSt st)
+{
+	switch (st) {
+		case NeStNone:         return "Normal";
+		case NeStBold:         return "Bold";
+		case NeStDim:          return "Dim";
+		case NeStItalics:      return "Italics";
+		case NeStUnder:        return "Underline";
+		case NeStBlink:        return "Blink";
+		case NeStFastBlink:    return "Fast Blink";
+		case NeStReverse:      return "Reverse";
+		case NeStConceal:      return "Conceal";
+		case NeStStrikeout:    return "Strikeout";
+		case NeStFraktur:      return "Fraktur";
+		case NeStNoBold:       return "No Bold";
+		case NeStNoBright:     return "No Bright";
+		case NeStNoItalics:    return "No Italics";
+		case NeStNoUnder:      return "No Underline";
+		case NeStNoBlink:      return "No Blink";
+		case NeStNoReverse:    return "No Reverse";
+		case NeStReveal:       return "Reveal";
+		case NeStNoStrikeout:  return "No Strikeout";
+		case NeStFrame:        return "Frame";
+		case NeStCircle:       return "Circle";
+		case NeStOver:         return "Overline";
+		case NeStNoFrame:      return "No Frame";
+		case NeStNoOver:       return "No Overline";
+		case NeStIUnder:       return "Ideogram Underline";
+		case NeStIDoubleUnder: return "Ideogram Double Underline";
+		case NeStIOver:        return "Ideogram Overline";
+		case NeStIDoubleOver:  return "Ideogram Double Overline";
+		case NeStIStress:      return "Ideogram Stress";
+		case NeStIOff:         return "Ideogram Off";
+		default: return "Invalid";
+	}
+}
+/* HIDEOUS */
+const char *NeLogFnStr(enum NeLogFn fn)
+{
+	switch (fn) {
+		case NeFnNormal: return "Normal";
+		case NeFn1: return "Alternate 1";
+		case NeFn2: return "Alternate 2";
+		case NeFn3: return "Alternate 3";
+		case NeFn4: return "Alternate 4";
+		case NeFn5: return "Alternate 5";
+		case NeFn6: return "Alternate 6";
+		case NeFn7: return "Alternate 7";
+		case NeFn8: return "Alternate 8";
+		case NeFn9: return "Alternate 9";
+		default: return "Invalid";
+	}
+}
+/* HIDEOUS */
+const char *NeLogPrStr(enum NeLogPr pr)
+{
+	switch (pr) {
+		case NePrLast:     return "LAST";
+		case NePrNone:     return "NONE";
+		case NePrNormal:   return "NORMAL";
+		case NePrWarning:  return "WARNING";
+		case NePrError:    return "ERROR";
+		case NePrCritical: return "CRITICAL";
+		case NePrAll:      return "ALL";
+		case NePrDebug:    return "DEBUG";
+		default: return "INVALID";
+	}
+}
+/* HIDEOUS */
+const char *NeLogPrPfx(enum NeLogPr pr)
+{
+	switch (pr) {
+		case NePrNormal:   return NeFmtNormal.pfx;
+		case NePrWarning:  return NeFmtWarning.pfx;
+		case NePrError:    return NeFmtError.pfx;
+		case NePrCritical: return NeFmtCritical.pfx;
+		case NePrDebug:    return NeFmtDebug.pfx;
+		default: return NeFmtClear.pfx;
+	}
+}
+/* HIDEOUS */
+struct NeLogFmt NeLogPrFmt(enum NeLogPr pr)
+{
+	switch (pr) {
+		case NePrNormal:   return NeFmtNormal;
+		case NePrWarning:  return NeFmtWarning;
+		case NePrError:    return NeFmtError;
+		case NePrCritical: return NeFmtCritical;
+		case NePrDebug:    return NeFmtDebug;
+		default: return NeFmtClear;
+	}
+}

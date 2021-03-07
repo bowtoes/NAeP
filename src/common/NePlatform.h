@@ -104,6 +104,7 @@ enum NePlatforms {
 #  define NePLATFORMTYPE_UNIX
 #elif defined(WIN32) || defined(_WIN32) || defined(__WIN32) || defined(__WIN32__)
 #  define NePLATFORMTYPE_WINDOWS
+#  define NeNOLOGCOLORS
 #  if defined(__MINGW32__)
 #    define NePLATFORMTYPE_MINGW
 #  endif

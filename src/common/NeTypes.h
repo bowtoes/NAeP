@@ -16,14 +16,21 @@ typedef uint64_t    NeU8;
 
 /* To be used when representing arbitrary data */
 typedef NeU1        NeBy;
+
 /* Max supported filesize ~ 4GiB */
 typedef NeU4        NeSz;
 #define NeSZMAX     UINT32_MAX
 #define NeSZMIN		0
+
 /* +- Offsets */
 typedef NeS8        NeOf;
 #define NeOFMAX     INT64_MAX
 #define NeOFMIN     INT64_MIN
+
+/* array lengths */
+typedef NeU2        NeCt;
+/* RIFF chunk fourcc */
+typedef NeU4 NeFcc;
 
 /* Neither are guaranteed, screw you floating points */
 typedef float       NeF4;

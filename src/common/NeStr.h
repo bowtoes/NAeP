@@ -10,13 +10,13 @@ struct NeStr {
 
 /* Return length of str excluding null-terminator, up to max */
 NeSz NeStrlen(const char *const str, NeSz max);
-/* Initialize a new string; can be done on top of an existing string.
- * str MUST be initialized (specifically, str.cstr must be NULL or a valid pointer) */
+/* Initialize a new string; can be done on top of an existing string */
+/* Str MUST be initialized (specifically, str.cstr must be NULL or a valid pointer) */
 /* Pass -1 for maxlen to have no maxlen */
 /* Return -1 on error */
 void NeStrNew(struct NeStr *const str, const char *const cstr, NeSz maxlen);
 void NeStrCopy(struct NeStr *const out, const struct NeStr src);
-/* Creates a NeStr without copying cstr */
+/* Creates a NeStr without copying cstr, dangerous if cstr is supposed to be const */
 struct NeStr NeStrShallow(char *cstr, NeSz maxlen);
 
 NeOf NeStrIndexOf(const struct NeStr hay, const struct NeStr ndl, NeSz iof);
@@ -32,9 +32,12 @@ void NeStrJoin(struct NeStr *const out, const struct NeStr a, struct NeStr b);
 /* Same as NeStrJoin, but does so in-place (on str) */
 void NeStrMerge(struct NeStr *const str, const struct NeStr mg);
 
+/* Frees associated memory */
 void NeStrDel(struct NeStr *const str);
 
 /* Last string must be "" or NULL */
 int NeStrCmp(const char *const cmp, int cse, ...);
+
+int NeStrEndswith(const struct NeStr str, const struct NeStr cmp);
 
 #endif /* NeStr_h */

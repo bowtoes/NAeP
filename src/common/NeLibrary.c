@@ -13,27 +13,19 @@ void *
 NeSafeAlloc(void *cur, NeSz size, int zero)
 {
 	if (!size) {
-		NeDEBUGN("SIZE 0");
 		if (cur) {
-			NeDEBUGN(" FREEING");
 			free(cur);
 		}
-		NeDEBUG("");
 		return NULL;
 	}
 	if (zero) {
-		NeDEBUGN("ZEROING %3zu", size);
 		if (cur) {
-			NeDEBUGN(" FREEING");
 			free(cur);
 		}
-		NeDEBUG("");
 		NeASSERTM(cur = calloc(1, size), "Failed to calloc %zu bytes : %m", size);
 	} else if (!cur) {
-		NeDEBUG("MALLOCING %3zu", size);
 		NeASSERTM(cur = malloc(size), "Failed to malloc %zu bytes : %m", size);
 	} else {
-		NeDEBUG("REALLOCING %3zu", size);
 		NeASSERTM(cur = realloc(cur, size), "Failed to realloc %zu bytes : %m", size);
 	}
 
@@ -73,13 +65,13 @@ NeSlice(void *const dst, NeSz dstlen,
 	const NeBy *const s = (const NeBy *const)src;
 	/* can't copy any bytes */
 	if (!src || !dst || !srclen || !dstlen)
-		return 0;
+		return NeLEINVALID;
 
 	start = NeSmartMod(start, srclen, 1);
 	end = NeSmartMod(end, srclen, 1);
 	/* no length of bytes to copy */
 	if (start == end)
-		return 0;
+		return NeLENONE;
 
 	if (start > end) {
 		for (NeOf k = start - 1; k >= end && i < dstlen; --k, ++i)
@@ -111,7 +103,7 @@ NeFind(const void *const hay, NeSz haysz,
 	           *const n = (const NeBy *const)ndl;
 
 	if (!hay || !ndl)
-		return -1;
+		return NeLEINVALID;
 	if (!haysz || !ndlsz || ndlsz > haysz)
 		return haysz;
 
@@ -137,7 +129,7 @@ NeRfind(const void *const hay, NeSz haysz,
 	           *const n = (const NeBy *const)ndl;
 
 	if (!hay || !ndl)
-		return -1;
+		return NeLEINVALID;
 	if (!haysz || !ndlsz || ndlsz > haysz)
 		return haysz;
 

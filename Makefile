@@ -50,9 +50,13 @@ clean:
 	@rmdir -pv $(OBJDIR) > /dev/null 2>&1 || printf ""
 	@rm -fv $(OUTDIR)/$(PROJECT)
 
+again: clean all
+
 install: all
 	@cp -fv $(PROJECT) $(prefix)/bin
 uninstall:
 	@rm -fv $(prefix)/bin/$(PROJECT)
+test: $(PROJECT)
+	./T.py
 
-.PHONY: setup options ass int obj all clean install
+.PHONY: setup options ass int obj all clean again install test

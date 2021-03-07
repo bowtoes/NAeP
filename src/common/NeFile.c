@@ -1,125 +1,151 @@
 #include "common/NeFile.h"
+#include "common/NePlatform.h"
 
 #include <stdint.h>
 #include <stdlib.h>
-#include "common/NePlatform.h"
+#if defined(NePLATFORMTYPE_POSIX)
+#include <sys/stat.h>
+#include <errno.h>
+#endif
+
 #include "common/NeDebugging.h"
 #include "common/NeLogging.h"
 #include "common/NeLibrary.h"
 #include "common/NeMisc.h"
 #include "common/NeStr.h"
 
-/* these will probably need platform specific impls? */
-#if defined(NePLATFORMTYPE_POSIX)
-#define NeFOPEN(path, mode) fopen(path, mode)
-#define NeFCLOSE(file) fclose(file)
-#define NeFSEEK(file, to, wh) fseeko(file, to, wh)
-#define NeFTELL(file) ftello(file)
-#define NeFREAD(into, count, file) fread(into, 1, count, file)
-#define NeFWRITE(from, count, file) fwrite(from, 1, count, file)
-#define NeFFLUSH(file) fflush(file)
-#define NeFEOF(file) feof(file)
-#define NeFERROR(file) ferror(file)
-#else
-#error Unsupported platform
-#endif
+const NeFcc WEEMCC = 0x46464952;
+const NeFcc BANKCC = 0x44484b42;
+const NeFcc OGGSCC = 0x5367674f;
 
-static const char *nnemodestring(enum NeFileMode mode)
-{
-	switch (mode) {
-		case NeModeRead:
-			return "reading";
-		case NeModeWrite:
-			return "writing";
-		case NeModeReadWrite:
-			return "reading+writing";
-		default:
-			return "invalid operation";
+const char *const NeFileModeStr[] = {
+	"invalid operation",
+	"reading",
+	"writing",
+	"reading+writing",
+};
+
+static int nneopen(struct NeFile *f) {
+	int code = NeFENONE;
+	if (f->mode == NeFileModeRead) {
+		f->file = fopen(f->ppp.cstr, "rb");
+	} else if (f->mode == NeFileModeWrite) {
+		if (!f->stat.exist) {
+			f->stat.isnew = 1;
+			f->stat.exist = 1;
+		}
+		f->file = fopen(f->ppp.cstr, "wb+");
+	} else if (f->mode == NeFileModeReadWrite) {
+		if (!f->stat.exist) {
+			f->stat.isnew = 1;
+			f->stat.exist = 1;
+			f->file = fopen(f->ppp.cstr, "wb+");
+		} else {
+			f->file = fopen(f->ppp.cstr, "rb+");
+		}
+	} else {
+		code = NeFEMODE;
 	}
+	if (!f->file && code != NeFEMODE)
+		code = NeFEOPEN;
+	return code;
 }
 
-/* TODO SEEK_END is not universal */
-static NeSz nnefilesize(FILE *file)
-{
-	NeSz s = 0;
-	NeSz p = NeFTELL(file);
-	NeFSEEK(file, 0, SEEK_END);
-	s = NeFTELL(file);
-	NeFSEEK(file, p, SEEK_SET);
-	return s;
-}
-/* TODO platform specific impls */
-#if defined(NePLATFORMTYPE_POSIX)
-#include <sys/stat.h>
-#include <errno.h>
-#else
-#error Unsupported platform
-#endif
-static int nnestat(struct NeFile *const file)
-{
-#if defined(NePLATFORMTYPE_POSIX)
-	struct stat s;
-	if (stat(file->ppp.cstr, &s) == -1) {
-		if (errno != ENOENT || !file->ppp.length)
-			NeTRACE("Could not stat %s : %m", file->ppp.cstr);
-		file->size = 0;
-		return 0;
-	}
-	if (!S_ISREG(s.st_mode))
-		return -1;
-	file->size = s.st_size;
-	return 0;
-#else
-#error Unsupported platform
-#endif
-}
-static int nneopen(struct NeFile *f)
-{
-	switch (f->mode) {
-		case NeModeRead:
-			f->file = NeFOPEN(f->ppp.cstr, "rb");
-			break;
-		case NeModeWrite:
-			f->file = NeFOPEN(f->ppp.cstr, "wb+");
-			break;
-		case NeModeReadWrite:
-			f->file = NeFOPEN(f->ppp.cstr, "rb+");
-			if (!f->file)
-				f->file = NeFOPEN(f->ppp.cstr, "wb+");
-			break;
-		default:
-			NeERROR("Invalid file open mode specified %i", f->mode);
-			return -1;
-	}
-	return 0;
+static NeBy nneeof(struct NeFile *f) {
+	return f->stat.iseof = f->position >= f->size - 1;
 }
 
 int
-NeFileOpen(struct NeFile *const file, const struct NeStr path,
+NeFileStat(struct NeFileStat *fs, NeSz *fsize, const char *const path)
+{
+	int code = NeFENONE;
+	struct stat s;
+	if (!fs)
+		return NeFENONE;
+	*fs = (struct NeFileStat){0};
+	if (stat(path, &s) == 0) {
+		fs->exist = 1;
+		fs->isreg = S_ISREG(s.st_mode);
+		fs->canwt = ((s.st_mode & S_IWUSR) && s.st_uid == getuid()) ||
+			((s.st_mode & S_IWGRP) && s.st_gid == getgid());
+		fs->canrd = ((s.st_mode & S_IRUSR) && s.st_uid == getuid()) ||
+			((s.st_mode & S_IRGRP) && s.st_gid == getgid());
+		if (fsize) *fsize = s.st_size;
+	} else {
+		if (errno != ENOENT)
+			code = NeFESTAT;
+		if (fsize) *fsize = 0;
+	}
+	return code;
+}
+
+int
+NeFileOpen(struct NeFile *const file, const char *const path,
         enum NeFileMode mode)
 {
 	struct NeFile f = {0};
+	int err = NeFENONE;
 
-	if (!file || !path.length)
-		return 0;
-	if (path.length > NeMAXPATH) {
-		NeERROR("File path %s must have less than %u characters", path, NeMAXPATH);
-		return -1;
-	}
-	NeStrCopy(&f.ppp, path);
-	if (nnestat(&f) != 0) {
-		NeERROR("Could not stat %s : %m", f.ppp.cstr);
-		NeStrDel(&f.ppp);
-		return -1;
-	}
+	if (!file || !path || !*path)
+		return err;
+
+	NeStrNew(&f.ppp, path, -1);
 	f.mode = mode;
-	if (nneopen(&f) == -1) {
-		NeERROR("Failed to open %s for %s : %m", path, nnemodestring(mode));
-		NeStrDel(&f.ppp);
-		return -1;
+	if ((err = NeFileStat(&f.stat, &f.size, path)) != NeFENONE) {
+		NeERROR("Could not stat %s : %m", path);
+	} else {
+		if (!f.stat.isreg) {
+			NeERROR("%s is not a regular file", path);
+			err = NeFEREG;
+		} else if ((err = nneopen(&f)) != NeFENONE) {
+			if (err == NeFEMODE)
+				NeERROR("Invalid mode passed to open for %s : %i", path, mode);
+			else
+				NeERROR("Failed to open %s for %s : %m", path, NeFileModeStr[mode]);
+			err = NeFEOPEN;
+		} else {
+			nneeof(&f);
+		}
 	}
+
+	if (err) {
+		NeStrDel(&f.ppp);
+		f.mode = NeFileModeNone;
+		f.status = 0;
+	}
+
 	*file = f;
-	return 0;
+	return err;
+}
+
+void
+NeFileClose(struct NeFile *const file)
+{
+	if (!file || !file->file)
+		return;
+	if (fclose(file->file) != 0)
+		NeTRACE("Failed to close file %s : %m", file->ppp.cstr);
+	file->file = NULL;
+	file->position = 0;
+	file->size = 0;
+	file->status = 0;
+	NeStrDel(&file->ppp);
+}
+
+void
+NeFileReopen(struct NeFile *const file, enum NeFileMode newmode)
+{
+	struct NeStr p = {0};
+	if (!file)
+		return;
+	if (newmode == file->mode) {
+		NeFileReset(file);
+		return;
+	}
+	NeStrCopy(&p, file->ppp);
+	NeFileClose(file);
+	NeFileOpen(file, p.cstr, newmode);
+	NeStrDel(&p);
 }
 
 void
@@ -130,23 +156,23 @@ NeFileSkip(struct NeFile *const file, NeOf bytes)
 	if (!bytes || !file || !f->file)
 		return;
 	newpos = NeSmartMod(bytes + (NeOf)file->position, file->size, 0);
-	NeFSEEK(f->file, newpos, SEEK_SET);
+	fseek(f->file, newpos, SEEK_SET);
 	f->position = newpos;
+	nneeof(f);
 }
 
 void
 NeFileJump(struct NeFile *const file, NeSz position)
 {
-	struct NeFile *f = (struct NeFile *)file;
-	if (!file || !f->file || f->position == position)
+	if (!file || !file->file || file->position == position)
 		return;
-	if (position >= f->size) {
+	if (position >= file->size) {
 		NeWARNING("Jumped past EOF");
-		NeDEBUG("POS 0x%08x SZ 0x%08x OFS 0x%08x", position, f->size, f->position);
-		position = f->size - 1;
+		NeDEBUG("POS 0x%08x SZ 0x%08x OFS 0x%08x", position, file->size, file->position);
 	}
-	NeFSEEK(f->file, position, SEEK_SET);
-	f->position = position;
+	fseek(file->file, position, SEEK_SET);
+	file->position = position;
+	nneeof(file);
 }
 
 void
@@ -156,7 +182,7 @@ NeFileReset(struct NeFile *const file)
 	if (!file || !f->file)
 		return;
 
-	NeFFLUSH(file->file);
+	fflush(file->file);
 	NeFileJump(file, 0);
 }
 
@@ -169,16 +195,18 @@ NeFileStream(struct NeFile *const file, void *dst, NeSz dstlen)
 		return 0;
 
 	blk = NeSafeAlloc(NULL, dstlen, 1);
-	rd = NeFREAD(blk, dstlen, file->file);
-	if (NeFERROR(file->file)) {
+	rd = fread(blk, 1, dstlen, file->file);
+	if (ferror(file->file) != 0) {
 		NeERROR("Failed to read %zu bytes from %s : %m", dstlen, file->ppp.cstr);
-		rd = -1;
+		clearerr(file->file);
+		rd = NeFEREAD;
 	} else { /* copy tmp into dst */
 		NeCopy(dst, dstlen, blk, rd);
 		file->position += rd;
 	}
 	blk = NeSafeAlloc(blk, 0, 0);
 
+	nneeof(file);
 	return rd;
 }
 
@@ -221,49 +249,13 @@ NeFileWrite(struct NeFile *const file, const void *const data, NeSz datalen)
 {
 	NeSz wt = 0;
 	struct NeFile *f = (struct NeFile *)file;
-	if (!file || !f->file || !(f->mode & NeModeWrite) || !data || !datalen)
+	if (!file || !f->file || !(f->mode & NeFileModeWrite) || !data || !datalen)
 		return 0;
 
-	if ((wt = NeFWRITE(data, datalen, f->file)) != datalen) {
+	if ((wt = fwrite(data, 1, datalen, f->file)) != datalen) {
 		NeERROR("Failed to write %zu bytes to %s : %m", datalen, f->ppp.cstr);
 	}
 	f->position += wt;
+	nneeof(f);
 	return wt;
-}
-
-int
-NeFileEOF(const struct NeFile file)
-{
-	return file.position == file.size - 1;
-}
-
-int
-NeFileClose(struct NeFile *const file)
-{
-	if (!file || !file->file)
-		return 0;
-	if (NeFCLOSE(file->file) != 0)
-		NeTRACE("Failed to close file %s : %m", file->ppp.cstr);
-	file->file = NULL;
-	file->position = 0;
-	file->size = 0;
-	NeStrDel(&file->ppp);
-	return 0;
-}
-
-int
-NeFileReopen(struct NeFile *const file, enum NeFileMode newmode)
-{
-	struct NeStr p = {0};
-	if (!file)
-		return 0;
-	if (newmode == file->mode) {
-		NeFileReset(file);
-		return 0;
-	}
-	NeStrCopy(&p, file->ppp);
-	NeFileClose(file);
-	NeFileOpen(file, p, newmode);
-	NeStrDel(&p);
-	return 0;
 }

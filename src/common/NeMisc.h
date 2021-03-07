@@ -24,6 +24,7 @@
 			(((d) & 0x20) >> 5),\
 			(((d) & 0x40) >> 6),\
 			(((d) & 0x80) >> 7)
+#define NeTOGGLE(a) ((a)=!(a))
 
 /* Return 'in % mod', with overflow checking */
 NeOf NeGCF(NeOf a, NeOf b);

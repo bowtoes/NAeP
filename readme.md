@@ -34,7 +34,7 @@ to ogg with [ww2ogg][ww2ogg], and then re-encoded into a playable form with [rev
 ## Capabilities
 What the program can/will be able to do:
 1. [ ] Wisp Extraction:  
-   * [x] Extract all weems embedded in arguments to separate, individual files.  
+   * [ ] Extract all weems embedded in arguments to separate, individual files.  
    * [ ] Extract all weems AND convert those weems to oggs.  
    * [ ] Convert all embedded weems to ogg files directly, without extracting them.  
 2. [ ] Bank Extraction:  

@@ -1,5 +1,6 @@
 #include "common/NeStr.h"
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
@@ -204,4 +205,16 @@ NeStrCmp(const char *const cmp, int cse, ...)
 	}
 	va_end(lptr);
 	return i;
+}
+
+int
+NeStrEndswith(const struct NeStr str, const struct NeStr cmp)
+{
+	int c = 1;
+	if (!str.length || !cmp.length || cmp.length > str.length)
+		return 0;
+	for (NeSz i = 0; i < cmp.length && c; ++i) {
+		c &= cmp.cstr[i] == str.cstr[str.length - cmp.length + i];
+	}
+	return c;
 }

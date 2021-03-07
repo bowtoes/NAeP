@@ -9,27 +9,50 @@
 #include "common/NeMisc.h"
 #include "common/NeStr.h"
 #include "wisp/NeWisp.h"
-#include "NeArg.h"
 
+#if 0
+#define TEST(a, b) do { \
+	printf("%s %s end with %s\n", a.cstr, NeStrEndswith(a, b)?"does":"does not", b.cstr); \
+	printf("%s %s end with %s\n", b.cstr, NeStrEndswith(b, a)?"does":"does not", a.cstr); \
+} while (0);
+int main(int argc, char **argv) {
+	struct NeStr a = NeStrShallow("woah.mp4.as", -1),
+				 b = NeStrShallow(".mp4.as", -1),
+				 c = NeStrShallow(".as", -1);
+	TEST(a,b);
+	TEST(a,c);
+	TEST(b,c);
+}
+#else
 static const char *const usg =
 "Usage: NAeP [[OPTIONS] FILE]..."
-"\n Options:"
-"\n     Options take affect on all files placed1after, and can be overwritten per file."
-"\n         -h, -help, -v   Print this help."
-"\n         -q, -quiet      Turn off superfluous logging."
-"\n         -a, -auto       Filetype is automatically determined."
-"\n         -W, -wisp       File is a wisp (.wsp) file; extract all weems from it."
-"\n         -w, -weem       File is a weem (.wem) file; convert to ogg."
-"\n         -b, -bank       File is a bank (.bnk) file; extract all weems found in it."
-"\n         -R, -recurse    Recursively extract all weems referenced in each bank file,"
-"\n                             if they're found in the given bank files."
-"\n         -o, -ogg        Automatically convert extracted weem files into ogg/vorbis."
-"\n         -r, -revorb     Automatically revorb converted ogg files."
+"\nOptions:"
+"\n    Options take affect on all files following and can be toggled."
+"\n        -h, -help, -v        Print this help."
+"\n    File Type Specification:"
+"\n        -a, -auto, -detect   Autodetect filetype from header or extension"
+"\n        -w, -wem, -weem      File(s) are weems to be converted to ogg."
+"\n        -W, -wsp, -wisp      File(s) are wisps to have their weems extracted."
+"\n        -b, -bnk, -bank      File(s) are banks to extract all referenced weems."
+"\n        -o, -ogg             File(s) are ogg files to be revorbed."
+"\n    Processing options:"
+"\n        -R, -recurse         Search passed bank files for all referenced weems."
+"\n        -O, -weem2ogg        Convert extracted weems to oggs."
+"\n        -oi, -ogg-inplace    All weem-to-ogg conversion is done in place;"
+"\n                             weems are replaced with oggs."
+"\n        -r, -revorb          All extracted/specified oggs are revorbed."
+"\n        -ri, -rvb-inplace    Revorptions are done in place."
+"\n    Miscellaneous options:"
+"\n        -d, -debug           Enable debug output, irrespective of quiet settings."
+"\n        -c, -color           Toggle color logging."
+"\n        -q, -quiet           Suppress all non-critical output."
+"\n        -Q, -qq, -too-quiet  Suppress all output."
 ;
+
 static void printhelp()
 {
 	NeNORMAL("NAeP - NieR: Automata extraction Protocol");
-	NeNORMAL("Compiled on %s %s", __DATE__, __TIME__);
+	NeNORMAL("Compiled on %s %s\n", __DATE__, __TIME__);
 	fprintf(stdout, "%s\n", usg);
 	exit(0);
 }
@@ -39,56 +62,166 @@ static void printhelp()
  * specific options. Then go through the list and yada yada, do the extractions/conversions.
  * */
 
-#if 1
-int main(int argc, char **argv)
-{
-	for (int p = 0; p < NePriorityCount; ++p) {
-		for (int f = 0; f < NeColorCount; ++f) {
-			for (int b = 0; b < NeColorCount; ++b) {
-				for (int s = 0; s < NeStyleCount; ++s) {
-					for (int n = 0; n < NeFontCount; ++n) {
-						struct NeLogFormat fmt = {f, b, s, n};
-						NeLOGFM(p, f, b, s, n, 1, "Pr:%02i %s\tFg:%02i %s\tBg:%02i %s\tSt:%02i %s\tFn:%02i %s\t",
-								p, NeLogPriorityStr(p),
-								NeForegroundIndex(fmt), NeLogColorStr(f),
-								NeBackgroundIndex(fmt), NeLogColorStr(b),
-								NeStyleIndex(fmt), NeLogStyleStr(s),
-								NeFontIndex(fmt), NeLogFontStr(n));
-					}
-				}
-			}
-		}
-	}
-}
-#else
+#include "NeArg.h"
+struct NeArgOpt def = {0};
 int main(int argc, char **argv)
 {
 	struct NeArgOpt opt = {0};
 	struct NeArgs args = {0};
 	char *arg = argv[1];
+	NeCt maxargs = 1024;
 
-	opt.wisp = 1;
+	def.loglevel = NePrAll;
+	def.logcolor = 1;
+	opt = def;
+
 	if (argc == 1)
 		printhelp();
+
+	/* Parse arguments */
 	for (int i = 1; i < argc; ++i, arg = argv[i]) {
-		NeSz t = NeParseArg(arg, &opt, &args);
-		if (args.maxarg == -1) {
-			NeERROR("WOah there, too many files!");
-			break;
-		} else if (args.maxarg == -2) {
+		struct NeArg narg = {0}, *t;
+		if (NeStrCmp(arg, 1, "-h", "-help", "--help", "-v", "-version", "--version", NULL)) {
 			printhelp();
+		} else if (NeStrCmp(arg, 0, "-a", "-auto", "-detect", NULL)) {
+			opt.weem = opt.wisp = opt.bank = opt.oggs = 0; continue;
+		} else if (NeStrCmp(arg, 0, "-w", "-wem", "-weem", NULL)) {
+			opt.weem = 1; opt.oggs = opt.wisp = opt.bank = 0; continue;
+		} else if (NeStrCmp(arg, 0, "-W", "-wsp", "-wisp", NULL)) {
+			opt.wisp = 1; opt.weem = opt.oggs = opt.bank = 0; continue;
+		} else if (NeStrCmp(arg, 0, "-b", "-bnk", "-bank", NULL)) {
+			opt.bank = 1; opt.weem = opt.wisp = opt.oggs = 0; continue;
+		} else if (NeStrCmp(arg, 0, "-o", "-ogg", NULL)) {
+			opt.oggs  = 1; opt.weem = opt.wisp = opt.bank = 0; continue;
+		} else if (NeStrCmp(arg, 0, "-R", "-recurse", NULL)) {
+			NeTOGGLE(opt.bankrecurse); continue;
+		} else if (NeStrCmp(arg, 0, "-O", "-weem2ogg", NULL)) {
+			NeTOGGLE(opt.autoogg); continue;
+		} else if (NeStrCmp(arg, 0, "-oi", "-ogg-inplace", NULL)) {
+			NeTOGGLE(opt.ogginplace); continue;
+		} else if (NeStrCmp(arg, 0, "-r", "-revorb", NULL)) {
+			NeTOGGLE(opt.autorvb); continue;
+		} else if (NeStrCmp(arg, 0, "-ri", "-rvb-inplace", NULL)) {
+			NeTOGGLE(opt.rvbinplace); continue;
+		} else if (NeStrCmp(arg, 0, "-d", "-debug", NULL)) {
+			NeTOGGLE(opt.logdebug); continue;
+		} else if (NeStrCmp(arg, 0, "-c", "-color", NULL)) {
+			NeTOGGLE(opt.logcolor); continue;
+		} else if (NeStrCmp(arg, 0, "-q", "-quiet", NULL)) {
+			opt.loglevel = opt.loglevel - 1 < 0 ? 0 : opt.loglevel - 1; continue;
+		} else if (NeStrCmp(arg, 0, "-Q", "-qq", "-too-quiet", NULL)) {
+			NeTOGGLE(opt.logoff); continue;
+		} else if ((t = NeFindArg(args, arg))) {
+			t->opt = opt; opt = def; continue;
 		}
+
+		NeStrNew(&narg.arg, arg, -1);
+		narg.opt = opt;
+
+		if (narg.arg.length > args.maxarg)
+			args.maxarg = narg.arg.length;
+		args.argcount++;
+		args.args = NeSafeAlloc(args.args, args.argcount * sizeof(struct NeArg), 0);
+		args.args[args.argcount - 1] = narg;
+		opt = def; /* only for testing */
 	}
+
+	/* Process files */
 	if (args.argcount) {
-		for (int i = 0; i < args.argcount; ++i) {
-			NeProcessArg(args.list[i], args.maxarg);
+		struct NeArg *arg = &args.args[0];
+		struct NeFileStat stat;
+		struct NeFile afile;
+		NeLogLevelSet(NePrDebug);
+		for (int i = 0; i < args.argcount; ++i, arg = &args.args[i]) {
+			//NeLogLevelSet(arg->opt.logdebug?NePrDebug:arg->opt.loglevel);
+			//NeLogColorState(arg->opt.logcolor);
+			NeFileStat(&stat, NULL, arg->arg.cstr);
+			if (!stat.exist || !stat.isreg || (!stat.canwt && (arg->opt.ogginplace || arg->opt.rvbinplace)) || !stat.canrd) {
+				NeWARNINGN("Cannot parse ");
+				NePREFIXNST(-1, NeClCyan, -1, NeStBold, "%s", arg->arg.cstr);
+				NePREFIXN(-1, " : ");
+				if (!stat.exist)
+					NePREFIXST(-1, NeClGreen, -1, NeStBold, "File does not exist.");
+				else if (!stat.isreg)
+					NePREFIXST(-1, NeClBlue, -1, NeStBold, "File is not regular.");
+				else if (!stat.canwt)
+					NePREFIXST(-1, NeClGreen, -1, NeStBold, "Cannot write to file for in-place convert/revorb.");
+				else if (!stat.canrd)
+					NePREFIXST(NePrWarning, NeClGreen, -1, NeStBold, "Cannot read file.");
+				continue;
+			}
+			if (NeFileOpen(&afile, arg->arg.cstr, NeFileModeReadWrite) != NeFENONE) {
+				NeERRORN("Could not open ");
+				NePREFIXNST(NePrError, NeClCyan, -1, NeStBold, "%s", arg->arg.cstr);
+				NePREFIXN(NePrError, " for parsing.");
+				continue;
+			}
+			NeNORMALN("Parsing ");
+			//NePREFIXFG(NePrNormal, NeClCyan, "Parsing %-*s", args.maxarg, arg->arg.cstr);
+			if ((arg->opt.oggs | arg->opt.weem | arg->opt.wisp | arg->opt.bank) == 0) {
+				NeDetectType(arg, &afile);
+			}
+			NePrintArg(*arg, args.maxarg);
+			if (arg->opt.oggs) {
+			} else if (arg->opt.weem) {
+			} else if (arg->opt.wisp) {
+			} else if (arg->opt.bank) {
+			} else {
+				NeERRORN("Could not determine filetype for ");
+				NePREFIXNFG(NePrError, NeClCyan, "%s", arg->arg);
+				NePREFIX(NePrError, ", cannot parse");
+			}
+			NeFileClose(&afile);
 		}
 	} else {
-		if (!opt.quiet) {
-			NeERROR("No files passed");
-		}
+		NeLogLevelSet(opt.logdebug ? NePrDebug : opt.loglevel);
+		NeERROR("No files passed");
 	}
 
 	return 0;
 }
+
+#if 0
+static int extractwisp(struct NeArg a, struct NeWeem **dst) {
+	struct NeWeem *d = *dst;
+	struct NeWisp wsp = {0};
+	struct NeStr wispPath, tempPath = {0};
+	NeSz dgt = 0;
+	int wemcount = 0, err = 0;
+
+	if (!NeWispOpen(&wsp, a.arg)) {
+		NeERROR("Failed to open %s for wisp extraction");
+		dst = NULL;
+		return 0;
+
+	}
+	wispPath = wsp.file.ppp;
+	NeStrSlice(&tempPath, wispPath, 0, NeStrRindex(wispPath, NeStrShallow(".", 1), wispPath.length));
+
+	d = NeSafeAlloc(d, wsp.wemCount * sizeof(*d), 1);
+	for (int i = 0; i < wsp.wemCount; ++i) {
+		struct NeWem wem = wsp.wems[i];
+		struct NeWeem w = {0};
+		NeSz wrt = 0;
+
+		NeStrPrint(&w.outpath, 0, NeMAXPATH - 4, "%s_%0*u", tempPath.cstr, dgt, i);
+		NeStrPrint(&w.outpath, w.outpath.length, NeMAXPATH, "%s", ".wem");
+		w.size = wem.size;
+
+		while (wrt < wem.size + 8) {
+			NeSz rd = 0;
+			w.data = NeSafeAlloc(w.data, wrt + NeBLOCKSIZE, 0);
+			rd = NeFileSegment(&wsp.file, w.data + wrt, NeBLOCKSIZE, wem.offset + wrt, wem.offset + wem.size + 8);
+			if (rd == -1) {
+				err = 1;
+				break;
+			}
+			wrt += rd;
+		}
+		wemcount++;
+	}
+	NeWispClose(&wsp);
+	return wemcount;
+}
+#endif
 #endif

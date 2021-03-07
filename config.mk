@@ -26,18 +26,20 @@ WRNS=-Wall -Wextra -Wformat-security\
 	 -Werror=implicit-function-declaration\
 	 -Wno-unused-function -Wno-unused-variable -Wno-unused-parameter\
 	 -Wno-sign-compare -Wno-misleading-indentation -Wno-comment\
+	 -Wno-format-zero-length
 
 # compiler 'define' arguments
 DEFS=-D$(shell echo $(PROJECT) | tr a-z A-Z)_MAJOR=$($(PROJECT)_MAJOR)\
 	 -D$(shell echo $(PROJECT) | tr a-z A-Z)_MINOR=$($(PROJECT)_MINOR)\
 	 -D$(shell echo $(PROJECT) | tr a-z A-Z)_REVIS=$($(PROJECT)_REVIS)\
-	 -DNeASSERTS -DNeLOGGING\
-	 -D_POSIX_C_SOURCE=200112L -D_FILE_OFFSET_BITS=64
+	 -DNeASSERTS -DNeLOGGING -DNeLOGCOLORS -DNeLOGFLUSH\
+	 -DNeDEBUGGING\
+	 -D_POSIX_C_SOURCE=200112L -D_FILE_OFFSET_BITS=64\
 
 PRF=
-#PRF=-pg -no-pie
-OPT=-O3 -Ofast
-OPT=-g
+PRF=-pg -no-pie
+OPT=-O0
+#OPT=-O3 -Ofast
 $(PROJECT)_CFLAGS=-std=c11 $(OPT) $(PRF) $(WRNS) $(INCS) $(CFLAGS)
 $(PROJECT)_CPPFLAGS=$(DEFS) $(STCPPFLAGS) $(CPPFLAGS)
 $(PROJECT)_LDFLAGS=$(LDFLAGS) -logg -lvorbis $(PRF)

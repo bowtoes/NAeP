@@ -30,8 +30,12 @@
 #    endif
 #  endif /* !NeBREAK */
 #  define NeHASBREAK
-#  define NeASSERTS
-#  define NeTRACING
+#  if !defined(NeASSERTS)
+#    define NeASSERTS
+#  endif
+#  if !defined(NeTRACING)
+#    define NeTRACING
+#  endif
 #
 #else
 #  define NeBREAK()
