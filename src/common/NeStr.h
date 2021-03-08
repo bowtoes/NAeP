@@ -10,8 +10,10 @@ struct NeStr {
 
 /* Return length of str excluding null-terminator, up to max */
 NeSz NeStrlen(const char *const str, NeSz max);
+
+/* Str MUST MUST MUST be initialized (specifically, str.cstr must be NULL or a
+ * valid pointer) */
 /* Initialize a new string; can be done on top of an existing string */
-/* Str MUST be initialized (specifically, str.cstr must be NULL or a valid pointer) */
 /* Pass -1 for maxlen to have no maxlen */
 void NeStrNew(struct NeStr *const str, const char *const cstr, NeSz maxlen);
 void NeStrCopy(struct NeStr *const out, const struct NeStr src);

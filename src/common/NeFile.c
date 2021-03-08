@@ -94,7 +94,7 @@ NeFileOpen(struct NeFile *const file, const char *const path,
 	if ((err = NeFileStat(&f.stat, &f.size, path)) != NeERGNONE) {
 		NeERROR("Could not stat %s : %m", path);
 	} else {
-		if (!f.stat.isreg) {
+		if (!f.stat.isreg && f.stat.exist) {
 			NeERROR("%s is not a regular file", path);
 			err = NeERFTYPE;
 		} else if ((err = nneopen(&f)) != NeERGNONE) {
@@ -118,11 +118,12 @@ NeFileOpen(struct NeFile *const file, const char *const path,
 	return err;
 }
 
-void
+int
 NeFileClose(struct NeFile *const file)
 {
+	int code = NeERGNONE;
 	if (!file || !file->file)
-		return;
+		return NeERGNONE;
 	if (fclose(file->file) == 0) {
 		file->file = NULL;
 		file->position = 0;
@@ -130,8 +131,10 @@ NeFileClose(struct NeFile *const file)
 		file->status = 0;
 	} else {
 		NeERROR("Failed to close file %s : %m", file->ppp.cstr);
+		code = NeERFFILE;
 	}
 	NeStrDel(&file->ppp);
+	return code;
 }
 
 void

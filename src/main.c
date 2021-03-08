@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <alloca.h>
 
+#include "common/NeDebugging.h"
 #include "common/NeLogging.h"
 #include "common/NeLibrary.h"
 #include "common/NeMisc.h"
@@ -162,10 +163,10 @@ int main(int argc, char **argv)
 			}
 			NeNORMALN("Parsing ");
 			NePREFIXNFG(NePrNormal, NeClMagenta, "%*i / %*i ", args.argdigit, i + 1, args.argdigit, args.argcount);
+			NePrintArg(*arg, args.maxarg);
 			if ((arg->opt.oggs | arg->opt.weem | arg->opt.wisp | arg->opt.bank) == 0) {
 				NeDetectType(arg, &afile);
 			}
-			NePrintArg(*arg, args.maxarg);
 			if (arg->opt.oggs) {
 				NePREFIXFG(NePrNormal, NeClBlue, "%-*s", args.maxarg, arg->arg.cstr);
 				NeRevorbOgg(*arg, &afile);
@@ -183,7 +184,9 @@ int main(int argc, char **argv)
 				NePREFIXNFG(NePrError, NeClCyan, "%s", arg->arg);
 				NePREFIX(NePrError, ", cannot parse");
 			}
-			NeFileClose(&afile);
+			if (NeFileClose(&afile) != NeERGNONE) {
+				NeTRACE("AAA");
+			}
 		}
 	} else {
 		NeLogLevelSet(opt.logdebug ? NePrDebug : opt.loglevel);

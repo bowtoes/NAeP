@@ -40,9 +40,18 @@ NeStrNew(struct NeStr *const str, const char *const cstr, NeSz maxlen)
 }
 
 void
+NeStrDel(struct NeStr *const str)
+{
+	if (!str)
+		return;
+	str->cstr = NeSafeAlloc(str->cstr, 0, 0);
+	str->length = 0;
+}
+
+void
 NeStrCopy(struct NeStr *const out, const struct NeStr src)
 {
-	return NeStrNew(out, src.cstr, src.length);
+	NeStrNew(out, src.cstr, src.length);
 }
 
 struct NeStr
@@ -157,15 +166,6 @@ NeStrMerge(struct NeStr *const str, const struct NeStr mg)
 	str->cstr = NeSafeAlloc(str->cstr, str->length + 1, 0);
 	for (NeSz i = str->length - mg.length; i < str->length; ++i)
 		str->cstr[i] = mg.cstr[i - str->length + mg.length];
-}
-
-void
-NeStrDel(struct NeStr *const str)
-{
-	if (!str)
-		return;
-	str->cstr = NeSafeAlloc(str->cstr, 0, 0);
-	str->length = 0;
 }
 
 int

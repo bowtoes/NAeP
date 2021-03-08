@@ -52,7 +52,7 @@ int NeFileOpen(struct NeFile *const file, const char *const path,
 
 /* Closes file */
 /* Fails gracefully*/
-void NeFileClose(struct NeFile *const file);
+int NeFileClose(struct NeFile *const file);
 /* Reopens given file with given mode */
 void NeFileReopen(struct NeFile *const file, enum NeFileMode newmode);
 

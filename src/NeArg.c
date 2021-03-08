@@ -60,15 +60,15 @@ void
 NeDetectType(struct NeArg *arg, struct NeFile *f)
 {
 	NeFcc fcc;
-	if (NeFileStream(f, &fcc, 4) != NeERFREAD) {
+	if (NeFileSegment(f, &fcc, 4, 0, 4) != NeERFREAD) {
 		if (fcc == WEEMCC) {
 			if (NeStrEndswith(f->ppp, NeStrShallow(".wsp", 4)))
 				arg->opt.wisp = 1;
 			else if (NeStrEndswith(f->ppp, NeStrShallow(".wem", 4)))
 				arg->opt.weem = 1;
+			/* assume wisp because wisps are a superset of weems */
 			else
 				arg->opt.wisp = 1;
-			/* assume wisp because wisps are a superset of weems */
 		} else if (fcc == BANKCC) {
 			arg->opt.bank = 1;
 		} else if (fcc == OGGSCC) {
@@ -85,38 +85,48 @@ int
 NeRevorbOgg(struct NeArg arg, struct NeFile *f)
 {
 	struct NeFile out;
-	struct NeStr op;
-	int suc = 1;
+	struct NeStr op = {0};
+	int code = NeERGNONE;
 	if (!f || !f->stat.exist)
-		return 0;
+		return code;
 
+	NeStrCopy(&op, f->ppp);
+	NeStrPrint(&op, NeStrRindex(f->ppp, NeStrShallow(".", 1), f->ppp.length), f->ppp.length + 10, "_rvb.ogg");
 	if (!arg.opt.dryrun) {
-		NeStrCopy(&op, f->ppp);
-		NeStrMerge(&op, NeStrShallow(".tmp", 4));
+		NeDEBUGN("Open ");
+		NePREFIXNFG(NePrDebug, NeClCyan, "%s", op.cstr);
+		NePREFIX(NePrDebug, " for revorbtion output");
 		if (NeFileOpen(&out, op.cstr, NeFileModeWrite) != NeERGNONE) {
 			NeERROR("Failed to open %s for revorb output : %m", op.cstr);
-			suc = 0;
+			code = NeERFFILE;
 		} else if (revorb(f->file, out.file) != NeERGNONE) {
 			NeERROR("Failed to revorb %s", f->ppp.cstr);
-			suc = 0;
+			code = NeERRREVORB;
 		}
-		if (suc && arg.opt.rvbinplace)
-			NeDEBUG("TODO MOVE %s -> %s", op.cstr, f->ppp.cstr);
-		NeStrDel(&op);
+		if (code == NeERGNONE && arg.opt.rvbinplace) {
+			NeDEBUGN("Move ");
+			NePREFIXNFG(NePrDebug, NeClCyan, "%s", op.cstr);
+			NePREFIXN(NePrDebug, " -> ");
+			NePREFIXFG(NePrDebug, NeClCyan, "%s", f->ppp.cstr);
+			if (rename(op.cstr, f->ppp.cstr) != 0) {
+				NeERROR("Failed to rename %s to %s : %m", op.cstr, f->ppp.cstr);
+				code = NeERFFILE;
+			}
+		}
 	} else {
-		NeNORMALN("Opened ");
-		NePREFIXNFG(NePrNormal, NeClCyan, "%s.tmp", f->ppp.cstr);
-		NePREFIX(NePrNormal, " for revorbtion output");
-		NeNORMALN("Moved ");
-		NePREFIXNFG(NePrNormal, NeClCyan, "%s.tmp", f->ppp.cstr);
-		NeNORMALN(" -> ");
-		if (arg.opt.rvbinplace)
-			NePREFIXFG(NePrNormal, NeClCyan, "%s", f->ppp.cstr);
-		else
-			NePREFIXFG(NePrNormal, NeClCyan, "%.*s_rvb.ogg", NeStrRindex(f->ppp, NeStrShallow(".", 1), f->ppp.length), f->ppp.cstr);
+		NeDEBUGN("Open ");
+		NePREFIXNFG(NePrDebug, NeClCyan, "%s", op.cstr);
+		NePREFIX(NePrDebug, " for revorbtion output");
+		if (arg.opt.rvbinplace) {
+			NeDEBUGN("Move ");
+			NePREFIXNFG(NePrDebug, NeClCyan, "%s", op.cstr);
+			NePREFIXN(NePrDebug, " -> ");
+			NePREFIXFG(NePrDebug, NeClCyan, "%s", f->ppp.cstr);
+		}
 	}
+	NeStrDel(&op);
 
-	return suc;
+	return code;
 }
 int
 NeConvertWeem(struct NeArg arg, struct NeFile *f)

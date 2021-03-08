@@ -44,9 +44,9 @@ What the program can/will be able to do:
 3. [ ] Weem-to-ogg Conversion:  
    * [ ] All passed weems (and extracted weems, if specified) are converted to ogg,
      either in-place or to separate files.
-4. [ ] Ogg Revorption:  
-    * [ ] All passed oggs (and generated oggs, if specified) are revorbed, either in-place
-     or to separate files (`..._revorb.ogg`).
+4. [x] Ogg Revorption:  
+    * [x] All passed oggs are revorbed, either in-place or to separate files (`..._rvb.ogg`).
+    * [ ] All generated oggs can be similarly revorbed automatically.
 5. Videos:  
     * Maybe? If so then:
       * [ ] Video extraction.

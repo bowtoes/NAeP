@@ -57,6 +57,8 @@ install: all
 uninstall:
 	@rm -fv $(prefix)/bin/$(PROJECT)
 test: $(PROJECT)
-	./T.py
+	@test/test-dryrun.py
+test-ogg: $(PROJECT)
+	@test/test-ogg.py
 
 .PHONY: setup options ass int obj all clean again install test
