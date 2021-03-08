@@ -5,9 +5,10 @@
 1. [Goal](#goal)
 2. [Present](#present)
    1. [Usage](#usage)
-3. [Plan](#plan)
+3. [Capabilities](#capabilities)
 4. [Build](#build)
    1. [Linux](#linux)
+5. [Todo](#todo)
 
 # Goal
 Extract the media files stored within NieR: Automata's data archives into a
@@ -18,18 +19,17 @@ however I thought it could be done better and more cross platform; this is an at
 at that.
 
 ## Present
-Currently, all this does is extract all `.wem` files embedded in `.wsp` files; it
-doesn't do anything like convert the Wwise audio to ogg (like [ww2ogg][ww2ogg], yet)
-or [revorb][revorbc] the files (yet); it is the plan to have those processes
-integrated into this single program however.
+List of features, planned and implemented, is at [Capabilities](#capabilities).
+Revorption is done using modified code of [revorb][revorb] (custom version at [revorbc][revorbc]).
+Weem-to-ogg conversion is not implemented yet; may or may not make use of similar code
+from [ww2ogg][ww2ogg], to be seen.
 
 ### Usage
-Run `NAeP` on any number of `.wsp` (wisp) files and the program will extract all
-embedded `.wem` (weem) files, with an incrementing numerical suffix on the original
-wisp filename. Most of these files (though not all for some reason) can be converted
-to ogg with [ww2ogg][ww2ogg], and then re-encoded into a playable form with [revorb][revorbc].
-
-* [ ] Video extraction? Maybe.  
+All command-line options are viewable by passing any of `-h`, `-help`, or `-version`.
+Most options are toggleable, meaning, for example, passing `-w` before a bunch of files,
+all those files will be parsed as weems. Passing `-w` again means any files after
+will be not be parsed as weems and instead will be parsed differently, depending
+on the `state` of other options.
 
 ## Capabilities
 What the program can/will be able to do:
@@ -62,10 +62,10 @@ What the program can/will be able to do:
 ## Build
 I only have a linux system and do not have convenient access to a Windows system, so
 for now there is only a Make build system; the plan is to eventually make this at least
-cross-platform and cross-compilable between linux and Windows, maybe more in the future.
+cross-platform and eventually cross-compilable between linux and Windows, maybe more in the future.
 
 ### Linux
-To build, simply run `make` in the top level directory; there is `config.mk` for configuring
+Assumes GNU Make. To build, simply run `make` in the top level directory; there is `config.mk` for configuring
 different build parameters and output directories.
 
 ## Todo
@@ -75,3 +75,4 @@ of data storage (wisp, weem, bank, ...) used in NieR: Automata.
 [NME2]:https://github.com/TypeA2/NME2
 [ww2ogg]:https://github.com/hcs64/ww2ogg
 [revorbc]:https://github.com/bowtoes/revorbc
+[revorb]:http://yirkha.fud.cz/progs/foobar2000/revorb.cpp
