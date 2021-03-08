@@ -35,22 +35,29 @@ to ogg with [ww2ogg][ww2ogg], and then re-encoded into a playable form with [rev
 What the program can/will be able to do:
 1. [ ] Wisp Extraction:  
    * [ ] Extract all weems embedded in arguments to separate, individual files.  
-   * [ ] Extract all weems AND convert those weems to oggs.  
-   * [ ] Convert all embedded weems to ogg files directly, without extracting them.  
+   * [ ] Extract all weems AND convert those weems to separate oggs.  
+   * [ ] Convert all embedded weems to ogg files directly, without extracting them
+   to separate files.  
 2. [ ] Bank Extraction:  
     Same capabilities as wisp extraction, with one addition:  
    * [ ] Recursive extraction: search all passed bank files for weems referenced in
-     other bank/wisp files passed on command-line.
+     other bank/wisp files passed on command-line.  
 3. [ ] Weem-to-ogg Conversion:  
-   * [ ] All passed weems (and extracted weems, if specified) are converted to ogg,
-     either in-place or to separate files.
+   * [ ] All passed weems are converted to ogg, either in-place or to separate files.  
+   * [ ] All extracted weems can be similarly converted automatically.  
 4. [x] Ogg Revorption:  
-    * [x] All passed oggs are revorbed, either in-place or to separate files (`..._rvb.ogg`).
-    * [ ] All generated oggs can be similarly revorbed automatically.
-5. Videos:  
-    * Maybe? If so then:
-      * [ ] Video extraction.
-      * [ ] Audio rip from videos, either embedded or from extracted.
+    * [x] All passed oggs are revorbed, either in-place or to separate files (`..._rvb.ogg`).  
+    * [ ] All converted weems can be similarly revorbed automatically.  
+5. [x] Logging:  
+   Not really a focused `feature` of the program, but logging options.  
+    * [x] Option for successively quieter output.  
+    * [x] Option for completely silent output, no errors or critical messages at all.  
+    * [x] Option for debug output, turning on all possible logs.  
+    * [x] Option for turning off color output.  
+* [ ] Videos:  
+    Maybe? If so then:
+   * [ ] Video extraction.
+   * [ ] Audio rip from videos, either embedded or from extracted.
 
 ## Build
 I only have a linux system and do not have convenient access to a Windows system, so
