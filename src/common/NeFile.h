@@ -6,6 +6,10 @@
 #include "common/NeStr.h"
 #include "common/NeErrors.h"
 
+/* TODO some kind of buffer system? not sure, but definetely
+ * little endian/big endian specification; default is system default?
+ * argument to pass? bitstreams? huh? */
+
 extern const NeFcc WEEMCC;
 extern const NeFcc BANKCC;
 extern const NeFcc OGGSCC;
@@ -43,16 +47,16 @@ struct NeFile {
 	};
 };
 
-int NeFileStat(struct NeFileStat *stat, NeSz *fsize, const char *const path);
+NeErr NeFileStat(struct NeFileStat *stat, NeSz *fsize, const char *const path);
 
 /* Open file for reading/writing */
 /* Returns -1 on error */
-int NeFileOpen(struct NeFile *const file, const char *const path,
+NeErr NeFileOpen(struct NeFile *const file, const char *const path,
         enum NeFileMode mode);
 
 /* Closes file */
 /* Fails gracefully*/
-int NeFileClose(struct NeFile *const file);
+NeErr NeFileClose(struct NeFile *const file);
 /* Reopens given file with given mode */
 void NeFileReopen(struct NeFile *const file, enum NeFileMode newmode);
 
@@ -81,6 +85,6 @@ NeOf NeFileSegment(struct NeFile *const file, void *dst,
 NeSz NeFileWrite(struct NeFile *const file, const void *const data, NeSz datalen);
 
 /* Closes the file and removes it from disk */
-int NeFileRemove(struct NeFile *const file);
-int NeFileRename(struct NeFile *const file, const char *const newpath);
+NeErr NeFileRemove(struct NeFile *const file);
+NeErr NeFileRename(const char *const file, const char *const newpath);
 #endif /* NeFile_h */

@@ -4,7 +4,7 @@ PROJECT=$(notdir $(CURDIR))
 
 $(PROJECT)_MAJOR=0
 $(PROJECT)_MINOR=0
-$(PROJECT)_REVIS=0
+$(PROJECT)_REVIS=1
 
 ### Directory locations relative to project root
 SRCDIR=src
@@ -29,17 +29,21 @@ WRNS=-Wall -Wextra -Wformat-security\
 	 -Wno-format-zero-length
 
 # compiler 'define' arguments
-DEFS=-D$(shell echo $(PROJECT) | tr a-z A-Z)_MAJOR=$($(PROJECT)_MAJOR)\
-	 -D$(shell echo $(PROJECT) | tr a-z A-Z)_MINOR=$($(PROJECT)_MINOR)\
-	 -D$(shell echo $(PROJECT) | tr a-z A-Z)_REVIS=$($(PROJECT)_REVIS)\
+DEFS=-D$(PROJECT)_MAJOR=$($(PROJECT)_MAJOR)\
+	 -D$(PROJECT)_MINOR=$($(PROJECT)_MINOR)\
+	 -D$(PROJECT)_REVIS=$($(PROJECT)_REVIS)\
+	 -D$(PROJECT)_VERSION='$($(PROJECT)_MAJOR).$($(PROJECT)_MINOR).$($(PROJECT)_REVIS)'\
 	 -DNeASSERTS -DNeLOGGING -DNeLOGCOLORS -DNeLOGFLUSH\
 	 -DNeDEBUGGING\
 	 -D_POSIX_C_SOURCE=200112L -D_FILE_OFFSET_BITS=64\
 
-PRF=
+ifdef DEBUG
 PRF=-pg -no-pie
 OPT=-O0
-#OPT=-O3 -Ofast
+else
+PRF=
+OPT=-O3 -Ofast
+endif
 $(PROJECT)_CFLAGS=-std=c11 $(OPT) $(PRF) $(WRNS) $(INCS) $(CFLAGS)
 $(PROJECT)_CPPFLAGS=$(DEFS) $(STCPPFLAGS) $(CPPFLAGS)
 $(PROJECT)_LDFLAGS=$(LDFLAGS) -logg -lvorbis $(PRF)

@@ -25,8 +25,8 @@ const char *const NeFileModeStr[] = {
 	"reading+writing",
 };
 
-static int nneopen(struct NeFile *f) {
-	int code = NeERGNONE;
+static NeErr nneopen(struct NeFile *f) {
+	NeErr err = NeERGNONE;
 	if (f->mode == NeFileModeRead) {
 		f->file = fopen(f->ppp.cstr, "rb");
 	} else if (f->mode == NeFileModeWrite) {
@@ -44,22 +44,22 @@ static int nneopen(struct NeFile *f) {
 			f->file = fopen(f->ppp.cstr, "rb+");
 		}
 	} else {
-		code = NeERFMODE;
+		err = NeERFMODE;
 	}
-	if (!f->file && code != NeERFMODE)
-		code = NeERFOPEN;
-	return code;
+	if (!f->file && err != NeERFMODE)
+		err = NeERFOPEN;
+	return err;
 }
 
 static NeBy nneeof(struct NeFile *f) {
 	return f->stat.iseof = f->position >= f->size - 1;
 }
 
-int
+NeErr
 NeFileStat(struct NeFileStat *fs, NeSz *fsize, const char *const path)
 {
-	int code = NeERGNONE;
 	struct stat s;
+	NeErr err = NeERGNONE;
 	if (!fs)
 		return NeERGNONE;
 	*fs = (struct NeFileStat){0};
@@ -73,18 +73,18 @@ NeFileStat(struct NeFileStat *fs, NeSz *fsize, const char *const path)
 		if (fsize) *fsize = s.st_size;
 	} else {
 		if (errno != ENOENT)
-			code = NeERFSTAT;
+			err = NeERFSTAT;
 		if (fsize) *fsize = 0;
 	}
-	return code;
+	return err;
 }
 
-int
+NeErr
 NeFileOpen(struct NeFile *const file, const char *const path,
         enum NeFileMode mode)
 {
 	struct NeFile f = {0};
-	int err = NeERGNONE;
+	NeErr err = NeERGNONE;
 
 	if (!file || !path || !*path)
 		return err;
@@ -118,10 +118,10 @@ NeFileOpen(struct NeFile *const file, const char *const path,
 	return err;
 }
 
-int
+NeErr
 NeFileClose(struct NeFile *const file)
 {
-	int code = NeERGNONE;
+	NeErr err = NeERGNONE;
 	if (!file || !file->file)
 		return NeERGNONE;
 	if (fclose(file->file) == 0) {
@@ -131,10 +131,10 @@ NeFileClose(struct NeFile *const file)
 		file->status = 0;
 	} else {
 		NeERROR("Failed to close file %s : %m", file->ppp.cstr);
-		code = NeERFFILE;
+		err = NeERFFILE;
 	}
 	NeStrDel(&file->ppp);
-	return code;
+	return err;
 }
 
 void
@@ -265,48 +265,52 @@ NeFileWrite(struct NeFile *const file, const void *const data, NeSz datalen)
 	return wt;
 }
 
-int
+// TODO Can't remove files while they're open; pass path argument instead?
+// Close first then remove? Yes.
+NeErr
 NeFileRemove(struct NeFile *const file)
 {
-	int code = NeERGNONE;
+	NeErr err = NeERGNONE;
 	if (!file || !file->file)
-		return 0;
+		return err;
 	if (remove(file->ppp.cstr) != 0) {
 		NeERROR("Could not remove %s : %m", file->ppp.cstr);
 		if (!file->stat.exist)
-			code = NeERFEXIST;
+			err = NeERFEXIST;
 		else if (!file->stat.canwt)
-			code = NeERFWRITE;
+			err = NeERFWRITE;
 		else
-			code = NeERFREMOVE;
+			err = NeERFREMOVE;
 	}
-	NeFileClose(file);
-	return code;
+	err = NeFileClose(file);
+	return err;
 }
 
-int
-NeFileRename(struct NeFile *const file, const char *const newpath)
+// TODO Can't rename while open; pass NeFile? NeFile specs? Huh?
+NeErr
+NeFileRename(const char *const oldpath, const char *const newpath)
 {
-	int code = NeERGNONE;
 	struct NeFileStat stat;
-	if (!file || !newpath)
-		return 0;
-	NeFileStat(&stat, NULL, newpath);
-	if (stat.exist) {
-		NeERROR("Cannot rename %s to existing path %s", file->ppp.cstr, newpath);
-		code = NeERFEXIST;
-	} else if (!file->stat.exist) {
-		NeERROR("Cannot rename non-existant file %s", file->ppp.cstr);
-		code = NeERFEXIST;
-	} else if (!file->stat.canwt) {
-		NeERROR("Lacking write permissions for rename of %s", file->ppp.cstr);
-		code = NeERFWRITEP;
-	} else if (!file->stat.isreg) {
-		NeERROR("Will not rename non-regular file %s", file->ppp.cstr);
-		code = NeERFTYPE;
-	} else if (rename(file->ppp.cstr, newpath) != 0) {
-		NeERROR("Error renaming %s to %s : %m", file->ppp.cstr, newpath);
-		code = NeERFRENAME;
+	NeErr err = NeERGNONE;
+	if (!oldpath || !newpath)
+		return NeERFPATH;
+	if ((err = NeFileStat(&stat, NULL, newpath)) == NeERGNONE) {
+		if (stat.exist) {
+			NeERROR("Cannot rename %s to existing path %s", oldpath, newpath);
+			err = NeERFEXIST;
+		} else if (!stat.exist) {
+			NeERROR("Cannot rename non-existant file %s", oldpath);
+			err = NeERFEXIST;
+		} else if (!stat.canwt) {
+			NeERROR("Lacking write permissions for rename of %s", oldpath);
+			err = NeERFWRITEP;
+		} else if (!stat.isreg) {
+			NeERROR("Will not rename non-regular file %s", oldpath);
+			err = NeERFTYPE;
+		} else if (rename(oldpath, newpath) != 0) {
+			NeERROR("Error renaming %s to %s : %m", oldpath, newpath);
+			err = NeERFRENAME;
+		}
 	}
-	return code;
+	return err;
 }

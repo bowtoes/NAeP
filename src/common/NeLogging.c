@@ -173,6 +173,7 @@ NeLog(enum NeLogPr pr,
 	#if defined(NeLOGFLUSH) && !defined(NeNOLOGFLUSH)
 	if (location != lastloc) // location changed, flush to keep sequential order
 		fflush(lastloc);
+	lastloc = location;
 	#endif
 	if (nl)
 		fprintf(location, "%s\n", msg);
@@ -185,9 +186,6 @@ NeLog(enum NeLogPr pr,
 	NeFmtLast.st = st;
 	NeFmtLast.fn = fn;
 	logcount++;
-	#if defined(NeLOGFLUSH) && !defined(NeNOLOGFLUSH)
-	lastloc = location;
-	#endif
 	return msgw;
 }
 
@@ -270,18 +268,18 @@ const char *NeLogFnStr(enum NeLogFn fn)
 	}
 }
 /* HIDEOUS */
-const char *NeLogPrStr(enum NeLogPr pr)
+const char *NeLogPrDbgStr(enum NeLogPr pr)
 {
 	switch (pr) {
-		case NePrLast:     return "LAST";
-		case NePrNone:     return "NONE";
-		case NePrNormal:   return "NORMAL";
-		case NePrWarning:  return "WARNING";
-		case NePrError:    return "ERROR";
-		case NePrCritical: return "CRITICAL";
+		case NePrLast:     return "LST";
+		case NePrNone:     return "NON";
+		case NePrNormal:   return "NRM";
+		case NePrWarning:  return "WRN";
+		case NePrError:    return "ERR";
+		case NePrCritical: return "CRT";
 		case NePrAll:      return "ALL";
-		case NePrDebug:    return "DEBUG";
-		default: return "INVALID";
+		case NePrDebug:    return "DBG";
+		default: return "INV";
 	}
 }
 /* HIDEOUS */

@@ -1,32 +1,35 @@
 #ifndef NeErrors_h
 #define NeErrors_h
 
+typedef enum {
 /* Generic Errors  */
-#define NeERGNONE       0 /* no error */
-#define NeERGINVALID   -1 /* invalid input */
+	NeERGNONE,        // No error.
+	NeERGINVALID,     // Invalid input.
 
 /* File Errors */
-#define NeERFEXIST     -2 /* file doesn't exist */
-#define NeERFTYPE      -3 /* file isn't regular */
-#define NeERFSTAT      -4 /* unspecified stat error */
-#define NeERFMODE      -5 /* invalid mode */
-#define NeERFOPEN      -6 /* could not open */
-#define NeERFREAD      -7 /* unspecified read error */
-#define NeERFREADP     -8 /* read permission error */
-#define NeERFWRITE     -9 /* unspecified write error */
-#define NeERFWRITEP   -10 /* write permission error */
-#define NeERFREMOVE   -11 /* unspecified remove error */
-#define NeERFRENAME   -12 /* unspecified rename error */
-#define NeERFFILE     -14 /* unspecified file error */
+	NeERFEXIST,       // File doesn't exist.
+	NeERFPATH,        // Invalid file path.
+	NeERFTYPE,        // File isn't regular.
+	NeERFSTAT,        // Unspecified stat error.
+	NeERFMODE,        // Invalid mode.
+	NeERFOPEN,        // Could not open.
+	NeERFClose,       // Failed to close.
+	NeERFREAD,        // Unspecified read error.
+	NeERFREADP,       // Read permission error.
+	NeERFWRITE,       // Unspecified write error.
+	NeERFWRITEP,      // Write permission error.
+	NeERFREMOVE,      // Unspecified remove error.
+	NeERFRENAME,      // Unspecified rename error.
+	NeERFFILE,        // Unspecified file error.
 
 /* Wisp Errors */
 
-#define NeERWEMPTY    -15 /* empty wisp */
-#define NeERWREAD     -16 /* generic wisp read error */
-#define NeERWSIZE     -17 /* weem size error */
-
+	NeERWEMPTY,       // Empty wisp.
+	NeERWREAD,        // Generic wisp read error.
+	NeERWSIZE,        // Weem size error.
 
 /* Revorb Errors */
-#define NeERRREVORB -13 /* unspecified revorb error */
+	NeERRREVORB,      // Unspecified revorb error.
+} NeErr;
 
 #endif /* NeErrors_h */

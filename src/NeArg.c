@@ -23,37 +23,37 @@ NePrintArg(struct NeArg arg, NeSz maxarg)
 	else if (arg.opt.wisp) { NePREFIXNFG(pr, NeClYellow, "WISP"); }
 	else if (arg.opt.bank) { NePREFIXNFG(pr, NeClRed,    "BANK"); }
 	else if (arg.opt.oggs) { NePREFIXNFG(pr, NeClBlue,   "OGGS"); }
-	else                   { NePREFIXNST(pr, NeClMagenta, NeClNormal, NeStBold, "AUTO"); }
+	else                   { NePREFIXNST(pr, NeClMagenta, NeClNormal, NeStBold, "AUT"); }
 	NePREFIXNFG(pr, NeClMagenta, " %-*s ", maxarg, arg.arg.cstr);
-	if (arg.opt.logcolor)    { NePREFIXNST(pr, NeClBlue, NeClNormal, NeStBold, "STYLED"); }
-	else                     { NePREFIXNST(pr, NeClRed,  NeClNormal, NeStNone, "SIMPLE"); }
+	if (arg.opt.logcolor)    { NePREFIXNST(pr, NeClBlue, NeClNormal, NeStBold, "SYL"); }
+	else                     { NePREFIXNST(pr, NeClRed,  NeClNormal, NeStNone, "SMP"); }
 	NePREFIXN(pr, " ");
-	if (arg.opt.logoff) { NePREFIXNST(pr, NeClRed,   NeClNormal, NeStBold, "DISABLED"); }
-	else                { NePREFIXNST(pr, NeClGreen, NeClNormal, NeStBold, " ENABLED"); }
+	if (arg.opt.logoff) { NePREFIXNST(pr, NeClRed,   NeClNormal, NeStBold, "DSB"); }
+	else                { NePREFIXNST(pr, NeClGreen, NeClNormal, NeStBold, "ENB"); }
 	NePREFIXN(pr, " ");
-	if (arg.opt.logdebug) { NePREFIXNST(pr, NeClCyan, NeClNormal, NeStBold, "DEBUG "); }
-	else                  { NePREFIXNST(pr, NeClCyan, NeClNormal, NeStBold, "NORMAL"); }
+	if (arg.opt.logdebug) { NePREFIXNST(pr, NeClCyan, NeClNormal, NeStBold, "DBG"); }
+	else                  { NePREFIXNST(pr, NeClCyan, NeClNormal, NeStBold, "NRM"); }
 	NePREFIXN(pr, " ");
-	NePREFIXNST(pr, fm.fg, fm.bg, fm.st, "%8s", NeLogPrStr(arg.opt.loglevel));
+	NePREFIXNST(pr, fm.fg, fm.bg, fm.st, "%s", NeLogPrDbgStr(arg.opt.loglevel));
 	NePREFIXN(pr, " log ");
-	if (arg.opt.dryrun) { NePREFIXNST(pr, NeClYellow, NeClNormal, NeStBold, "DRY RUN"); }
-	else                { NePREFIXNST(pr, NeClYellow, NeClNormal, NeStNone, "PROCESS"); }
+	if (arg.opt.dryrun) { NePREFIXNST(pr, NeClYellow, NeClNormal, NeStBold, "DRY"); }
+	else                { NePREFIXNST(pr, NeClYellow, NeClNormal, NeStNone, "WET"); }
 	NePREFIXN(pr, " ");
-	if (arg.opt.bankrecurse) { NePREFIXNST(pr, NeClGreen,   NeClNormal, NeStBold, "FULL"); }
-	else                     { NePREFIXNST(pr, NeClGreen,   NeClNormal, NeStNone, "  NO"); }
-	NePREFIXN(pr, " bank recurse ");
-	if (arg.opt.autoogg)     { NePREFIXNST(pr, NeClMagenta, NeClNormal, NeStBold, "AUTO"); }
-	else                     { NePREFIXNST(pr, NeClMagenta, NeClNormal, NeStNone, "  NO"); }
+	if (arg.opt.bankrecurse) { NePREFIXNST(pr, NeClGreen,   NeClNormal, NeStBold, "FLL"); }
+	else                     { NePREFIXNST(pr, NeClGreen,   NeClNormal, NeStNone, "NON"); }
+	NePREFIXN(pr, " bnk rcs ");
+	if (arg.opt.autoogg)     { NePREFIXNST(pr, NeClMagenta, NeClNormal, NeStBold, "AUT"); }
+	else                     { NePREFIXNST(pr, NeClMagenta, NeClNormal, NeStNone, "NON"); }
 	NePREFIXN(pr, " ");
-	if (arg.opt.ogginplace)  { NePREFIXNST(pr, NeClBlue,    NeClNormal, NeStBold, "IN-PLACE"); }
-	else                     { NePREFIXNST(pr, NeClBlue,    NeClNormal, NeStNone, "SEPARATE"); }
-	NePREFIXN(pr, " ogg convert ");
-	if (arg.opt.autorvb)     { NePREFIXNST(pr, NeClYellow,  NeClNormal, NeStBold, "AUTO"); }
-	else                     { NePREFIXNST(pr, NeClYellow,  NeClNormal, NeStNone, "  NO"); }
+	if (arg.opt.ogginplace)  { NePREFIXNST(pr, NeClBlue,    NeClNormal, NeStBold, "RPL"); }
+	else                     { NePREFIXNST(pr, NeClBlue,    NeClNormal, NeStNone, "SEP"); }
+	NePREFIXN(pr, " ogg cnv ");
+	if (arg.opt.autorvb)     { NePREFIXNST(pr, NeClYellow,  NeClNormal, NeStBold, "AUT"); }
+	else                     { NePREFIXNST(pr, NeClYellow,  NeClNormal, NeStNone, "NON"); }
 	NePREFIXN(pr, " ");
-	if (arg.opt.rvbinplace)  { NePREFIXNST(pr, NeClCyan,    NeClNormal, NeStBold, "IN-PLACE"); }
-	else                     { NePREFIXNST(pr, NeClCyan,    NeClNormal, NeStNone, "SEPARATE"); }
-	NePREFIXN(pr, " revorb\n");
+	if (arg.opt.rvbinplace)  { NePREFIXNST(pr, NeClCyan,    NeClNormal, NeStBold, "RPL"); }
+	else                     { NePREFIXNST(pr, NeClCyan,    NeClNormal, NeStNone, "SEP"); }
+	NePREFIXN(pr, " rvb\n");
 }
 
 void
@@ -81,14 +81,14 @@ NeDetectType(struct NeArg *arg, struct NeFile *f)
 	}
 }
 
-int
+NeErr
 NeRevorbOgg(struct NeArg arg, struct NeFile *f)
 {
 	struct NeFile out;
 	struct NeStr op = {0};
-	int code = NeERGNONE;
+	NeErr err = NeERGNONE;
 	if (!f || !f->stat.exist)
-		return code;
+		return err;
 
 	NeStrCopy(&op, f->ppp);
 	NeStrPrint(&op, NeStrRindex(f->ppp, NeStrShallow(".", 1), f->ppp.length), f->ppp.length + 10, "_rvb.ogg");
@@ -98,19 +98,21 @@ NeRevorbOgg(struct NeArg arg, struct NeFile *f)
 		NePREFIX(NePrDebug, " for revorbtion output");
 		if (NeFileOpen(&out, op.cstr, NeFileModeWrite) != NeERGNONE) {
 			NeERROR("Failed to open %s for revorb output : %m", op.cstr);
-			code = NeERFFILE;
+			err = NeERFFILE;
 		} else if (revorb(f->file, out.file) != NeERGNONE) {
 			NeERROR("Failed to revorb %s", f->ppp.cstr);
-			code = NeERRREVORB;
+			err = NeERRREVORB;
 		}
-		if (code == NeERGNONE && arg.opt.rvbinplace) {
-			NeDEBUGN("Move ");
-			NePREFIXNFG(NePrDebug, NeClCyan, "%s", op.cstr);
-			NePREFIXN(NePrDebug, " -> ");
-			NePREFIXFG(NePrDebug, NeClCyan, "%s", f->ppp.cstr);
-			if (rename(op.cstr, f->ppp.cstr) != 0) {
-				NeERROR("Failed to rename %s to %s : %m", op.cstr, f->ppp.cstr);
-				code = NeERFFILE;
+		if ((err = NeFileClose(&out)) == NeERGNONE) {
+			if (err == NeERGNONE && arg.opt.rvbinplace) {
+				NeDEBUGN("Move ");
+				NePREFIXNFG(NePrDebug, NeClCyan, "%s", op.cstr);
+				NePREFIXN(NePrDebug, " -> ");
+				NePREFIXFG(NePrDebug, NeClCyan, "%s", f->ppp.cstr);
+				if ((err = NeFileRename(out.ppp.cstr, f->ppp.cstr)) != NeERGNONE) {
+					NeERROR("Failed to rename %s to %s : %m", op.cstr, f->ppp.cstr);
+					err = NeERFFILE;
+				}
 			}
 		}
 	} else {
@@ -126,19 +128,19 @@ NeRevorbOgg(struct NeArg arg, struct NeFile *f)
 	}
 	NeStrDel(&op);
 
-	return code;
+	return err;
 }
-int
+NeErr
 NeConvertWeem(struct NeArg arg, struct NeFile *f)
 {
 	return 0;
 }
-int
+NeErr
 NeExtractWisp(struct NeArg arg, struct NeFile *f)
 {
 	return 0;
 }
-int
+NeErr
 NeExtractBank(struct NeArg arg, struct NeFile *f)
 {
 	return 0;

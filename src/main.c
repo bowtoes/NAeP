@@ -54,7 +54,7 @@ static const char *const usg =
 static void printhelp()
 {
 	NeNORMAL("NAeP - NieR: Automata extraction Protocol");
-	NeNORMAL("Compiled on %s %s\n", __DATE__, __TIME__);
+	NeNORMAL("Compiled on "__DATE__", " __TIME__"\n");
 	fprintf(stdout, "%s\n", usg);
 	exit(0);
 }
@@ -119,7 +119,7 @@ int main(int argc, char **argv)
 			t->opt = opt; opt = def; continue;
 		}
 
-		NeStrNew(&narg.arg, arg, -1);
+		narg.arg = NeStrShallow(arg, -1);
 		narg.opt = opt;
 
 		if (narg.arg.length > args.maxarg)
@@ -192,6 +192,7 @@ int main(int argc, char **argv)
 		NeLogLevelSet(opt.logdebug ? NePrDebug : opt.loglevel);
 		NeERROR("No files passed");
 	}
+	args.args = NeSafeAlloc(args.args, 0, 0);
 
 	return 0;
 }

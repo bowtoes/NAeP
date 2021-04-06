@@ -97,7 +97,7 @@ NeSz NeLog(enum NeLogPr pr,
 const char *NeLogClrStr(enum NeLogCl cl);
 const char *NeLogStStr(enum NeLogSt st);
 const char *NeLogFnStr(enum NeLogFn fn);
-const char *NeLogPrStr(enum NeLogPr pr);
+const char *NeLogPrDbgStr(enum NeLogPr pr);
 const char *NeLogPrPfx(enum NeLogPr pr);
 struct NeLogFmt NeLogPrFmt(enum NeLogPr pr);
 

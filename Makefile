@@ -10,9 +10,9 @@ OBJ:=$(addprefix $(OBJDIR)/,$(patsubst $(SRCDIR)/%,%,$(SRC:.c=.o)))
 
 all: options setup $(PROJECT)
 setup:
-	@mkdir -pv $(dir $(ASS)) 2>/dev/null || printf ""
-	@mkdir -pv $(dir $(INT)) 2>/dev/null || printf ""
-	@mkdir -pv $(dir $(OBJ)) 2>/dev/null || printf ""
+	@mkdir -pv $(dir $(ASS)) 2>/dev/null || :
+	@mkdir -pv $(dir $(INT)) 2>/dev/null || :
+	@mkdir -pv $(dir $(OBJ)) 2>/dev/null || :
 options:
 	@echo "$(PROJECT) Build options:"
 	@echo "CFLAGS        = $(CFLAGS)"
@@ -45,9 +45,9 @@ clean:
 	@rm -fv $(ASS)
 	@rm -fv $(INT)
 	@rm -fv $(OBJ)
-	@rmdir -pv $(ASSDIR) > /dev/null 2>&1 || printf ""
-	@rmdir -pv $(INTDIR) > /dev/null 2>&1 || printf ""
-	@rmdir -pv $(OBJDIR) > /dev/null 2>&1 || printf ""
+	@rmdir -pv $(ASSDIR) > /dev/null 2>&1 || :
+	@rmdir -pv $(INTDIR) > /dev/null 2>&1 || :
+	@rmdir -pv $(OBJDIR) > /dev/null 2>&1 || :
 	@rm -fv $(OUTDIR)/$(PROJECT)
 
 again: clean all
