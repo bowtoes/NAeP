@@ -40,7 +40,7 @@ struct NeArgs {
 };
 
 struct NeArg *NeFindArg(struct NeArgs args, const char *const arg);
-void NePrintArg(struct NeArg arg, NeSz maxarg);
+void NePrintArg(struct NeArg arg, NeSz maxarg, int newline);
 
 void  NeDetectType(struct NeArg *arg, struct NeFile *f);
 NeErr NeConvertWeem(struct NeArg arg, struct NeFile *f);

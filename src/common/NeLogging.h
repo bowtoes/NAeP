@@ -86,8 +86,9 @@ extern       struct NeLogFmt NeFmtLast;
 
 void NeLogLevelSet(NeBy lvl);
 void NeLogColorState(NeBy cl);
+void NeLogSetDebug(NeBy dbg);
 void NeLogToggleColor();
-NeSz NeLogCount();
+NeU8 NeLogCount();
 
 NeSz NeLog(enum NeLogPr pr,
         enum NeLogCl fg, enum NeLogCl bg,

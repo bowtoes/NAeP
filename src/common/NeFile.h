@@ -16,20 +16,16 @@ extern const NeFcc OGGSCC;
 
 /* Modes with which to open files (always in binary) */
 enum NeFileMode {
-	/* Passing to open functions will error */
-	NeFileModeNone = 0 << 0,
-	/* Readonly mode */
-	NeFileModeRead = 1 << 0,
-	/* Read-write mode; file truncated */
-	NeFileModeWrite = 1 << 1,
-	/* Read-write mode; file unchanged */
-	NeFileModeReadWrite = NeFileModeRead | NeFileModeWrite,
+	NeFileModeNone      = 0, // Passing to open functions will error
+	NeFileModeRead      = 1, // Readonly mode
+	NeFileModeWrite     = 2, // Read-write mode; file truncated
+	NeFileModeReadWrite = 3, // Read-write mode; file unchanged
 };
 extern const char *const NeFileModeStr[];
 
 /* Structure for more portalizable file operations */
 struct NeFile {
-	struct NeStr ppp;
+	struct NeStr path;
 	FILE *file;
 	NeSz size;
 	NeSz position;

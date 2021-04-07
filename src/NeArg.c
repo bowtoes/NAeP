@@ -1,5 +1,6 @@
 #include "NeArg.h"
 
+#include "common/NeDebugging.h"
 #include "revorbc/revorbc.h"
 #include "wisp/NeWisp.h"
 
@@ -15,7 +16,7 @@ NeFindArg(struct NeArgs args, const char *const arg)
 }
 
 void
-NePrintArg(struct NeArg arg, NeSz maxarg)
+NePrintArg(struct NeArg arg, NeSz maxarg, int newline)
 {
 	struct NeLogFmt fm = NeLogPrFmt(arg.opt.loglevel);
 	enum NeLogPr pr = NePrDebug;
@@ -24,7 +25,7 @@ NePrintArg(struct NeArg arg, NeSz maxarg)
 	else if (arg.opt.bank) { NePREFIXNFG(pr, NeClRed,    "BANK"); }
 	else if (arg.opt.oggs) { NePREFIXNFG(pr, NeClBlue,   "OGGS"); }
 	else                   { NePREFIXNST(pr, NeClMagenta, NeClNormal, NeStBold, "AUT"); }
-	NePREFIXNFG(pr, NeClMagenta, " %-*s ", maxarg, arg.arg.cstr);
+	NePREFIXN(pr, " ");
 	if (arg.opt.logcolor)    { NePREFIXNST(pr, NeClBlue, NeClNormal, NeStBold, "SYL"); }
 	else                     { NePREFIXNST(pr, NeClRed,  NeClNormal, NeStNone, "SMP"); }
 	NePREFIXN(pr, " ");
@@ -53,7 +54,7 @@ NePrintArg(struct NeArg arg, NeSz maxarg)
 	NePREFIXN(pr, " ");
 	if (arg.opt.rvbinplace)  { NePREFIXNST(pr, NeClCyan,    NeClNormal, NeStBold, "RPL"); }
 	else                     { NePREFIXNST(pr, NeClCyan,    NeClNormal, NeStNone, "SEP"); }
-	NePREFIXN(pr, " rvb\n");
+	NePREFIXN(pr, " rvb%s", newline?"\n":" ");
 }
 
 void
@@ -62,9 +63,9 @@ NeDetectType(struct NeArg *arg, struct NeFile *f)
 	NeFcc fcc;
 	if (NeFileSegment(f, &fcc, 4, 0, 4) != NeERFREAD) {
 		if (fcc == WEEMCC) {
-			if (NeStrEndswith(f->ppp, NeStrShallow(".wsp", 4)))
+			if (NeStrEndswith(f->path, NeStrShallow(".wsp", 4)))
 				arg->opt.wisp = 1;
-			else if (NeStrEndswith(f->ppp, NeStrShallow(".wem", 4)))
+			else if (NeStrEndswith(f->path, NeStrShallow(".wem", 4)))
 				arg->opt.weem = 1;
 			/* assume wisp because wisps are a superset of weems */
 			else
@@ -82,51 +83,62 @@ NeDetectType(struct NeArg *arg, struct NeFile *f)
 }
 
 NeErr
-NeRevorbOgg(struct NeArg arg, struct NeFile *f)
+NeRevorbOgg(struct NeArg arg, struct NeFile *infile)
 {
 	struct NeFile out;
-	struct NeStr op = {0};
+	struct NeStr opath = {0};
 	NeErr err = NeERGNONE;
-	if (!f || !f->stat.exist)
+	if (!infile || !infile->stat.exist)
 		return err;
 
-	NeStrCopy(&op, f->ppp);
-	NeStrPrint(&op, NeStrRindex(f->ppp, NeStrShallow(".", 1), f->ppp.length), f->ppp.length + 10, "_rvb.ogg");
+	NeStrCopy(&opath, infile->path);
+	NeStrPrint(&opath,
+			NeStrRindex(infile->path, NeStrShallow(".", 1), infile->path.length),
+			infile->path.length + 10, "_rvb.ogg");
 	if (!arg.opt.dryrun) {
 		NeDEBUGN("Open ");
-		NePREFIXNFG(NePrDebug, NeClCyan, "%s", op.cstr);
+		NePREFIXNFG(NePrDebug, NeClCyan, "%s", opath.cstr);
 		NePREFIX(NePrDebug, " for revorbtion output");
-		if (NeFileOpen(&out, op.cstr, NeFileModeWrite) != NeERGNONE) {
-			NeERROR("Failed to open %s for revorb output : %m", op.cstr);
+		if (NeFileOpen(&out, opath.cstr, NeFileModeWrite) != NeERGNONE) {
+			NeERROR("Failed to open %s for revorb output : %m", opath.cstr);
 			err = NeERFFILE;
-		} else if (revorb(f->file, out.file) != NeERGNONE) {
-			NeERROR("Failed to revorb %s", f->ppp.cstr);
+		} else if (revorb(infile->file, out.file) != NeERGNONE) {
+			NeERROR("Failed to revorb %s", infile->path.cstr);
 			err = NeERRREVORB;
 		}
-		if ((err = NeFileClose(&out)) == NeERGNONE) {
-			if (err == NeERGNONE && arg.opt.rvbinplace) {
+		NeASSERTM(NeFileClose(&out) == NeERGNONE, "Failed to close output file %s : %m", out.path.cstr);
+		if (arg.opt.rvbinplace) {
+			struct NeStr ipath = {0};
+			NeStrCopy(&ipath, infile->path);
+			NeDEBUGN("Remove ");
+			NePREFIXFG(NePrDebug, NeClCyan, "%s", infile->path.cstr);
+			if ((err = NeFileRemove(infile)) == NeERGNONE) {
 				NeDEBUGN("Move ");
-				NePREFIXNFG(NePrDebug, NeClCyan, "%s", op.cstr);
+				NePREFIXNFG(NePrDebug, NeClCyan, "%s", opath.cstr);
 				NePREFIXN(NePrDebug, " -> ");
-				NePREFIXFG(NePrDebug, NeClCyan, "%s", f->ppp.cstr);
-				if ((err = NeFileRename(out.ppp.cstr, f->ppp.cstr)) != NeERGNONE) {
-					NeERROR("Failed to rename %s to %s : %m", op.cstr, f->ppp.cstr);
+				NePREFIXFG(NePrDebug, NeClCyan, "%s", ipath.cstr);
+				if ((err = NeFileRename(opath.cstr, ipath.cstr)) != NeERGNONE) {
+					NeERROR("Failed to rename %s to %s : %m", err, opath.cstr, ipath.cstr);
 					err = NeERFFILE;
 				}
+			} else {
+				NeERROR("Failed to remove %s when renaming : %m", ipath.cstr);
+				err = NeERFFILE;
 			}
+			NeStrDel(&ipath);
 		}
 	} else {
 		NeDEBUGN("Open ");
-		NePREFIXNFG(NePrDebug, NeClCyan, "%s", op.cstr);
+		NePREFIXNFG(NePrDebug, NeClCyan, "%s", opath.cstr);
 		NePREFIX(NePrDebug, " for revorbtion output");
 		if (arg.opt.rvbinplace) {
 			NeDEBUGN("Move ");
-			NePREFIXNFG(NePrDebug, NeClCyan, "%s", op.cstr);
+			NePREFIXNFG(NePrDebug, NeClCyan, "%s", opath.cstr);
 			NePREFIXN(NePrDebug, " -> ");
-			NePREFIXFG(NePrDebug, NeClCyan, "%s", f->ppp.cstr);
+			NePREFIXFG(NePrDebug, NeClCyan, "%s", infile->path.cstr);
 		}
 	}
-	NeStrDel(&op);
+	NeStrDel(&opath);
 
 	return err;
 }

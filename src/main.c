@@ -72,6 +72,7 @@ int main(int argc, char **argv)
 	struct NeArgs args = {0};
 	char *arg = argv[1];
 	NeCt maxargs = 1024;
+	NeBy rst = 0;
 
 	def.loglevel = NePrAll;
 	def.logcolor = 1;
@@ -115,6 +116,8 @@ int main(int argc, char **argv)
 			NeTOGGLE(opt.logoff); continue;
 		} else if (NeStrCmp(arg, 0, "-n", "-dry", "-dryrun", NULL)) {
 			NeTOGGLE(opt.dryrun); continue;
+		} else if (NeStrCmp(arg, 0, "-reset", NULL)) {
+			NeTOGGLE(rst); continue;
 		} else if ((t = NeFindArg(args, arg))) {
 			t->opt = opt; opt = def; continue;
 		}
@@ -127,7 +130,8 @@ int main(int argc, char **argv)
 		args.argcount++;
 		args.args = NeSafeAlloc(args.args, args.argcount * sizeof(struct NeArg), 0);
 		args.args[args.argcount - 1] = narg;
-		opt = def; /* only for testing */
+		if (rst)
+			opt = def;
 	}
 	args.argdigit = NeDigitCount(args.argcount);
 
@@ -136,9 +140,9 @@ int main(int argc, char **argv)
 		struct NeArg *arg = &args.args[0];
 		struct NeFileStat stat;
 		struct NeFile afile;
-		NeLogLevelSet(NePrDebug);
 		for (int i = 0; i < args.argcount; ++i, arg = &args.args[i]) {
-			NeLogLevelSet(arg->opt.logdebug?NePrDebug:arg->opt.loglevel);
+			NeLogSetDebug(arg->opt.logdebug);
+			NeLogLevelSet(arg->opt.logoff?NePrNone:arg->opt.loglevel);
 			NeLogColorState(arg->opt.logcolor);
 			NeFileStat(&stat, NULL, arg->arg.cstr);
 			if (!stat.exist || !stat.isreg || (!stat.canwt && (arg->opt.ogginplace || arg->opt.rvbinplace)) || !stat.canrd) {
@@ -154,8 +158,7 @@ int main(int argc, char **argv)
 				else if (!stat.canrd)
 					NePREFIXST(NePrWarning, NeClGreen, -1, NeStBold, "Cannot read file.");
 				continue;
-			}
-			if (NeFileOpen(&afile, arg->arg.cstr, NeFileModeReadWrite) != NeERGNONE) {
+			} else if (NeFileOpen(&afile, arg->arg.cstr, NeFileModeReadWrite) != NeERGNONE) {
 				NeERRORN("Could not open ");
 				NePREFIXNST(NePrError, NeClCyan, -1, NeStBold, "%s", arg->arg.cstr);
 				NePREFIXN(NePrError, " for parsing.");
@@ -163,7 +166,8 @@ int main(int argc, char **argv)
 			}
 			NeNORMALN("Parsing ");
 			NePREFIXNFG(NePrNormal, NeClMagenta, "%*i / %*i ", args.argdigit, i + 1, args.argdigit, args.argcount);
-			NePrintArg(*arg, args.maxarg);
+			if (arg->opt.logdebug)
+				NePrintArg(*arg, args.maxarg, arg->opt.logoff);
 			if ((arg->opt.oggs | arg->opt.weem | arg->opt.wisp | arg->opt.bank) == 0) {
 				NeDetectType(arg, &afile);
 			}

@@ -12,12 +12,13 @@ const struct NeLogFmt NeFmtClear    = { NePrCount,          0,          0,      
       struct NeLogFmt NeFmtLast     = {NePrNormal, NeClNormal, NeClNormal, NeStNone, NeFnNormal, "[last]"};
 
 static NeBy loglevel = NePrDebug;
+static NeBy logdbg = 0;
 #if defined(NeLOGCOLORS) && !defined(NeNOLOGCOLORS)
 static NeBy logcolor = 1;
 #else
 static NeBy logcolor = 0;
 #endif
-static NeSz logcount = 0;
+static NeU8 logcount = 0;
 #if defined(NeLOGFLUSH) && !defined(NeNOLOGFLUSH)
 static FILE *lastloc = 0;
 #endif
@@ -125,13 +126,11 @@ if (logcolor) {
 	return wrt;
 }
 
-#define NeLCSTATEOFF 0
-#define NeLCSTATEON 1
-
 void NeLogLevelSet(NeBy lvl) { loglevel = lvl; }
 void NeLogColorState(NeBy cl) { logcolor = cl; }
+void NeLogSetDebug(NeBy dbg) { logdbg = dbg; }
 void NeLogToggleColor() { logcolor = !logcolor; }
-NeSz NeLogCount() { return logcount; }
+NeU8 NeLogCount() { return logcount; }
 
 NeSz
 NeLog(enum NeLogPr pr,
@@ -150,7 +149,7 @@ NeLog(enum NeLogPr pr,
 	if (st == NeStLast) st = NeFmtLast.st;
 	if (fn == NeFnLast) fn = NeFmtLast.fn;
 
-	if (!fmt || pr > loglevel)
+	if ((!fmt || pr > loglevel) && !(pr == NePrDebug && logdbg))
 		return 0;
 
 	/* HIDEOUS */

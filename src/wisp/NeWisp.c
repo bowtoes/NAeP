@@ -57,7 +57,7 @@ NeWispOpen(struct NeWisp *const dst, const char *const path)
 		}
 	} while (rd > 0 && !err);
 	if (wsp.wemCount == 0) {
-		NeERROR("%s contains no wems", wsp.file.ppp.cstr);
+		NeERROR("%s contains no wems", wsp.file.path.cstr);
 		err = NeERWEMPTY;
 	}
 
