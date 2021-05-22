@@ -74,7 +74,7 @@ NeOf NeFileStream(struct NeFile *const file, void *dst, NeSz dstlen);
 /* If start > end, read in reverse */
 /* File position is unchanged */
 NeOf NeFileSegment(struct NeFile *const file, void *dst,
-        NeSz maxlen, NeSz start, NeSz end);
+        NeSz start, NeSz end, NeSz maxlen);
 
 /* Writes datalen bytes into file at file position */
 /* Returns new file position */

@@ -213,7 +213,7 @@ NeFileStream(struct NeFile *const file, void *dst, NeSz dstlen)
 	if (ferror(file->file) != 0) {
 		NeERROR("Failed to read %zu bytes from %s : %m", dstlen, file->path.cstr);
 		clearerr(file->file);
-		rd = NeERFREAD;
+		rd = -1;
 	} else { /* copy tmp into dst */
 		NeCopy(dst, dstlen, blk, rd);
 		file->position += rd;
@@ -226,7 +226,7 @@ NeFileStream(struct NeFile *const file, void *dst, NeSz dstlen)
 
 NeOf
 NeFileSegment(struct NeFile *const file, void *dest,
-        NeSz maxlen, NeSz start, NeSz end)
+        NeSz end, NeSz start, NeSz maxlen)
 {
 	NeOf rd = 0;
 	NeSz first = 0;
@@ -245,7 +245,7 @@ NeFileSegment(struct NeFile *const file, void *dest,
 	first = file->position;
 	NeFileJump(file, start);
 	rd = NeFileStream(file, dest, end - start);
-	if (rd != end - start) { // no ferror
+	if (rd > 0) { // no ferror
 		if (rv) { // reverse read bytes
 			NeBy *const d = (NeBy *const)dest;
 			for (NeSz i = 0; i < rd/2; ++i) {
@@ -254,7 +254,6 @@ NeFileSegment(struct NeFile *const file, void *dest,
 		}
 	}
 	NeFileJump(file, first);
-
 	return rd;
 }
 

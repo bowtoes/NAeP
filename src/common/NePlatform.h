@@ -125,10 +125,6 @@
 #  error UNKNOWN PLATFORM
 #endif
 
-#if NePLATFORM != NePLATFORM_Linux
-#  error Unsupported platform
-#endif
-
 /* +++++ System requirements */
 #if CHAR_BIT != 8
 #  error WEIRD SYSTEM

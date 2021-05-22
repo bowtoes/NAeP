@@ -144,10 +144,14 @@ NeStrJoin(struct NeStr *const out, const struct NeStr a, const struct NeStr b)
 {
 	if (!out)
 		return;
-	else if (!b.length)
-		return NeStrNew(out, a.cstr, a.length);
-	else if (!a.length)
-		return NeStrNew(out, b.cstr, b.length);
+	else if (!b.length) {
+		NeStrNew(out, a.cstr, a.length);
+		return;
+	}
+	else if (!a.length) {
+		NeStrNew(out, b.cstr, b.length);
+		return;
+	}
 
 	out->length = a.length + b.length;
 	out->cstr = NeSafeAlloc(out->cstr, out->length + 1, 1);

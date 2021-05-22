@@ -11,6 +11,16 @@
 #include "common/NeStr.h"
 #include "wisp/NeWisp.h"
 
+// TODO
+// TODO
+// TODO
+// TODO
+// TODO
+// TODO
+// TODO
+// TODO NeArg, NeFile, NeWisp need a desperate rework/redesign/refactor all of it.
+// TODO Also, the first file doesn't seem to take the arguments? Everything after does though?
+
 #if 0
 #define TEST(a, b) do { \
 	printf("%s %s end with %s\n", a.cstr, NeStrEndswith(a, b)?"does":"does not", b.cstr); \

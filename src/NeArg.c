@@ -61,7 +61,7 @@ void
 NeDetectType(struct NeArg *arg, struct NeFile *f)
 {
 	NeFcc fcc;
-	if (NeFileSegment(f, &fcc, 4, 0, 4) != NeERFREAD) {
+	if (NeFileSegment(f, &fcc, 0, 4, 4) != NeERFREAD) {
 		if (fcc == WEEMCC) {
 			if (NeStrEndswith(f->path, NeStrShallow(".wsp", 4)))
 				arg->opt.wisp = 1;
@@ -143,17 +143,37 @@ NeRevorbOgg(struct NeArg arg, struct NeFile *infile)
 	return err;
 }
 NeErr
-NeConvertWeem(struct NeArg arg, struct NeFile *f)
+NeConvertWeem(struct NeArg arg, struct NeFile *infile)
 {
-	return 0;
+	NeErr err = NeERGNONE;
+	if (!infile || !infile->stat.exist)
+		return err;
+	return err;
 }
 NeErr
-NeExtractWisp(struct NeArg arg, struct NeFile *f)
+NeExtractWisp(struct NeArg arg, struct NeFile *infile)
 {
-	return 0;
+	struct NeWisp wsp;
+	NeErr err = NeERGNONE;
+	if (!infile || !infile->stat.exist)
+		return err;
+
+	if (!arg.opt.dryrun) {
+		if ((err = NeWispRead(&wsp, infile)) != NeERGNONE) {
+			NeERROR("Failed reading wisp file %s : %m", infile->path.cstr);
+		} else {
+			NeWispSave(&wsp, 0);
+		}
+	} else {
+	}
+
+	return err;
 }
 NeErr
-NeExtractBank(struct NeArg arg, struct NeFile *f)
+NeExtractBank(struct NeArg arg, struct NeFile *infile)
 {
-	return 0;
+	NeErr err = NeERGNONE;
+	if (!infile || !infile->stat.exist)
+		return err;
+	return err;
 }

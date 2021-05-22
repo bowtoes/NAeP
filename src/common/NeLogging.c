@@ -189,7 +189,7 @@ NeLog(enum NeLogPr pr,
 }
 
 /* HIDEOUS */
-const char *NeLogColorStr(enum NeLogCl cl)
+const char *NeLogClrStr(enum NeLogCl cl)
 {
 	switch (cl) {
 		case NeClBlack:        return "Black";

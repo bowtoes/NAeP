@@ -43,9 +43,9 @@ struct NeArg *NeFindArg(struct NeArgs args, const char *const arg);
 void NePrintArg(struct NeArg arg, NeSz maxarg, int newline);
 
 void  NeDetectType(struct NeArg *arg, struct NeFile *f);
-NeErr NeConvertWeem(struct NeArg arg, struct NeFile *f);
-NeErr NeExtractWisp(struct NeArg arg, struct NeFile *f);
-NeErr NeExtractBank(struct NeArg arg, struct NeFile *f);
-NeErr   NeRevorbOgg(struct NeArg arg, struct NeFile *f);
+NeErr NeConvertWeem(struct NeArg arg, struct NeFile *infile);
+NeErr NeExtractWisp(struct NeArg arg, struct NeFile *infile);
+NeErr NeExtractBank(struct NeArg arg, struct NeFile *infile);
+NeErr   NeRevorbOgg(struct NeArg arg, struct NeFile *infile);
 
 #endif /* NeArg_h */

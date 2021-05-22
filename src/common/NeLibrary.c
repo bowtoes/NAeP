@@ -42,7 +42,7 @@ NeReverse(void *const buf, NeSz buflen)
 		NeSWAP(b[i], b[buflen - 1 - i]);
 }
 
-void
+static void
 NeReverseElements(NeBy *const buf, NeSz elcount, NeSz elsize)
 {
 	if (!buf || !elcount || !elsize)
