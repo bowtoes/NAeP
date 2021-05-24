@@ -7,7 +7,6 @@
    1. [Usage](#usage)
 3. [Capabilities](#capabilities)
 4. [Build](#build)
-   1. [Linux](#linux)
 5. [Todo](#todo)
 
 # Goal
@@ -46,10 +45,10 @@ What the program can/will be able to do:
    * &#9744; All passed weems are converted to ogg, either in-place or to separate files.  
    * &#9744; All extracted weems can be similarly converted automatically.  
 4. &#9744; Ogg Revorption:  
-    * &#9746; All passed oggs are revorbed, either in-place or to separate files (`..._rvb.ogg`).  
+    * &#9744; All passed oggs are revorbed, either in-place or to separate files (`..._rvb.ogg`).  
     * &#9744; All converted weems can be similarly revorbed automatically.  
 5. &#9746; Logging:  
-   Not really a focused `feature` of the program, but logging options.  
+   Not really a focused 'feature' of the program, but logging options.  
     * &#9746; Option for successively quieter output.  
     * &#9746; Option for completely silent output, no errors or critical messages at all.  
     * &#9746; Option for debug output, turning on all possible logs.  
@@ -60,13 +59,25 @@ What the program can/will be able to do:
    * &#9744; Audio rip from videos, either embedded or from extracted.
 
 ## Build
-I only have a linux system and do not have convenient access to a Windows system, so
-for now there is only a Make build system; the plan is to eventually make this at least
-cross-platform and eventually cross-compilable between linux and Windows, maybe more in the future.
 
-### Linux
-Assumes GNU Make. To build, simply run `make` in the top level directory; there is `config.mk` for configuring
-different build parameters and output directories.
+First, after cloning, be sure to run `git submodule update`. Then issue one of the following commands:
+
+Arguments in brackets (`[]`) are optional.
+
+|Host   |Target |Requirements                        |Command|
+|:---:  |:---:  |:---                                |:---|
+|\*NIX  |\*NIX  |GNU `make` and toolchain            |`make [HOST=UNIX] [TARGET=UNIX]`|
+|\*NIX  |Windows|GNU `make` and `mingw-w64` toolchain|`make [HOST=UNIX] TARGET=WINDOWS`|
+|Windows|\*NIX  |N/A|N/A|
+|Windows|Windows|Cygwin with above or mingw          |`make HOST=WINDOWS TARGET=WINDOWS`|
+
+**DISCLAIMER:** I only have a linux distribution, so I can't test building on Windows.
+
+If building with mingw, be sure to have the ogg library installed for mingw.
+On Arch-linux for example, the package is called `mingw-w64-libogg`.
+
+32/64-bit compilation can be specified by setting the environment variable `BITS` to either `32` or `64`;
+defaults to `64`.
 
 ## Todo
 Eventually, some (hopefully) neat and understandable documentation on the different formats
