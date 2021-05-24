@@ -15,24 +15,23 @@ limitations under the License.
 */
 
 #include "common/NeFile.h"
-#include "common/NePlatform.h"
 
 #include <stdint.h>
 #include <stdlib.h>
-#if defined(NePLATFORMTYPE_POSIX)
+
+#include <brrtools/brrplatform.h>
 #include <sys/stat.h>
 #include <errno.h>
-#endif
 
-#include "common/NeDebugging.h"
-#include "common/NeLogging.h"
+#include <brrtools/brrlog.h>
+
 #include "common/NeLibrary.h"
 #include "common/NeMisc.h"
 #include "common/NeStr.h"
 
-const NeFcc WEEMCC = 0x46464952;
-const NeFcc BANKCC = 0x44484b42;
-const NeFcc OGGSCC = 0x5367674f;
+const brrfccT WEEMCC = {.code=0x46464952};
+const brrfccT BANKCC = {.code=0x44484b42};
+const brrfccT OGGSCC = {.code=0x5367674f};
 
 const char *const NeFileModeStr[] = {
 	"invalid operation",
@@ -68,12 +67,12 @@ static NeErr nneopen(struct NeFile *f) {
 }
 
 /* Update NeFile EOF indicator */
-static NeBy nneeof(struct NeFile *f) {
+static brrby nneeof(struct NeFile *f) {
 	return f->stat.iseof = f->position >= f->size - 1;
 }
 
 NeErr
-NeFileStat(struct NeFileStat *fs, NeSz *fsize, const char *const path)
+NeFileStat(struct NeFileStat *fs, brrsz *fsize, const char *const path)
 {
 	struct stat s;
 	NeErr err = NeERGNONE;
@@ -82,11 +81,14 @@ NeFileStat(struct NeFileStat *fs, NeSz *fsize, const char *const path)
 	*fs = (struct NeFileStat){0};
 	if (stat(path, &s) == 0) {
 		fs->exist = 1;
+		fs->canrd = fs->canwt = fs->isreg = 1;
+		/*
 		fs->isreg = S_ISREG(s.st_mode);
 		fs->canwt = ((s.st_mode & S_IWUSR) && s.st_uid == getuid()) ||
 			((s.st_mode & S_IWGRP) && s.st_gid == getgid());
 		fs->canrd = ((s.st_mode & S_IRUSR) && s.st_uid == getuid()) ||
 			((s.st_mode & S_IRGRP) && s.st_gid == getgid());
+		*/
 		if (fsize) *fsize = s.st_size;
 	} else {
 		// File not existing is not an error.
@@ -110,16 +112,16 @@ NeFileOpen(struct NeFile *const file, const char *const path,
 	NeStrNew(&f.path, path, -1);
 	f.mode = mode;
 	if ((err = NeFileStat(&f.stat, &f.size, path)) != NeERGNONE) {
-		NeERROR("Could not stat %s : %m", path);
+		BRRLOG_ERR("Could not stat %s : %m", path);
 	} else {
 		if (!f.stat.isreg && f.stat.exist) {
-			NeERROR("%s is not a regular file", path);
+			BRRLOG_ERR("%s is not a regular file", path);
 			err = NeERFTYPE;
 		} else if ((err = nneopen(&f)) != NeERGNONE) {
 			if (err == NeERFMODE)
-				NeERROR("Invalid mode passed to open for %s : %i", path, mode);
+				BRRLOG_ERR("Invalid mode passed to open for %s : %i", path, mode);
 			else
-				NeERROR("Failed to open %s for %s : %m", path, NeFileModeStr[mode]);
+				BRRLOG_ERR("Failed to open %s for %s : %m", path, NeFileModeStr[mode]);
 			err = NeERFOPEN;
 		} else {
 			nneeof(&f);
@@ -148,7 +150,7 @@ NeFileClose(struct NeFile *const file)
 		file->size = 0;
 		file->status = 0;
 	} else {
-		NeERROR("Failed to close file %s : %m", file->path.cstr);
+		BRRLOG_ERR("Failed to close file %s : %m", file->path.cstr);
 		err = NeERFFILE;
 	}
 	NeStrDel(&file->path);
@@ -172,13 +174,13 @@ NeFileReopen(struct NeFile *const file, enum NeFileMode newmode)
 }
 
 void
-NeFileSkip(struct NeFile *const file, NeOf bytes)
+NeFileSkip(struct NeFile *const file, brrof bytes)
 {
 	struct NeFile *f = (struct NeFile *)file;
-	NeSz newpos;
+	brrsz newpos;
 	if (!bytes || !file || !f->file)
 		return;
-	newpos = NeSmartMod(bytes + (NeOf)file->position, file->size, 0);
+	newpos = NeSmartMod(bytes + (brrof)file->position, file->size, 0);
 	// TODO fseek portability?
 	fseek(f->file, newpos, SEEK_SET);
 	f->position = newpos;
@@ -186,13 +188,13 @@ NeFileSkip(struct NeFile *const file, NeOf bytes)
 }
 
 void
-NeFileJump(struct NeFile *const file, NeSz position)
+NeFileJump(struct NeFile *const file, brrsz position)
 {
 	if (!file || !file->file || file->position == position)
 		return;
 	if (position >= file->size) {
-		NeWARNING("Jumped past EOF");
-		NeDEBUG("POS 0x%08x SZ 0x%08x OFS 0x%08x", position, file->size, file->position);
+		BRRLOG_WAR("Jumped past EOF");
+		BRRLOG_DEB("POS 0x%08x SZ 0x%08x OFS 0x%08x", position, file->size, file->position);
 	}
 	file->position = position;
 	// TODO rewind portability?
@@ -215,10 +217,10 @@ NeFileReset(struct NeFile *const file)
 	NeFileJump(file, 0);
 }
 
-NeOf
-NeFileStream(struct NeFile *const file, void *dst, NeSz dstlen)
+brrof
+NeFileStream(struct NeFile *const file, void *dst, brrsz dstlen)
 {
-	NeOf rd = 0;
+	brrof rd = 0;
 	void *blk;
 	if (!file || !file->file || !dst || !dstlen)
 		return 0;
@@ -227,7 +229,7 @@ NeFileStream(struct NeFile *const file, void *dst, NeSz dstlen)
 	// TODO are fread, ferror, clearerr cross-platform/portable?
 	rd = fread(blk, 1, dstlen, file->file);
 	if (ferror(file->file) != 0) {
-		NeERROR("Failed to read %zu bytes from %s : %m", dstlen, file->path.cstr);
+		BRRLOG_ERR("Failed to read %zu bytes from %s : %m", dstlen, file->path.cstr);
 		clearerr(file->file);
 		rd = -1;
 	} else { /* copy tmp into dst */
@@ -240,12 +242,12 @@ NeFileStream(struct NeFile *const file, void *dst, NeSz dstlen)
 	return rd;
 }
 
-NeOf
+brrof
 NeFileSegment(struct NeFile *const file, void *dest,
-        NeSz end, NeSz start, NeSz maxlen)
+        brrsz end, brrsz start, brrsz maxlen)
 {
-	NeOf rd = 0;
-	NeSz first = 0;
+	brrof rd = 0;
+	brrsz first = 0;
 	int rv = 0;
 	if (!file || !file->file || !dest || !maxlen || start == end)
 		return 0;
@@ -263,8 +265,8 @@ NeFileSegment(struct NeFile *const file, void *dest,
 	rd = NeFileStream(file, dest, end - start);
 	if (rd > 0) { // no ferror
 		if (rv) { // reverse read bytes
-			NeBy *const d = (NeBy *const)dest;
-			for (NeSz i = 0; i < rd/2; ++i) {
+			brrby *const d = (brrby *const)dest;
+			for (brrsz i = 0; i < rd/2; ++i) {
 				NeSWAP(d[start + i], d[start + rd - 1 - i]);
 			}
 		}
@@ -273,17 +275,17 @@ NeFileSegment(struct NeFile *const file, void *dest,
 	return rd;
 }
 
-NeSz
-NeFileWrite(struct NeFile *const file, const void *const data, NeSz datalen)
+brrsz
+NeFileWrite(struct NeFile *const file, const void *const data, brrsz datalen)
 {
-	NeSz wt = 0;
+	brrsz wt = 0;
 	struct NeFile *f = (struct NeFile *)file;
 	if (!file || !f->file || !(f->mode & NeFileModeWrite) || !data || !datalen)
 		return 0;
 
 	// TODO is fwrite cross-platform/portable?
 	if ((wt = fwrite(data, 1, datalen, f->file)) != datalen) {
-		NeERROR("Failed to write %zu bytes to %s : %m", datalen, f->path.cstr);
+		BRRLOG_ERR("Failed to write %zu bytes to %s : %m", datalen, f->path.cstr);
 	}
 	f->position += wt;
 	nneeof(f);
@@ -301,7 +303,7 @@ NeFileRemove(struct NeFile *const file)
 	if ((err = NeFileClose(file)) == NeERGNONE) {
 		// TODO remove is not cross-platform/portable
 		if ((err = remove(path.cstr)) != 0) {
-			NeERROR("Could not remove %s : %m", file->path.cstr);
+			BRRLOG_ERR("Could not remove %s : %m", file->path.cstr);
 			err = NeERFREMOVE;
 		}
 	}
@@ -318,10 +320,10 @@ NeFileRename(const char *const oldpath, const char *const newpath)
 		return NeERFPATH;
 	if ((err = NeFileStat(&stat, NULL, oldpath)) == NeERGNONE) {
 		if (!stat.exist) {
-			NeERROR("Cannot rename non-existant path %s", oldpath);
+			BRRLOG_ERR("Cannot rename non-existant path %s", oldpath);
 			return NeERFEXIST;
 		} else if (!stat.isreg) {
-			NeERROR("Will not rename non-regular file %s", newpath);
+			BRRLOG_ERR("Will not rename non-regular file %s", newpath);
 			return NeERFMODE;
 		}
 	} else {
@@ -329,11 +331,11 @@ NeFileRename(const char *const oldpath, const char *const newpath)
 	}
 	if ((err = NeFileStat(&stat, NULL, newpath)) == NeERGNONE) {
 		if (stat.exist) {
-			NeERROR("Cannot rename %s to existing path %s", oldpath, newpath);
+			BRRLOG_ERR("Cannot rename %s to existing path %s", oldpath, newpath);
 			return NeERFEXIST;
 		// TODO rename is not cross-platform/portable
 		} else if (rename(oldpath, newpath) != 0) {
-			NeERROR("Error renaming %s to %s : %m", oldpath, newpath);
+			BRRLOG_ERR("Error renaming %s to %s : %m", oldpath, newpath);
 			return NeERFRENAME;
 		}
 	} else {

@@ -26,10 +26,10 @@ limitations under the License.
 struct NeWisp {
 	struct NeStr path;
 	struct NeWem {
-		NeSz offset;
-		NeSz size;
+		brrsz offset;
+		brrsz size;
 	} *wems; // Storage for weem offset and size in wisp file
-	NeCt wemCount;
+	brrct wemCount;
 };
 
 NeErr NeWispRead(struct NeWisp *dst, struct NeFile *file);

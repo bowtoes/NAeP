@@ -18,7 +18,6 @@ limitations under the License.
 #define NeFile_h
 
 #include <stdio.h>
-#include "common/NeTypes.h"
 #include "common/NeStr.h"
 #include "common/NeErrors.h"
 
@@ -26,9 +25,9 @@ limitations under the License.
  * little endian/big endian specification; default is system default?
  * argument to pass? bitstreams? huh? */
 
-extern const NeFcc WEEMCC;
-extern const NeFcc BANKCC;
-extern const NeFcc OGGSCC;
+extern const brrfccT WEEMCC;
+extern const brrfccT BANKCC;
+extern const brrfccT OGGSCC;
 
 /* Modes with which to open files (always in binary) */
 enum NeFileMode {
@@ -43,23 +42,23 @@ extern const char *const NeFileModeStr[];
 struct NeFile {
 	struct NeStr path;
 	FILE *file;
-	NeSz size;
-	NeSz position;
+	brrsz size;
+	brrsz position;
 	enum NeFileMode mode;
 	union {
 		struct NeFileStat {
-			NeBy exist:1;
-			NeBy canrd:1;
-			NeBy canwt:1;
-			NeBy isreg:1;
-			NeBy isnew:1;
-			NeBy iseof:1;
+			brrby exist:1;
+			brrby canrd:1;
+			brrby canwt:1;
+			brrby isreg:1;
+			brrby isnew:1;
+			brrby iseof:1;
 		} stat;
-		NeBy status;
+		brrby status;
 	};
 };
 
-NeErr NeFileStat(struct NeFileStat *stat, NeSz *fsize, const char *const path);
+NeErr NeFileStat(struct NeFileStat *stat, brrsz *fsize, const char *const path);
 
 /* Open file for reading/writing */
 /* Returns -1 on error */
@@ -73,9 +72,9 @@ NeErr NeFileClose(struct NeFile *const file);
 void NeFileReopen(struct NeFile *const file, enum NeFileMode newmode);
 
 /* Skips file position forward/backward by bytes, with wrap-around */
-void NeFileSkip(struct NeFile *const file, NeOf bytes);
+void NeFileSkip(struct NeFile *const file, brrof bytes);
 /* Jumps to offset in file, no wrap-around */
-void NeFileJump(struct NeFile *const file, NeSz position);
+void NeFileJump(struct NeFile *const file, brrsz position);
 /* Flushes file and sets position to beginning of file */
 void NeFileReset(struct NeFile *const file);
 
@@ -85,16 +84,16 @@ void NeFileReset(struct NeFile *const file);
 */
 /* If feof, output is truncated */
 /* If ferror, buffer is unchanged and returns -1 */
-NeOf NeFileStream(struct NeFile *const file, void *dst, NeSz dstlen);
+brrof NeFileStream(struct NeFile *const file, void *dst, brrsz dstlen);
 /* Same as NeFileStream, but read from start to end */
 /* If start > end, read in reverse */
 /* File position is unchanged */
-NeOf NeFileSegment(struct NeFile *const file, void *dst,
-        NeSz start, NeSz end, NeSz maxlen);
+brrof NeFileSegment(struct NeFile *const file, void *dst,
+        brrsz start, brrsz end, brrsz maxlen);
 
 /* Writes datalen bytes into file at file position */
 /* Returns new file position */
-NeSz NeFileWrite(struct NeFile *const file, const void *const data, NeSz datalen);
+brrsz NeFileWrite(struct NeFile *const file, const void *const data, brrsz datalen);
 
 /* Closes the file and removes it from disk */
 NeErr NeFileRemove(struct NeFile *const file);

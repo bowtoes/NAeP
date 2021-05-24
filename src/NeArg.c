@@ -16,7 +16,9 @@ limitations under the License.
 
 #include "NeArg.h"
 
-#include "common/NeDebugging.h"
+#include <brrtools/brrlog.h>
+#include <brrtools/brrdebug.h>
+
 #include "revorbc/revorbc.h"
 #include "wisp/NeWisp.h"
 
@@ -24,61 +26,60 @@ struct NeArg *
 NeFindArg(struct NeArgs args, const char *const arg)
 {
 	for (int i = 0; i < args.argcount; ++i) {
-		if (NeStrCmp(arg, 0, args.args[i].arg.cstr, NULL)) {
+		if (NeStrCmp(arg, 0, args.args[i].arg.cstr, NULL))
 			return &args.args[i];
-		}
 	}
 	return NULL;
 }
 
 void
-NePrintArg(struct NeArg arg, NeSz maxarg, int newline)
+NePrintArg(struct NeArg arg, brrsz maxarg, int newline)
 {
-	struct NeLogFmt fm = NeLogPrFmt(arg.opt.loglevel);
-	enum NeLogPr pr = NePrDebug;
-	if      (arg.opt.weem) { NePREFIXNFG(pr, NeClGreen,  "WEEM"); }
-	else if (arg.opt.wisp) { NePREFIXNFG(pr, NeClYellow, "WISP"); }
-	else if (arg.opt.bank) { NePREFIXNFG(pr, NeClRed,    "BANK"); }
-	else if (arg.opt.oggs) { NePREFIXNFG(pr, NeClBlue,   "OGGS"); }
-	else                   { NePREFIXNST(pr, NeClMagenta, NeClNormal, NeStBold, "AUT"); }
-	NePREFIXN(pr, " ");
-	if (arg.opt.logcolor)    { NePREFIXNST(pr, NeClBlue, NeClNormal, NeStBold, "SYL"); }
-	else                     { NePREFIXNST(pr, NeClRed,  NeClNormal, NeStNone, "SMP"); }
-	NePREFIXN(pr, " ");
-	if (arg.opt.logoff) { NePREFIXNST(pr, NeClRed,   NeClNormal, NeStBold, "DSB"); }
-	else                { NePREFIXNST(pr, NeClGreen, NeClNormal, NeStBold, "ENB"); }
-	NePREFIXN(pr, " ");
-	if (arg.opt.logdebug) { NePREFIXNST(pr, NeClCyan, NeClNormal, NeStBold, "DBG"); }
-	else                  { NePREFIXNST(pr, NeClCyan, NeClNormal, NeStBold, "NRM"); }
-	NePREFIXN(pr, " ");
-	NePREFIXNST(pr, fm.fg, fm.bg, fm.st, "%s", NeLogPrDbgStr(arg.opt.loglevel));
-	NePREFIXN(pr, " log ");
-	if (arg.opt.dryrun) { NePREFIXNST(pr, NeClYellow, NeClNormal, NeStBold, "DRY"); }
-	else                { NePREFIXNST(pr, NeClYellow, NeClNormal, NeStNone, "WET"); }
-	NePREFIXN(pr, " ");
-	if (arg.opt.bankrecurse) { NePREFIXNST(pr, NeClGreen,   NeClNormal, NeStBold, "FLL"); }
-	else                     { NePREFIXNST(pr, NeClGreen,   NeClNormal, NeStNone, "NON"); }
-	NePREFIXN(pr, " bnk rcs ");
-	if (arg.opt.autoogg)     { NePREFIXNST(pr, NeClMagenta, NeClNormal, NeStBold, "AUT"); }
-	else                     { NePREFIXNST(pr, NeClMagenta, NeClNormal, NeStNone, "NON"); }
-	NePREFIXN(pr, " ");
-	if (arg.opt.ogginplace)  { NePREFIXNST(pr, NeClBlue,    NeClNormal, NeStBold, "RPL"); }
-	else                     { NePREFIXNST(pr, NeClBlue,    NeClNormal, NeStNone, "SEP"); }
-	NePREFIXN(pr, " ogg cnv ");
-	if (arg.opt.autorvb)     { NePREFIXNST(pr, NeClYellow,  NeClNormal, NeStBold, "AUT"); }
-	else                     { NePREFIXNST(pr, NeClYellow,  NeClNormal, NeStNone, "NON"); }
-	NePREFIXN(pr, " ");
-	if (arg.opt.rvbinplace)  { NePREFIXNST(pr, NeClCyan,    NeClNormal, NeStBold, "RPL"); }
-	else                     { NePREFIXNST(pr, NeClCyan,    NeClNormal, NeStNone, "SEP"); }
-	NePREFIXN(pr, " rvb%s", newline?"\n":" ");
+	brrlog_formatT fm = brrlog_format_debug;
+	brrlog_levelT lv = fm.level;
+	if      (arg.opt.weem) { BRRLOG_MESSAGE_FGNP(lv, brrlog_color_green,  "WEEM"); }
+	else if (arg.opt.wisp) { BRRLOG_MESSAGE_FGNP(lv, brrlog_color_yellow, "WISP"); }
+	else if (arg.opt.bank) { BRRLOG_MESSAGE_FGNP(lv, brrlog_color_red,    "BANK"); }
+	else if (arg.opt.oggs) { BRRLOG_MESSAGE_FGNP(lv, brrlog_color_blue,   "OGGS"); }
+	else                   { BRRLOG_MESSAGE_STNP(lv, brrlog_color_magenta, 0, brrlog_style_bold, "AUT"); }
+	BRRLOG_MESSAGE_EM(lv, " ");
+	if (arg.opt.logcolor)    { BRRLOG_MESSAGE_STNP(lv, brrlog_color_blue, brrlog_color_normal, brrlog_style_bold, "SYL"); }
+	else                     { BRRLOG_MESSAGE_STNP(lv, brrlog_color_red,  brrlog_color_normal, brrlog_style_none, "SMP"); }
+	BRRLOG_MESSAGE_EMNP(lv, " ");
+	if (arg.opt.logoff) { BRRLOG_MESSAGE_STNP(lv, brrlog_color_red,   brrlog_color_normal, brrlog_style_bold, "DSB"); }
+	else                { BRRLOG_MESSAGE_STNP(lv, brrlog_color_green, brrlog_color_normal, brrlog_style_bold, "ENB"); }
+	BRRLOG_MESSAGE_EMNP(lv, " ");
+	if (arg.opt.logdebug) { BRRLOG_MESSAGE_STNP(lv, brrlog_color_cyan, brrlog_color_normal, brrlog_style_bold, "DBG"); }
+	else                  { BRRLOG_MESSAGE_STNP(lv, brrlog_color_cyan, brrlog_color_normal, brrlog_style_bold, "NRM"); }
+	BRRLOG_MESSAGE_EMNP(lv, " ");
+	BRRLOG_MESSAGEFNP(lv, fm, "%s", brrlog_priority_dbgstr(arg.opt.loglevel));
+	BRRLOG_MESSAGE_EMNP(lv, " log ");
+	if (arg.opt.dryrun) { BRRLOG_MESSAGE_STNP(lv, brrlog_color_yellow, brrlog_color_normal, brrlog_style_bold, "DRY"); }
+	else                { BRRLOG_MESSAGE_STNP(lv, brrlog_color_yellow, brrlog_color_normal, brrlog_style_none, "WET"); }
+	BRRLOG_MESSAGE_EMNP(lv, " ");
+	if (arg.opt.bankrecurse) { BRRLOG_MESSAGE_STNP(lv, brrlog_color_green,   brrlog_color_normal, brrlog_style_bold, "FLL"); }
+	else                     { BRRLOG_MESSAGE_STNP(lv, brrlog_color_green,   brrlog_color_normal, brrlog_style_none, "NON"); }
+	BRRLOG_MESSAGE_EMNP(lv, " bnk rcs ");
+	if (arg.opt.autoogg)     { BRRLOG_MESSAGE_STNP(lv, brrlog_color_magenta, brrlog_color_normal, brrlog_style_bold, "AUT"); }
+	else                     { BRRLOG_MESSAGE_STNP(lv, brrlog_color_magenta, brrlog_color_normal, brrlog_style_none, "NON"); }
+	BRRLOG_MESSAGE_EMNP(lv, " ");
+	if (arg.opt.ogginplace)  { BRRLOG_MESSAGE_STNP(lv, brrlog_color_blue,    brrlog_color_normal, brrlog_style_bold, "RPL"); }
+	else                     { BRRLOG_MESSAGE_STNP(lv, brrlog_color_blue,    brrlog_color_normal, brrlog_style_none, "SEP"); }
+	BRRLOG_MESSAGE_EMNP(lv, " ogg cnv ");
+	if (arg.opt.autorvb)     { BRRLOG_MESSAGE_STNP(lv, brrlog_color_yellow,  brrlog_color_normal, brrlog_style_bold, "AUT"); }
+	else                     { BRRLOG_MESSAGE_STNP(lv, brrlog_color_yellow,  brrlog_color_normal, brrlog_style_none, "NON"); }
+	BRRLOG_MESSAGE_EMNP(lv, " ");
+	if (arg.opt.rvbinplace)  { BRRLOG_MESSAGE_STNP(lv, brrlog_color_cyan,    brrlog_color_normal, brrlog_style_bold, "RPL"); }
+	else                     { BRRLOG_MESSAGE_STNP(lv, brrlog_color_cyan,    brrlog_color_normal, brrlog_style_none, "SEP"); }
+	BRRLOG_MESSAGE_EMNP(lv, " rvb%s", newline?"\n":" ");
 }
 
 void
 NeDetectType(struct NeArg *arg, struct NeFile *f)
 {
-	NeFcc fcc;
+	brrfccT fcc;
 	if (NeFileSegment(f, &fcc, 0, 4, 4) != NeERFREAD) {
-		if (fcc == WEEMCC) {
+		if (fcc.code == WEEMCC.code) {
 			if (NeStrEndswith(f->path, NeStrShallow(".wsp", 4)))
 				arg->opt.wisp = 1;
 			else if (NeStrEndswith(f->path, NeStrShallow(".wem", 4)))
@@ -86,9 +87,9 @@ NeDetectType(struct NeArg *arg, struct NeFile *f)
 			/* assume wisp because wisps are a superset of weems */
 			else
 				arg->opt.wisp = 1;
-		} else if (fcc == BANKCC) {
+		} else if (fcc.code == BANKCC.code) {
 			arg->opt.bank = 1;
-		} else if (fcc == OGGSCC) {
+		} else if (fcc.code == OGGSCC.code) {
 			arg->opt.oggs = 1;
 		} else {
 			arg->opt.weem = arg->opt.wisp = arg->opt.bank = arg->opt.oggs = 0;
@@ -112,46 +113,46 @@ NeRevorbOgg(struct NeArg arg, struct NeFile *infile)
 			NeStrRindex(infile->path, NeStrShallow(".", 1), infile->path.length),
 			infile->path.length + 10, "_rvb.ogg");
 	if (!arg.opt.dryrun) {
-		NeDEBUGN("Open ");
-		NePREFIXNFG(NePrDebug, NeClCyan, "%s", opath.cstr);
-		NePREFIX(NePrDebug, " for revorbtion output");
+		BRRLOG_DEBN("Open ");
+		BRRLOG_MESSAGE_FGNP(brrlog_format_debug.level, brrlog_color_cyan, "%s", opath.cstr);
+		BRRLOG_DEBP(" for revorbtion output");
 		if (NeFileOpen(&out, opath.cstr, NeFileModeWrite) != NeERGNONE) {
-			NeERROR("Failed to open %s for revorb output : %m", opath.cstr);
+			BRRLOG_ERR("Failed to open %s for revorb output : %m", opath.cstr);
 			err = NeERFFILE;
 		} else if (revorb(infile->file, out.file) != NeERGNONE) {
-			NeERROR("Failed to revorb %s", infile->path.cstr);
+			BRRLOG_ERR("Failed to revorb %s", infile->path.cstr);
 			err = NeERRREVORB;
 		}
-		NeASSERTM(NeFileClose(&out) == NeERGNONE, "Failed to close output file %s : %m", out.path.cstr);
+		BRRDEBUG_ASSERTM(NeFileClose(&out) == NeERGNONE, "Failed to close output file %s : %m", out.path.cstr);
 		if (arg.opt.rvbinplace) {
 			struct NeStr ipath = {0};
 			NeStrCopy(&ipath, infile->path);
-			NeDEBUGN("Remove ");
-			NePREFIXFG(NePrDebug, NeClCyan, "%s", infile->path.cstr);
+			BRRLOG_DEBN("Remove ");
+			BRRLOG_MESSAGE_FGNP(brrlog_format_debug.level, brrlog_color_cyan, "%s", infile->path.cstr);
 			if ((err = NeFileRemove(infile)) == NeERGNONE) {
-				NeDEBUGN("Move ");
-				NePREFIXNFG(NePrDebug, NeClCyan, "%s", opath.cstr);
-				NePREFIXN(NePrDebug, " -> ");
-				NePREFIXFG(NePrDebug, NeClCyan, "%s", ipath.cstr);
+				BRRLOG_DEBN("Move ");
+				BRRLOG_MESSAGE_FGNP(brrlog_format_debug.level, brrlog_color_cyan, "%s", opath.cstr);
+				BRRLOG_DEBUGNP(" -> ");
+				BRRLOG_MESSAGE_FGP(brrlog_format_debug.level, brrlog_color_cyan, "%s", ipath.cstr);
 				if ((err = NeFileRename(opath.cstr, ipath.cstr)) != NeERGNONE) {
-					NeERROR("Failed to rename %s to %s : %m", err, opath.cstr, ipath.cstr);
+					BRRLOG_ERR("Failed to rename %s to %s : %m", err, opath.cstr, ipath.cstr);
 					err = NeERFFILE;
 				}
 			} else {
-				NeERROR("Failed to remove %s when renaming : %m", ipath.cstr);
+				BRRLOG_ERR("Failed to remove %s when renaming : %m", ipath.cstr);
 				err = NeERFFILE;
 			}
 			NeStrDel(&ipath);
 		}
 	} else {
-		NeDEBUGN("Open ");
-		NePREFIXNFG(NePrDebug, NeClCyan, "%s", opath.cstr);
-		NePREFIX(NePrDebug, " for revorbtion output");
+		BRRLOG_DEBN("Open ");
+		BRRLOG_MESSAGE_FGNP(brrlog_format_debug.level, brrlog_color_cyan, "%s", opath.cstr);
+		BRRLOG_DEBP(" for revorbtion output");
 		if (arg.opt.rvbinplace) {
-			NeDEBUGN("Move ");
-			NePREFIXNFG(NePrDebug, NeClCyan, "%s", opath.cstr);
-			NePREFIXN(NePrDebug, " -> ");
-			NePREFIXFG(NePrDebug, NeClCyan, "%s", infile->path.cstr);
+			BRRLOG_DEBN("Move ");
+			BRRLOG_MESSAGE_FGNP(brrlog_format_debug.level, brrlog_color_cyan, "%s", opath.cstr);
+			BRRLOG_DEBNP(" -> ");
+			BRRLOG_MESSAGE_FGP(brrlog_format_debug.level, brrlog_color_cyan, "%s", infile->path.cstr);
 		}
 	}
 	NeStrDel(&opath);
@@ -176,7 +177,7 @@ NeExtractWisp(struct NeArg arg, struct NeFile *infile)
 
 	if (!arg.opt.dryrun) {
 		if ((err = NeWispRead(&wsp, infile)) != NeERGNONE) {
-			NeERROR("Failed reading wisp file %s : %m", infile->path.cstr);
+			BRRLOG_ERR("Failed reading wisp file %s : %m", infile->path.cstr);
 		} else {
 			NeWispSave(&wsp, 0);
 		}

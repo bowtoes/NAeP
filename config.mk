@@ -143,15 +143,6 @@ else ifneq ($(BITS),32)
  endif
 endif ## BITS
 
-# Dynamic vs static linkage
-ifndef MODE # Assume dynamic linkage
- MODE:=SHARED
-else ifneq ($(MODE),STATIC)
- ifneq ($(MODE),SHARED)
-  MODE:=SHARED
- endif
-endif ## MODE
-
 # # # TOOLCHAIN
 # Compiler
 ifdef CC_CUSTOM
@@ -208,17 +199,22 @@ ifndef DLLTOOL
  endif ## HOST
 endif ## DLLTOOL
 
+ifeq ($(HOST),UNIX)
+ NULL:=/dev/null
+ RM:=rm -fv
+ RMDIR:=rm -rfv
+else
+ NULL:=nul
+ RM:=del /F
+ RMDIR:=rmdir
+endif ## HOST
+
 # Compileds output top directory
 ifeq ($(TARGET),WINDOWS)
 OUTDIR:=$(BLDDIR)/$(WINDIR)
 else
 OUTDIR:=$(BLDDIR)/$(UNIDIR)
 endif ## TARGET
-ifeq ($(MODE),SHARED)
-OUTDIR:=$(OUTDIR)/$(SHRDIR)
-else
-OUTDIR:=$(OUTDIR)/$(STADIR)
-endif ## MODE
 ifeq ($(BITS),32)
 OUTDIR:=$(OUTDIR)/$(B32DIR)
 else
@@ -233,7 +229,7 @@ endif
 
 # # # CC ARGS
 # Includes
-INCS:=-I$(SRCDIR)
+INCS:=-I$(SRCDIR) -I./vendor/brrtools/src
 # Warnings/errors
 WRNS:=-Wall -Wextra -Wpedantic -pedantic -Werror=pedantic -pedantic-errors\
       -Werror=implicit-function-declaration -Werror=missing-declarations\
@@ -243,7 +239,7 @@ DEFS:=-D$(UPROJECT)_MAJOR=$($(PROJECT)_MAJOR)\
       -D$(UPROJECT)_MINOR=$($(PROJECT)_MINOR)\
       -D$(UPROJECT)_REVIS=$($(PROJECT)_REVIS)\
       -D$(UPROJECT)_VERSION='$($(PROJECT)_MAJOR).$($(PROJECT)_MINOR).$($(PROJECT)_REVIS)'\
-      -DNeASSERTS -DNeLOGGING -DNeLOGCOLORS -DNeLOGFLUSH -DNeDEBUGGING\
+      -DNeASSERTS -DNeDEBUGGING\
 
 # PRF: Performance options (applied at compile & link-time)
 # OPT: Optimization options (applied at compile-time)
@@ -277,7 +273,6 @@ $(PROJECT)_LDFLAGS=$(LNK) $(PRF) $(LDFLAGS)
 # find source files to compile and headers to check for changes
 # should be specified relative to CURDIR
 SRC:=\
-	src/common/NeLogging.c\
 	src/common/NeLibrary.c\
 	src/common/NeFile.c\
 	src/common/NeMisc.c\
@@ -286,12 +281,9 @@ SRC:=\
 	src/revorbc/revorbc.c\
 	src/NeArg.c\
 	src/main.c\
+	#src/common/NeLogging.c\
 
 HDR:=\
-	src/common/NePlatform.h\
-	src/common/NeTypes.h\
-	src/common/NeDebugging.h\
-	src/common/NeLogging.h\
 	src/common/NeLibrary.h\
 	src/common/NeFile.h\
 	src/common/NeMisc.h\
@@ -299,3 +291,4 @@ HDR:=\
 	src/wisp/NeWisp.h\
 	src/revorbc/revorbc.h\
 	src/NeArg.h\
+	#src/common/NeLogging.h\

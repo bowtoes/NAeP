@@ -16,25 +16,27 @@ limitations under the License.
 
 #include "common/NeStr.h"
 
+#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
 
-#include "common/NePlatform.h"
-#include "common/NeDebugging.h"
-#include "common/NeLogging.h"
+#include <brrtools/brrplatform.h>
+#include <brrtools/brrdebug.h>
+#include <brrtools/brrlog.h>
+
 #include "common/NeLibrary.h"
 #include "common/NeMisc.h"
 
-#if defined(NePLATFORMTYPE_POSIX) || defined(NePLATFORMTYPE_BSD)
+#if defined(BRRPLATFORMTYPE_UNIX)
 #include <strings.h>
 #endif
 
-NeSz
-NeStrlen(const char *const str, NeSz max)
+brrsz
+NeStrlen(const char *const str, brrsz max)
 {
-	NeSz i = 0;
+	brrsz i = 0;
 	if (!str || !max)
 		return 0;
 	for (char a = str[0]; i < max && a != 0; ++i, a = str[i]);
@@ -42,16 +44,16 @@ NeStrlen(const char *const str, NeSz max)
 }
 
 void
-NeStrNew(struct NeStr *const str, const char *const cstr, NeSz maxlen)
+NeStrNew(struct NeStr *const str, const char *const cstr, brrsz maxlen)
 {
 	if (!str)
 		return;
-	NeASSERTM(str->cstr != cstr, "cstr and str->cstr must not overlap");
+	BRRDEBUG_ASSERTM(str->cstr != cstr, "cstr and str->cstr must not overlap");
 	/* !cstr || !maxlen produces valid string that can be deleted with NeStrDel */
 
 	str->length = NeStrlen(cstr, maxlen);
 	str->cstr = NeSafeAlloc(str->cstr, str->length + 1, 1);
-	for (NeSz i = 0; i < str->length; ++i)
+	for (brrsz i = 0; i < str->length; ++i)
 		str->cstr[i] = cstr[i];
 }
 
@@ -71,7 +73,7 @@ NeStrCopy(struct NeStr *const out, const struct NeStr src)
 }
 
 struct NeStr
-NeStrShallow(char *cstr, NeSz maxlen)
+NeStrShallow(char *cstr, brrsz maxlen)
 {
 	struct NeStr s = {0};
 	s.cstr = cstr;
@@ -79,23 +81,23 @@ NeStrShallow(char *cstr, NeSz maxlen)
 	return s;
 }
 
-NeOf
-NeStrIndex(const struct NeStr hay, const struct NeStr ndl, NeSz iof)
+brrof
+NeStrIndex(const struct NeStr hay, const struct NeStr ndl, brrsz iof)
 {
 	return NeFind(hay.cstr, hay.length, ndl.cstr, ndl.length, iof);
 }
 
-NeOf
-NeStrRindex(const struct NeStr hay, const struct NeStr ndl, NeSz iof)
+brrof
+NeStrRindex(const struct NeStr hay, const struct NeStr ndl, brrsz iof)
 {
 	return NeRfind(hay.cstr, hay.length, ndl.cstr, ndl.length, iof);
 }
 
-NeOf
-NeStrPrint(struct NeStr *dst, NeOf offset, NeSz strlen, const char *const fmt, ...)
+brrof
+NeStrPrint(struct NeStr *dst, brrof offset, brrsz strlen, const char *const fmt, ...)
 {
 	va_list lptr;
-	NeOf prt = 0;
+	brrof prt = 0;
 	if (!dst || !fmt)
 		return 0;
 	if (!strlen) {
@@ -123,9 +125,9 @@ NeStrPrint(struct NeStr *dst, NeOf offset, NeSz strlen, const char *const fmt, .
 }
 
 void
-NeStrSlice(struct NeStr *const out, const struct NeStr str, NeOf start, NeOf end)
+NeStrSlice(struct NeStr *const out, const struct NeStr str, brrof start, brrof end)
 {
-	NeOf rv = 0;
+	brrof rv = 0;
 	if (!out || !str.length)
 		return;
 
@@ -146,11 +148,11 @@ NeStrSlice(struct NeStr *const out, const struct NeStr str, NeOf start, NeOf end
 	out->cstr = NeSafeAlloc(out->cstr, out->length + 1, 1);
 
 	if (rv) {
-		for (NeOf k = end - 1, rv = 0; k >= start; --k, ++rv) {
+		for (brrof k = end - 1, rv = 0; k >= start; --k, ++rv) {
 			out->cstr[rv] = str.cstr[k];
 		}
 	} else {
-		for (NeOf k = start, rv = 0; k < end; ++k, ++rv)
+		for (brrof k = start, rv = 0; k < end; ++k, ++rv)
 			out->cstr[rv] = str.cstr[k];
 	}
 }
@@ -171,9 +173,9 @@ NeStrJoin(struct NeStr *const out, const struct NeStr a, const struct NeStr b)
 
 	out->length = a.length + b.length;
 	out->cstr = NeSafeAlloc(out->cstr, out->length + 1, 1);
-	for (NeSz i = 0; i < a.length; ++i)
+	for (brrsz i = 0; i < a.length; ++i)
 		out->cstr[i] = a.cstr[i];
-	for (NeSz i = a.length; i < out->length; ++i)
+	for (brrsz i = a.length; i < out->length; ++i)
 		out->cstr[i] = b.cstr[i - a.length];
 }
 
@@ -184,7 +186,7 @@ NeStrMerge(struct NeStr *const str, const struct NeStr mg)
 		return;
 	str->length += mg.length;
 	str->cstr = NeSafeAlloc(str->cstr, str->length + 1, 0);
-	for (NeSz i = str->length - mg.length; i < str->length; ++i)
+	for (brrsz i = str->length - mg.length; i < str->length; ++i)
 		str->cstr[i] = mg.cstr[i - str->length + mg.length];
 }
 
@@ -200,9 +202,9 @@ NeStrCmp(const char *const cmp, int cse, ...)
 			a = va_arg(lptr, char *);
 			if (!a || !*a)
 				break;
-#if defined(NePLATFORMTYPE_WINDOWS)
+#if defined(BRRPLATFORMTYPE_WINDOWS)
 			if (_stricmp(cmp, a) == 0)
-#elif defined(NePLATFORMTYPE_POSIX) || defined(NePLATFORMTYPE_BSD)
+#elif defined(BRRPLATFORMTYPE_UNIX)
 			if (strcasecmp(cmp, a) == 0)
 #else
 #error How get strcasecmp?
@@ -233,7 +235,7 @@ NeStrEndswith(const struct NeStr str, const struct NeStr cmp)
 	int c = 1;
 	if (!str.length || !cmp.length || cmp.length > str.length)
 		return 0;
-	for (NeSz i = 0; i < cmp.length && c; ++i) {
+	for (brrsz i = 0; i < cmp.length && c; ++i) {
 		c &= cmp.cstr[i] == str.cstr[str.length - cmp.length + i];
 	}
 	return c;

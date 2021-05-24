@@ -16,17 +16,17 @@ limitations under the License.
 
 #include "common/NeLibrary.h"
 
-#include <stdlib.h> /* malloc() */
-#include <string.h> /* memcmp() */
-#include "common/NeDebugging.h"
-#include "common/NeLogging.h"
+#include <stdlib.h>
+#include <string.h>
+
+#include <brrtools/brrdebug.h>
+#include <brrtools/brrlog.h>
 #include "common/NeMisc.h"
-#include "common/NeTypes.h"
 
 
 /* should this allocation be automatically chunked? */
 void *
-NeSafeAlloc(void *cur, NeSz size, int zero)
+NeSafeAlloc(void *cur, brrsz size, int zero)
 {
 	if (!size) {
 		if (cur) {
@@ -38,47 +38,47 @@ NeSafeAlloc(void *cur, NeSz size, int zero)
 		if (cur) {
 			free(cur);
 		}
-		NeASSERTM(cur = calloc(1, size), "Failed to calloc %zu bytes : %m", size);
+		BRRDEBUG_ASSERTM(cur = calloc(1, size), "Failed to calloc %zu bytes : %m", size);
 	} else if (!cur) {
-		NeASSERTM(cur = malloc(size), "Failed to malloc %zu bytes : %m", size);
+		BRRDEBUG_ASSERTM(cur = malloc(size), "Failed to malloc %zu bytes : %m", size);
 	} else {
-		NeASSERTM(cur = realloc(cur, size), "Failed to realloc %zu bytes : %m", size);
+		BRRDEBUG_ASSERTM(cur = realloc(cur, size), "Failed to realloc %zu bytes : %m", size);
 	}
 
 	return cur;
 }
 
 void
-NeReverse(void *const buf, NeSz buflen)
+NeReverse(void *const buf, brrsz buflen)
 {
-	NeBy *const b = (NeBy *const)buf;
+	brrby *const b = (brrby *const)buf;
 	if (!buf || !buflen)
 		return;
-	for (NeSz i = 0; i < buflen / 2; ++i)
+	for (brrsz i = 0; i < buflen / 2; ++i)
 		NeSWAP(b[i], b[buflen - 1 - i]);
 }
 
 static void
-NeReverseElements(NeBy *const buf, NeSz elcount, NeSz elsize)
+NeReverseElements(brrby *const buf, brrsz elcount, brrsz elsize)
 {
 	if (!buf || !elcount || !elsize)
 		return;
-	for (NeSz i = 0; i < elcount / 2; ++i) {
-		NeBy *a = NeIDX(buf, i, elsize);
-		NeBy *b = NeIDX(buf, elcount - 1 - i, elsize);
-		for (NeSz j = 0; j < elsize; ++j)
+	for (brrsz i = 0; i < elcount / 2; ++i) {
+		brrby *a = NeIDX(buf, i, elsize);
+		brrby *b = NeIDX(buf, elcount - 1 - i, elsize);
+		for (brrsz j = 0; j < elsize; ++j)
 			NeSWAP(a[j], b[j]);
 	}
 }
 
-NeSz
-NeSlice(void *const dst, NeSz dstlen,
-             const void *const src, NeSz srclen,
-             NeOf start, NeOf end)
+brrsz
+NeSlice(void *const dst, brrsz dstlen,
+             const void *const src, brrsz srclen,
+             brrof start, brrof end)
 {
-	NeSz i = 0;
-	NeBy *const d = (NeBy *const)dst;
-	const NeBy *const s = (const NeBy *const)src;
+	brrsz i = 0;
+	brrby *const d = (brrby *const)dst;
+	const brrby *const s = (const brrby *const)src;
 	/* can't copy any bytes */
 	if (!src || !dst || !srclen || !dstlen)
 		return NeERGINVALID;
@@ -90,19 +90,19 @@ NeSlice(void *const dst, NeSz dstlen,
 		return NeERGNONE;
 
 	if (start > end) {
-		for (NeOf k = start - 1; k >= end && i < dstlen; --k, ++i)
+		for (brrof k = start - 1; k >= end && i < dstlen; --k, ++i)
 			d[i] = s[k];
 	} else {
-		for (NeOf k = start; k < end && i < dstlen; ++k, ++i)
+		for (brrof k = start; k < end && i < dstlen; ++k, ++i)
 			d[i] = s[k];
 	}
 	return i;
 }
 
-NeSz
-(NeCopy)(void *const dst, NeSz dstlen, const void *const src, NeSz srclen)
+brrsz
+(NeCopy)(void *const dst, brrsz dstlen, const void *const src, brrsz srclen)
 {
-	NeSz mn = 0;
+	brrsz mn = 0;
 	if (!dst || !src || !dstlen || !srclen)
 		return 0;
 	mn = dstlen < srclen ? dstlen : srclen;
@@ -110,13 +110,13 @@ NeSz
 	return mn;
 }
 
-NeOf
-NeFind(const void *const hay, NeSz haysz,
-        const void *const ndl, NeSz ndlsz, NeOf iof)
+brrof
+NeFind(const void *const hay, brrsz haysz,
+        const void *const ndl, brrsz ndlsz, brrof iof)
 {
-	NeBy cmp;
-	const NeBy *const h = (const NeBy *const)hay,
-	           *const n = (const NeBy *const)ndl;
+	brrby cmp;
+	const brrby *const h = (const brrby *const)hay,
+	           *const n = (const brrby *const)ndl;
 
 	if (!hay || !ndl)
 		return NeERGINVALID;
@@ -126,7 +126,7 @@ NeFind(const void *const hay, NeSz haysz,
 	/* don't enter the last ndlsz - 1 bytes, they can't match */
 	for (;iof < haysz - (ndlsz - 1); ++iof) {
 		cmp = 1;
-		for (NeOf i = 0; i < ndlsz; ++i)
+		for (brrof i = 0; i < ndlsz; ++i)
 			cmp &= n[i] == h[i + iof];
 		if (cmp)
 			break;
@@ -136,13 +136,13 @@ NeFind(const void *const hay, NeSz haysz,
 	return iof;
 }
 
-NeOf
-NeRfind(const void *const hay, NeSz haysz,
-		const void *const ndl, NeSz ndlsz, NeOf iof)
+brrof
+NeRfind(const void *const hay, brrsz haysz,
+		const void *const ndl, brrsz ndlsz, brrof iof)
 {
-	NeBy cmp;
-	const NeBy *const h = (const NeBy *const)hay,
-	           *const n = (const NeBy *const)ndl;
+	brrby cmp;
+	const brrby *const h = (const brrby *const)hay,
+	           *const n = (const brrby *const)ndl;
 
 	if (!hay || !ndl)
 		return NeERGINVALID;
@@ -151,7 +151,7 @@ NeRfind(const void *const hay, NeSz haysz,
 
 	for (;iof>=ndlsz-1;--iof) {
 		cmp = 1;
-		for (NeOf i = 0; i < ndlsz; ++i)
+		for (brrof i = 0; i < ndlsz; ++i)
 			cmp &= n[i] == h[i + iof];
 		if (cmp)
 			break;

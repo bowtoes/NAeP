@@ -16,8 +16,8 @@ limitations under the License.
 
 #include "common/NeMisc.h"
 
-NeOf
-NeGCF(NeOf a, NeOf b)
+brrof
+NeGCF(brrof a, brrof b)
 {
 	if (a == b)
 		return a;
@@ -25,36 +25,36 @@ NeGCF(NeOf a, NeOf b)
 		return 0;
 
 	while (b != 0) {
-		NeOf t = b;
+		brrof t = b;
 		b = a % t;
 		a = t;
 	}
 
 	return a;
 }
-NeOf
-NeSmartMod(NeOf in, NeSz mod, NeOf of)
+brrof
+NeSmartMod(brrof in, brrsz mod, brrof of)
 {
 	if (mod == 0)
 		return 0;
 	if (in >= 0) {
-		in = (NeOf)((NeSz)in % mod);
+		in = (brrof)((brrsz)in % mod);
 	} else {
 		/* https://stackoverflow.com/a/43295944/13528679 */
-		NeSz t = (NeSz)(-(in + 1));
-		in = (NeOf)(mod - 1 - (t % mod)) + of;
+		brrsz t = (brrsz)(-(in + 1));
+		in = (brrof)(mod - 1 - (t % mod)) + of;
 	}
 	return in;
 }
 
-NeSz
-NeDigitCount(NeOf n)
+brrsz
+NeDigitCount(brrof n)
 {
-	NeSz c = 1;
+	brrsz c = 1;
 	if (n == 0)
 		return c;
 	if (n < 0) {
-		n = n == NeOFMIN ? -(n + 1) : -n;
+		n = n == BRRTOOLS_BRROF_MIN ? -(n + 1) : -n;
 	}
 	while (n/=10) c++; /* teehee */
 	return c;

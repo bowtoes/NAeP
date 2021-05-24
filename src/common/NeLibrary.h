@@ -17,11 +17,12 @@ limitations under the License.
 #ifndef NeLibrary_h
 #define NeLibrary_h
 
-#include "common/NeTypes.h"
+#include <brrtools/brrtypes.h>
+
 #include "common/NeErrors.h"
 
 /* get element (size elementsize) idx in data */
-#define NeIDX(data, idx, elementsize) (((NeBy *)(data)) + ((idx) * (elementsize)))
+#define NeIDX(data, idx, elementsize) (((brrby *)(data)) + ((idx) * (elementsize)))
 
 /* Should be used as maximum size alloced at once, though safe alloc doesn't
    check */
@@ -30,40 +31,40 @@ limitations under the License.
 /* if cur and zero, free cur and calloc */
 /* if cur and not zero, realloc cur */
 /* On error, hard crashes? what to do then? */
-void *NeSafeAlloc(void *cur, NeSz size, int zero);
+void *NeSafeAlloc(void *cur, brrsz size, int zero);
 
-void NeReverse(void *const buf, NeSz buflen);
+void NeReverse(void *const buf, brrsz buflen);
 
 /* Copy a subset of src into dst from start to end */
 /* If end is before start, the copied data is in backwards order */
 /* Does wrap-around */
 /* Very similar to python slicing */
 /* Returns number of bytes copied */
-NeSz NeSlice(void *const dst, NeSz dstlen,
-             const void *const src, NeSz srclen,
-             NeOf start, NeOf end);
+brrsz NeSlice(void *const dst, brrsz dstlen,
+             const void *const src, brrsz srclen,
+             brrof start, brrof end);
 
 //#define NeCopy(d, dl, s, sl) NeSlice(d, dl, s, sl, 0, -1)
 
 /* Copies at most dstlen bytes from src into dst */
-NeSz (NeCopy)(void *const dst, NeSz dstlen,
-			const void *const src, NeSz srclen);
+brrsz (NeCopy)(void *const dst, brrsz dstlen,
+			const void *const src, brrsz srclen);
 /* Find first offset of ndl in hay; return offset */
 /* Returns -1 if error */
 /* Retruns haysz if not found*/
 /* To find every instance of 'ndl' in 'hay', do a loop like: */
-/*  for (NeOf of = 0; of >= 0 && (of = NeFind(h, hs, n, ns, of)) >= 0 && of < hs; of += ns) {*/
+/*  for (brrof of = 0; of >= 0 && (of = NeFind(h, hs, n, ns, of)) >= 0 && of < hs; of += ns) {*/
 /*      // do stuff */
 /*  } */
 /* To do so backwards, with Rfind: */
-/*  for (NeOf of = hs - 1; of >= 0 && (of = NeRfind(h, hs, n, ns, of)) >= 0 && of < hs; of -= ns) { */
+/*  for (brrof of = hs - 1; of >= 0 && (of = NeRfind(h, hs, n, ns, of)) >= 0 && of < hs; of -= ns) { */
 /*      // do stuff */
 /*  } */
-NeOf NeFind(const void *const hay, NeSz haysz,
-        const void *const ndl, NeSz ndlsz, NeOf iof);
+brrof NeFind(const void *const hay, brrsz haysz,
+        const void *const ndl, brrsz ndlsz, brrof iof);
 /* Same as NeFind, except starts from the back and searches backward */
 /* iof is always relative to start of hay (0) */
-NeOf NeRfind(const void *const hay, NeSz haysz,
-        const void *const ndl, NeSz ndlsz, NeOf iof);
+brrof NeRfind(const void *const hay, brrsz haysz,
+        const void *const ndl, brrsz ndlsz, brrof iof);
 
 #endif /* NeLibrary_h */

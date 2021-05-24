@@ -17,11 +17,10 @@ limitations under the License.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <alloca.h>
 
-#include "common/NeDebugging.h"
-#include "common/NeLogging.h"
+#include <brrtools/brrdebug.h>
+#include <brrtools/brrlog.h>
+
 #include "common/NeLibrary.h"
 #include "common/NeMisc.h"
 #include "common/NeStr.h"
@@ -79,8 +78,8 @@ static const char *const usg =
 
 static void printhelp()
 {
-	NeNORMAL("NAeP - NieR: Automata extraction Protocol");
-	NeNORMAL("Compiled on "__DATE__", " __TIME__"\n");
+	BRRLOG_NOR("NAeP - NieR: Automata extraction Protocol");
+	BRRLOG_NOR("Compiled on "__DATE__", " __TIME__"\n");
 	fprintf(stdout, "%s\n", usg);
 	exit(0);
 }
@@ -97,10 +96,14 @@ int main(int argc, char **argv)
 	struct NeArgOpt opt = {0};
 	struct NeArgs args = {0};
 	char *arg = argv[1];
-	NeCt maxargs = 1024;
-	NeBy rst = 0;
+	brrct maxargs = 1024;
+	brrby rst = 0;
 
-	def.loglevel = NePrAll;
+	brrlog_setlogmax(0);
+	brrlogctl_styleon = true;
+	brrlogctl_flushon = true;
+
+	def.loglevel = brrlog_priority_debug;
 	def.logcolor = 1;
 	opt = def;
 
@@ -167,60 +170,60 @@ int main(int argc, char **argv)
 		struct NeFileStat stat;
 		struct NeFile afile;
 		for (int i = 0; i < args.argcount; ++i, arg = &args.args[i]) {
-			NeLogSetDebug(arg->opt.logdebug);
-			NeLogLevelSet(arg->opt.logoff?NePrNone:arg->opt.loglevel);
-			NeLogColorState(arg->opt.logcolor);
+			brrlogctl_debugon = arg->opt.logdebug;
+			brrlogctl_styleon = arg->opt.logcolor;
+			brrlog_setmaxpriority(arg->opt.logoff?brrlog_priority_none:arg->opt.loglevel);
 			NeFileStat(&stat, NULL, arg->arg.cstr);
 			if (!stat.exist || !stat.isreg || (!stat.canwt && (arg->opt.ogginplace || arg->opt.rvbinplace)) || !stat.canrd) {
-				NeWARNINGN("Cannot parse ");
-				NePREFIXNST(-1, NeClCyan, -1, NeStBold, "%s", arg->arg.cstr);
-				NePREFIXN(-1, " : ");
+				BRRLOG_WARN("Cannot parse ");
+				BRRLOG_MESSAGE_STNP(brrlog_format_last.level, brrlog_color_cyan, -1, brrlog_style_bold, "%s", arg->arg.cstr);
+				BRRLOG_MESSAGE_EMNP(brrlog_format_last.level, " : ");
 				if (!stat.exist)
-					NePREFIXST(-1, NeClGreen, -1, NeStBold, "File does not exist.");
+					BRRLOG_MESSAGE_STP(brrlog_format_last.level, brrlog_color_green, -1, brrlog_style_bold, "File does not exist.");
 				else if (!stat.isreg)
-					NePREFIXST(-1, NeClBlue, -1, NeStBold, "File is not regular.");
+					BRRLOG_MESSAGE_STP(brrlog_format_last.level, brrlog_color_blue, -1, brrlog_style_bold, "File is not regular.");
 				else if (!stat.canwt)
-					NePREFIXST(-1, NeClGreen, -1, NeStBold, "Cannot write to file for in-place convert/revorb.");
+					BRRLOG_MESSAGE_STP(brrlog_format_last.level, brrlog_color_green, -1, brrlog_style_bold, "Cannot write to file for in-place convert/revorb.");
 				else if (!stat.canrd)
-					NePREFIXST(NePrWarning, NeClGreen, -1, NeStBold, "Cannot read file.");
+					BRRLOG_MESSAGE_STP(brrlog_format_last.level, brrlog_color_blue, -1, brrlog_style_bold, "Cannot read file.");
 				continue;
 			} else if (NeFileOpen(&afile, arg->arg.cstr, NeFileModeReadWrite) != NeERGNONE) {
-				NeERRORN("Could not open ");
-				NePREFIXNST(NePrError, NeClCyan, -1, NeStBold, "%s", arg->arg.cstr);
-				NePREFIXN(NePrError, " for parsing.");
+				BRRLOG_ERRN("Could not open ");
+				BRRLOG_MESSAGE_STNP(brrlog_format_last.level, brrlog_color_cyan, -1, brrlog_style_bold, "%s", arg->arg.cstr);
+				BRRLOG_ERRP(" for parsing.");
 				continue;
 			}
-			NeNORMALN("Parsing ");
-			NePREFIXNFG(NePrNormal, NeClMagenta, "%*i / %*i ", args.argdigit, i + 1, args.argdigit, args.argcount);
+			BRRLOG_NORN("Parsing ");
+			BRRLOG_MESSAGE_FGNP(brrlog_format_last.level, brrlog_color_magenta, "%*i / %*i ", args.argdigit, i + 1, args.argdigit, args.argcount);
 			if (arg->opt.logdebug)
 				NePrintArg(*arg, args.maxarg, arg->opt.logoff);
 			if ((arg->opt.oggs | arg->opt.weem | arg->opt.wisp | arg->opt.bank) == 0) {
 				NeDetectType(arg, &afile);
 			}
 			if (arg->opt.oggs) {
-				NePREFIXFG(NePrNormal, NeClBlue, "%-*s", args.maxarg, arg->arg.cstr);
+				BRRLOG_MESSAGE_FGP(brrlog_format_last.level, brrlog_color_blue, "%-*s", args.maxarg, arg->arg.cstr);
 				NeRevorbOgg(*arg, &afile);
 			} else if (arg->opt.weem) {
-				NePREFIXFG(NePrNormal, NeClGreen, "%-*s", args.maxarg, arg->arg.cstr);
+				BRRLOG_MESSAGE_FGP(brrlog_format_last.level, brrlog_color_green, "%-*s", args.maxarg, arg->arg.cstr);
 				NeConvertWeem(*arg, &afile);
 			} else if (arg->opt.wisp) {
-				NePREFIXFG(NePrNormal, NeClYellow, "%-*s", args.maxarg, arg->arg.cstr);
+				BRRLOG_MESSAGE_FGP(brrlog_format_last.level, brrlog_color_yellow, "%-*s", args.maxarg, arg->arg.cstr);
 				NeExtractWisp(*arg, &afile);
 			} else if (arg->opt.bank) {
-				NePREFIXFG(NePrNormal, NeClRed, "%-*s", args.maxarg, arg->arg.cstr);
+				BRRLOG_MESSAGE_FGP(brrlog_format_last.level, brrlog_color_red, "%-*s", args.maxarg, arg->arg.cstr);
 				NeExtractBank(*arg, &afile);
 			} else {
-				NeERRORN("Could not determine filetype for ");
-				NePREFIXNFG(NePrError, NeClCyan, "%s", arg->arg);
-				NePREFIX(NePrError, ", cannot parse");
+				BRRLOG_ERRN("Could not determine filetype for ");
+				BRRLOG_MESSAGE_FGNP(brrlog_format_last.level, brrlog_color_cyan, "%s", arg->arg);
+				BRRLOG_ERRP(", cannot parse");
 			}
 			if (NeFileClose(&afile) != NeERGNONE) {
-				NeTRACE("AAA");
+				BRRDEBUG_TRACE("AAA");
 			}
 		}
 	} else {
-		NeLogLevelSet(opt.logdebug ? NePrDebug : opt.loglevel);
-		NeERROR("No files passed");
+		brrlog_setmaxpriority(opt.logdebug ? brrlog_priority_debug : opt.loglevel);
+		BRRLOG_ERR("No files passed");
 	}
 	args.args = NeSafeAlloc(args.args, 0, 0);
 
@@ -232,11 +235,11 @@ static int extractwisp(struct NeArg a, struct NeWeem **dst) {
 	struct NeWeem *d = *dst;
 	struct NeWisp wsp = {0};
 	struct NeStr wispPath, tempPath = {0};
-	NeSz dgt = 0;
+	brrsz dgt = 0;
 	int wemcount = 0, err = 0;
 
 	if (!NeWispOpen(&wsp, a.arg)) {
-		NeERROR("Failed to open %s for wisp extraction");
+		BRRLOG_ERR("Failed to open %s for wisp extraction");
 		dst = NULL;
 		return 0;
 
@@ -248,14 +251,14 @@ static int extractwisp(struct NeArg a, struct NeWeem **dst) {
 	for (int i = 0; i < wsp.wemCount; ++i) {
 		struct NeWem wem = wsp.wems[i];
 		struct NeWeem w = {0};
-		NeSz wrt = 0;
+		brrsz wrt = 0;
 
 		NeStrPrint(&w.outpath, 0, NeMAXPATH - 4, "%s_%0*u", tempPath.cstr, dgt, i);
 		NeStrPrint(&w.outpath, w.outpath.length, NeMAXPATH, "%s", ".wem");
 		w.size = wem.size;
 
 		while (wrt < wem.size + 8) {
-			NeSz rd = 0;
+			brrsz rd = 0;
 			w.data = NeSafeAlloc(w.data, wrt + NeBLOCKSIZE, 0);
 			rd = NeFileSegment(&wsp.file, w.data + wrt, NeBLOCKSIZE, wem.offset + wrt, wem.offset + wem.size + 8);
 			if (rd == -1) {

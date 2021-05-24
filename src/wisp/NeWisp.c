@@ -21,9 +21,9 @@ limitations under the License.
  * boundaries */
 
 #include <stdlib.h> /* realloc, free */
+#include <brrtools/brrdebug.h>
+#include <brrtools/brrlog.h>
 
-#include "common/NeDebugging.h"
-#include "common/NeLogging.h"
 #include "common/NeMisc.h"
 #include "common/NeLibrary.h"
 #include "common/NeErrors.h"
@@ -32,15 +32,15 @@ NeErr
 NeWispRead(struct NeWisp *dst, struct NeFile *file) {
 	void *blk;
 	NeErr err = NeERGNONE;
-	NeOf rd = 0;
+	brrof rd = 0;
 	if (!dst || !file || !file->stat.exist)
 		return err;
 
 	blk = NeSafeAlloc(NULL, NeBLOCKSIZE, 1);
 	do {
-		NeOf pos = 0;
+		brrof pos = 0;
 		if ((rd = NeFileStream(file, blk, NeBLOCKSIZE)) != NeERGNONE) {
-			NeERROR("Error reading wisp");
+			BRRLOG_ERR("Error reading wisp");
 			err = NeERWREAD;
 		} else if ((pos = NeFind(blk, rd, "RIFF", 4, pos)) < 0) {
 			err = NeERWREAD;
@@ -50,12 +50,12 @@ NeWispRead(struct NeWisp *dst, struct NeFile *file) {
 			wem.offset = file->position - rd + pos;
 			if (NeFileSegment(file, &wem.size, wem.offset + 4, wem.offset + 8, 4) != 4) {
 				if (file->stat.iseof)
-					NeWARNING("Unexpected EOF");
+					BRRLOG_WAR("Unexpected EOF");
 				else
-					NeERROR("Error reading weem size : %m");
+					BRRLOG_ERR("Error reading weem size : %m");
 				err = NeERWREAD;
 			} else if (wem.size > NeMAXWEEMSIZE) {
-				NeERROR("Read weem size too large : %zu (0x%08x)", wem.size, wem.size);
+				BRRLOG_ERR("Read weem size too large : %zu (0x%08x)", wem.size, wem.size);
 				err = NeERWSIZE;
 			} else {
 				dst->wemCount++;
@@ -79,14 +79,14 @@ NeWispOpen(struct NeWisp *const dst, const char *const path)
 	struct NeWisp wsp = {0};
 	struct NeFile file = {0};
 	NeErr err = NeERGNONE;
-	NeOf rd = 0;
+	brrof rd = 0;
 	void *blk;
 	if (!dst || !path || !*path)
 		return err;
 
 	NeStrCopy(&wsp.path, NeStrShallow((char *const)path, -1));
 	if (NeFileOpen(&file, path, NeFileModeRead) != 0) {
-		NeERROR("Could not open file for new wisp %s", path);
+		BRRLOG_ERR("Could not open file for new wisp %s", path);
 		return NeERFFILE;
 	}
 	err = NeWispRead(&wsp, &file);
@@ -104,11 +104,11 @@ NeWispDelete(struct NeWisp *const wisp)
 	wisp->wemCount = 0;
 }
 
-static NeErr savewem(struct NeFile *file, struct NeWem *wem, NeCt idx, NeCt maxidx, int autoogg) {
+static NeErr savewem(struct NeFile *file, struct NeWem *wem, brrct idx, brrct maxidx, int autoogg) {
 	NeErr err = NeERGNONE;
-	NeBy *block = NULL;
-	NeBy *data = NULL;
-	NeOf rd = 0;
+	brrby *block = NULL;
+	brrby *data = NULL;
+	brrof rd = 0;
 	struct NeStr outpath = {0};
 
 	NeStrPrint(&outpath,
@@ -151,7 +151,7 @@ NeWispSave(const struct NeWisp *const wsp, int autoogg)
 
 	if ((err = NeFileOpen(&file, wsp->path.cstr, NeFileModeRead)) != NeERGNONE)
 		return NeERFFILE;
-	for (NeCt i = 0; i < wsp->wemCount; ++i) {
+	for (brrct i = 0; i < wsp->wemCount; ++i) {
 		savewem(&file, &wsp->wems[i], i, wsp->wemCount, autoogg);
 	}
 	NeFileClose(&file);

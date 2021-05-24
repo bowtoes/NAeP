@@ -19,7 +19,6 @@ options:
 	@echo "TARGETNAME : $(TARGETNAME)"
 	@echo "HOST       : $(HOST)"
 	@echo "TARGET     : $(TARGET)"
-	@echo "MODE       : $(MODE)"
 	@echo "CC         : $(CC)"
 	@echo "OUTDIR     : $(OUTDIR)"
 	@echo "PREFIX     : $(prefix)"
@@ -44,8 +43,14 @@ $(ASS): $(HDR) Makefile config.mk
 $(INT): $(HDR) Makefile config.mk
 $(OBJ): $(HDR) Makefile config.mk
 
-$(PROJECT): setup options $(OBJ)
-	$(CC) -o $(OUTDIR)/$(TARGETNAME) $(OBJ) $($(PROJECT)_LDFLAGS)
+brrtools: ; make -C vendor/brrtools SRCDIR=src HDRDIR=src MODE=STATIC UNISTANAME=libbrrtools.a WINSTANAME=libbrrtools.lib
+
+$(PROJECT): brrtools setup options $(OBJ)
+ifeq ($(TARGET),UNIX)
+	$(CC) -o $(OUTDIR)/$(TARGETNAME) $(OBJ) ./vendor/brrtools/$(OUTDIR)/static/libbrrtools.a $($(PROJECT)_LDFLAGS)
+else
+	$(CC) -o $(OUTDIR)/$(TARGETNAME) $(OBJ) ./vendor/brrtools/$(OUTDIR)/static/libbrrtools.lib $($(PROJECT)_LDFLAGS)
+endif
 
 ass: setup options $(ASS) ;
 int: setup options $(INT) ;
@@ -53,6 +58,7 @@ obj: setup options $(OBJ) ;
 aio: setup options $(ASS) $(INT) $(OBJ) ;
 
 clean:
+	make -C vendor/brrtools clean
 	$(RM) $(ASS)
 	$(RM) $(INT)
 	$(RM) $(OBJ)
@@ -76,6 +82,7 @@ endif
 
 again: clean all
 
+install-lib: brrtools ; make -C vendor/brrtools install
 install: all
 	@cp -fv $(PROJECT) $(prefix)/bin
 uninstall:
@@ -85,4 +92,4 @@ test: $(PROJECT)
 test-ogg: $(PROJECT)
 	@test/test-ogg.py
 
-.PHONY: setup options ass int obj aio all clean again install test
+.PHONY: setup options ass int obj aio all clean again install test brrtools
