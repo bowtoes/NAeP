@@ -18,6 +18,7 @@ limitations under the License.
 #define NeArg_h
 
 #include <brrtools/brrtypes.h>
+
 #include "common/NeFile.h"
 
 struct NeArgs {
@@ -58,9 +59,9 @@ struct NeArg *NeFindArg(struct NeArgs args, const char *const arg);
 void NePrintArg(struct NeArg arg, brrsz maxarg, int newline);
 
 void  NeDetectType(struct NeArg *arg, struct NeFile *f);
-NeErr NeConvertWeem(struct NeArg arg, struct NeFile *infile);
-NeErr NeExtractWisp(struct NeArg arg, struct NeFile *infile);
-NeErr NeExtractBank(struct NeArg arg, struct NeFile *infile);
-NeErr   NeRevorbOgg(struct NeArg arg, struct NeFile *infile);
+NeErrT NeConvertWeem(struct NeArg arg, struct NeFile *infile);
+NeErrT NeExtractWisp(struct NeArg arg, struct NeFile *infile);
+NeErrT NeExtractBank(struct NeArg arg, struct NeFile *infile);
+NeErrT   NeRevorbOgg(struct NeArg arg, struct NeFile *infile);
 
 #endif /* NeArg_h */

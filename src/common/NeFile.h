@@ -58,16 +58,16 @@ struct NeFile {
 	};
 };
 
-NeErr NeFileStat(struct NeFileStat *stat, brrsz *fsize, const char *const path);
+NeErrT NeFileStat(struct NeFileStat *stat, brrsz *fsize, const char *const path);
 
 /* Open file for reading/writing */
 /* Returns -1 on error */
-NeErr NeFileOpen(struct NeFile *const file, const char *const path,
+NeErrT NeFileOpen(struct NeFile *const file, const char *const path,
         enum NeFileMode mode);
 
 /* Closes file */
 /* Fails gracefully*/
-NeErr NeFileClose(struct NeFile *const file);
+NeErrT NeFileClose(struct NeFile *const file);
 /* Reopens given file with given mode */
 void NeFileReopen(struct NeFile *const file, enum NeFileMode newmode);
 
@@ -96,6 +96,6 @@ brrof NeFileSegment(struct NeFile *const file, void *dst,
 brrsz NeFileWrite(struct NeFile *const file, const void *const data, brrsz datalen);
 
 /* Closes the file and removes it from disk */
-NeErr NeFileRemove(struct NeFile *const file);
-NeErr NeFileRename(const char *const file, const char *const newpath);
+NeErrT NeFileRemove(struct NeFile *const file);
+NeErrT NeFileRename(const char *const file, const char *const newpath);
 #endif /* NeFile_h */

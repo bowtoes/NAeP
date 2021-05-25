@@ -27,8 +27,6 @@ limitations under the License.
 #include <brrtools/brrlog.h>
 #include <brrtools/brrlib.h>
 
-#include "common/NeLibrary.h"
-
 #if defined(BRRPLATFORMTYPE_UNIX)
 #include <strings.h>
 #endif
@@ -83,18 +81,6 @@ NeStrShallow(char *cstr, brrsz maxlen)
 	return s;
 }
 
-brrof
-NeStrIndex(const struct NeStr hay, const struct NeStr ndl, brrsz iof)
-{
-	return NeFind(hay.cstr, hay.length, ndl.cstr, ndl.length, iof);
-}
-
-brrof
-NeStrRindex(const struct NeStr hay, const struct NeStr ndl, brrsz iof)
-{
-	return NeRfind(hay.cstr, hay.length, ndl.cstr, ndl.length, iof);
-}
-
 #define NeBLOCKSIZE 2048
 brrof
 NeStrPrint(struct NeStr *dst, brrof offset, brrsz strlen, const char *const fmt, ...)
@@ -133,6 +119,7 @@ NeStrPrint(struct NeStr *dst, brrof offset, brrsz strlen, const char *const fmt,
 	return prt;
 }
 
+#if 0
 void
 NeStrSlice(struct NeStr *const out, const struct NeStr str, brrof start, brrof end)
 {
@@ -165,6 +152,7 @@ NeStrSlice(struct NeStr *const out, const struct NeStr str, brrof start, brrof e
 		}
 	}
 }
+#endif
 
 void
 NeStrJoin(struct NeStr *const out, const struct NeStr a, const struct NeStr b)

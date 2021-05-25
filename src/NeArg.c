@@ -99,15 +99,15 @@ NeDetectType(struct NeArg *arg, struct NeFile *f)
 	}
 }
 
-NeErr
+NeErrT
 NeRevorbOgg(struct NeArg arg, struct NeFile *infile)
 {
 	struct NeFile out;
 	struct NeStr opath = {0};
-	NeErr err = NeERGNONE;
+	NeErrT err = NeERGNONE;
 	if (!infile || !infile->stat.exist)
 		return err;
-
+#if 0
 	NeStrCopy(&opath, infile->path);
 	NeStrPrint(&opath,
 			NeStrRindex(infile->path, NeStrShallow(".", 1), infile->path.length),
@@ -145,6 +145,7 @@ NeRevorbOgg(struct NeArg arg, struct NeFile *infile)
 			NeStrDel(&ipath);
 		}
 	} else {
+#endif
 		BRRLOG_DEBN("Open ");
 		BRRLOG_MESSAGE_FGNP(brrlog_format_debug.level, brrlog_color_cyan, "%s", opath.cstr);
 		BRRLOG_DEBP(" for revorbtion output");
@@ -154,24 +155,27 @@ NeRevorbOgg(struct NeArg arg, struct NeFile *infile)
 			BRRLOG_DEBNP(" -> ");
 			BRRLOG_MESSAGE_FGP(brrlog_format_debug.level, brrlog_color_cyan, "%s", infile->path.cstr);
 		}
+#if 0
 	}
 	NeStrDel(&opath);
+#endif
 
 	return err;
 }
-NeErr
+NeErrT
 NeConvertWeem(struct NeArg arg, struct NeFile *infile)
 {
-	NeErr err = NeERGNONE;
+	NeErrT err = NeERGNONE;
 	if (!infile || !infile->stat.exist)
 		return err;
 	return err;
 }
-NeErr
+NeErrT
 NeExtractWisp(struct NeArg arg, struct NeFile *infile)
 {
 	struct NeWisp wsp;
-	NeErr err = NeERGNONE;
+	NeErrT err = NeERGNONE;
+	/*
 	if (!infile || !infile->stat.exist)
 		return err;
 
@@ -183,13 +187,14 @@ NeExtractWisp(struct NeArg arg, struct NeFile *infile)
 		}
 	} else {
 	}
+	*/
 
 	return err;
 }
-NeErr
+NeErrT
 NeExtractBank(struct NeArg arg, struct NeFile *infile)
 {
-	NeErr err = NeERGNONE;
+	NeErrT err = NeERGNONE;
 	if (!infile || !infile->stat.exist)
 		return err;
 	return err;

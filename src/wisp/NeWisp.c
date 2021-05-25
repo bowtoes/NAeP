@@ -26,14 +26,13 @@ limitations under the License.
 #include <brrtools/brrlib.h>
 #include <brrtools/brrlog.h>
 
-#include "common/NeLibrary.h"
 #include "common/NeErrors.h"
 
 #define NeBLOCKSIZE 2048
-NeErr
+NeErrT
 NeWispRead(struct NeWisp *dst, struct NeFile *file) {
 	void *blk = NULL;
-	NeErr err = NeERGNONE;
+	NeErrT err = NeERGNONE;
 	brrof rd = 0;
 	if (!dst || !file || !file->stat.exist)
 		return err;
@@ -78,12 +77,12 @@ NeWispRead(struct NeWisp *dst, struct NeFile *file) {
 	return err;
 }
 
-NeErr
+NeErrT
 NeWispOpen(struct NeWisp *const dst, const char *const path)
 {
 	struct NeWisp wsp = {0};
 	struct NeFile file = {0};
-	NeErr err = NeERGNONE;
+	NeErrT err = NeERGNONE;
 	if (!dst || !path || !*path)
 		return err;
 
@@ -107,8 +106,8 @@ NeWispDelete(struct NeWisp *const wisp)
 	wisp->wemCount = 0;
 }
 
-static NeErr savewem(struct NeFile *file, struct NeWem *wem, brrct idx, brrct maxidx, int autoogg) {
-	NeErr err = NeERGNONE;
+static NeErrT savewem(struct NeFile *file, struct NeWem *wem, brrct idx, brrct maxidx, int autoogg) {
+	NeErrT err = NeERGNONE;
 	brrby *data = NULL;
 	brrof rd = 0;
 	struct NeStr outpath = {0};
@@ -143,10 +142,10 @@ static NeErr savewem(struct NeFile *file, struct NeWem *wem, brrct idx, brrct ma
 	return err;
 }
 
-NeErr
+NeErrT
 NeWispSave(const struct NeWisp *const wsp, int autoogg)
 {
-	NeErr err = NeERGNONE;
+	NeErrT err = NeERGNONE;
 	struct NeFile file = {0};
 	if (!wsp || !wsp->wemCount)
 		return err;

@@ -273,21 +273,16 @@ $(PROJECT)_LDFLAGS=$(LNK) $(PRF) $(LDFLAGS)
 # find source files to compile and headers to check for changes
 # should be specified relative to CURDIR
 SRC:=\
-	src/common/NeLibrary.c\
 	src/common/NeFile.c\
 	src/common/NeStr.c\
-	src/wisp/NeWisp.c\
 	src/revorbc/revorbc.c\
 	src/NeArg.c\
 	src/main.c\
-	#src/common/NeLogging.c\
+	#src/wisp/NeWisp.c\
 
 HDR:=\
-	src/common/NeLibrary.h\
 	src/common/NeFile.h\
-	src/common/NeMisc.h\
 	src/common/NeStr.h\
-	src/wisp/NeWisp.h\
 	src/revorbc/revorbc.h\
 	src/NeArg.h\
-	#src/common/NeLogging.h\
+	#src/wisp/NeWisp.h\

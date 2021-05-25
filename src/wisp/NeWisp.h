@@ -32,13 +32,13 @@ struct NeWisp {
 	brrct wemCount;
 };
 
-NeErr NeWispRead(struct NeWisp *dst, struct NeFile *file);
+NeErrT NeWispRead(struct NeWisp *dst, struct NeFile *file);
 /* Initialize wisp and count weem files */
-NeErr NeWispOpen(struct NeWisp *const dst, const char *const path);
+NeErrT NeWispOpen(struct NeWisp *const dst, const char *const path);
 /* Close wisp file and free all associated memory */
 void NeWispDelete(struct NeWisp *const wisp);
 
 /* Save out all wems stored into seperate files */
-NeErr NeWispSave(const struct NeWisp *const wsp, int autoogg);
+NeErrT NeWispSave(const struct NeWisp *const wsp, int autoogg);
 
 #endif /* NeWisp_h */

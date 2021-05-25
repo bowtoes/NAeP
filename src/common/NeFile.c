@@ -27,7 +27,6 @@ limitations under the License.
 #include <brrtools/brrlog.h>
 #include <brrtools/brrmem.h>
 
-#include "common/NeLibrary.h"
 #include "common/NeStr.h"
 
 const brrfccT WEEMCC = {.code=0x46464952};
@@ -41,8 +40,8 @@ const char *const NeFileModeStr[] = {
 	"reading+writing",
 };
 
-static NeErr nneopen(struct NeFile *f) {
-	NeErr err = NeERGNONE;
+static NeErrT nneopen(struct NeFile *f) {
+	NeErrT err = NeERGNONE;
 	if (f->mode == NeFileModeRead) {
 		f->file = fopen(f->path.cstr, "rb");
 	} else if (f->mode == NeFileModeWrite) {
@@ -72,11 +71,11 @@ static brrby nneeof(struct NeFile *f) {
 	return f->stat.iseof = f->position >= f->size - 1;
 }
 
-NeErr
+NeErrT
 NeFileStat(struct NeFileStat *fs, brrsz *fsize, const char *const path)
 {
 	struct stat s;
-	NeErr err = NeERGNONE;
+	NeErrT err = NeERGNONE;
 	if (!fs)
 		return NeERGNONE;
 	*fs = (struct NeFileStat){0};
@@ -100,12 +99,12 @@ NeFileStat(struct NeFileStat *fs, brrsz *fsize, const char *const path)
 	return err;
 }
 
-NeErr
+NeErrT
 NeFileOpen(struct NeFile *const file, const char *const path,
         enum NeFileMode mode)
 {
 	struct NeFile f = {0};
-	NeErr err = NeERGNONE;
+	NeErrT err = NeERGNONE;
 
 	if (!file || !path || !*path)
 		return err;
@@ -139,10 +138,10 @@ NeFileOpen(struct NeFile *const file, const char *const path,
 	return err;
 }
 
-NeErr
+NeErrT
 NeFileClose(struct NeFile *const file)
 {
-	NeErr err = NeERGNONE;
+	NeErrT err = NeERGNONE;
 	if (!file || !file->file)
 		return NeERGNONE;
 	if (fclose(file->file) == 0) {
@@ -291,11 +290,11 @@ NeFileWrite(struct NeFile *const file, const void *const data, brrsz datalen)
 	return wt;
 }
 
-NeErr
+NeErrT
 NeFileRemove(struct NeFile *const file)
 {
 	struct NeStr path = {0};
-	NeErr err = NeERGNONE;
+	NeErrT err = NeERGNONE;
 	if (!file || !file->file)
 		return err;
 	NeStrCopy(&path, file->path);
@@ -310,11 +309,11 @@ NeFileRemove(struct NeFile *const file)
 	return err;
 }
 
-NeErr
+NeErrT
 NeFileRename(const char *const oldpath, const char *const newpath)
 {
 	struct NeFileStat stat;
-	NeErr err = NeERGNONE;
+	NeErrT err = NeERGNONE;
 	if (!oldpath || !newpath)
 		return NeERFPATH;
 	if ((err = NeFileStat(&stat, NULL, oldpath)) == NeERGNONE) {

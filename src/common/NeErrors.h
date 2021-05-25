@@ -17,7 +17,7 @@ limitations under the License.
 #ifndef NeErrors_h
 #define NeErrors_h
 
-typedef enum {
+typedef enum NeErr {
 	NeERGNONE    , // No error.
 	NeERGINVALID , // Invalid input.
 
@@ -43,6 +43,6 @@ typedef enum {
 	NeERRREVORB  , // Unspecified revorb error.
 
 	NeERMUNSPECIFIED  , // Unspecified error.
-} NeErr;
+} NeErrT;
 
 #endif /* NeErrors_h */

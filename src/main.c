@@ -22,7 +22,6 @@ limitations under the License.
 #include <brrtools/brrlib.h>
 #include <brrtools/brrlog.h>
 
-#include "common/NeLibrary.h"
 #include "common/NeStr.h"
 #include "wisp/NeWisp.h"
 
