@@ -19,22 +19,6 @@ limitations under the License.
 
 #include <brrtools/brrtypes.h>
 
-#include "common/NeErrors.h"
-
-/* get element (size elementsize) idx in data */
-#define NeIDX(data, idx, elementsize) (((brrby *)(data)) + ((idx) * (elementsize)))
-
-/* Should be used as maximum size alloced at once, though safe alloc doesn't
-   check */
-#define NeBLOCKSIZE 2048
-/* If size == 0, free cur if necessary and return NULL */
-/* if cur and zero, free cur and calloc */
-/* if cur and not zero, realloc cur */
-/* On error, hard crashes? what to do then? */
-void *NeSafeAlloc(void *cur, brrsz size, int zero);
-
-void NeReverse(void *const buf, brrsz buflen);
-
 /* Copy a subset of src into dst from start to end */
 /* If end is before start, the copied data is in backwards order */
 /* Does wrap-around */
@@ -44,14 +28,9 @@ brrsz NeSlice(void *const dst, brrsz dstlen,
              const void *const src, brrsz srclen,
              brrof start, brrof end);
 
-//#define NeCopy(d, dl, s, sl) NeSlice(d, dl, s, sl, 0, -1)
-
-/* Copies at most dstlen bytes from src into dst */
-brrsz (NeCopy)(void *const dst, brrsz dstlen,
-			const void *const src, brrsz srclen);
 /* Find first offset of ndl in hay; return offset */
 /* Returns -1 if error */
-/* Retruns haysz if not found*/
+/* Returns haysz if not found*/
 /* To find every instance of 'ndl' in 'hay', do a loop like: */
 /*  for (brrof of = 0; of >= 0 && (of = NeFind(h, hs, n, ns, of)) >= 0 && of < hs; of += ns) {*/
 /*      // do stuff */

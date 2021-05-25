@@ -41,6 +41,8 @@ typedef enum {
 	NeERWSIZE    , // Weem size error.
 
 	NeERRREVORB  , // Unspecified revorb error.
+
+	NeERMUNSPECIFIED  , // Unspecified error.
 } NeErr;
 
 #endif /* NeErrors_h */

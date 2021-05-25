@@ -21,22 +21,25 @@ limitations under the License.
  * boundaries */
 
 #include <stdlib.h> /* realloc, free */
+
 #include <brrtools/brrdebug.h>
+#include <brrtools/brrlib.h>
 #include <brrtools/brrlog.h>
 
-#include "common/NeMisc.h"
 #include "common/NeLibrary.h"
 #include "common/NeErrors.h"
 
+#define NeBLOCKSIZE 2048
 NeErr
 NeWispRead(struct NeWisp *dst, struct NeFile *file) {
-	void *blk;
+	void *blk = NULL;
 	NeErr err = NeERGNONE;
 	brrof rd = 0;
 	if (!dst || !file || !file->stat.exist)
 		return err;
 
-	blk = NeSafeAlloc(NULL, NeBLOCKSIZE, 1);
+	if (!brrlib_alloc(&blk, NeBLOCKSIZE, 1))
+		return NeERMUNSPECIFIED;
 	do {
 		brrof pos = 0;
 		if ((rd = NeFileStream(file, blk, NeBLOCKSIZE)) != NeERGNONE) {
@@ -58,8 +61,11 @@ NeWispRead(struct NeWisp *dst, struct NeFile *file) {
 				BRRLOG_ERR("Read weem size too large : %zu (0x%08x)", wem.size, wem.size);
 				err = NeERWSIZE;
 			} else {
+				if (!brrlib_alloc((void **)dst->wems, (dst->wemCount + 1) * sizeof(*dst->wems), 0)) {
+					err = NeERMUNSPECIFIED;
+					break;
+				}
 				dst->wemCount++;
-				dst->wems = NeSafeAlloc(dst->wems, dst->wemCount * sizeof(*dst->wems), 0);
 				dst->wems[dst->wemCount - 1] = wem;
 				NeFileJump(file, wem.offset + wem.size + 8 - 1);
 			}
@@ -67,8 +73,7 @@ NeWispRead(struct NeWisp *dst, struct NeFile *file) {
 	} while (rd > 0 && err == NeERGNONE);
 	free(blk);
 	if (err) {
-		if (dst->wems)
-			dst->wems = NeSafeAlloc(dst->wems, 0, 0);
+		brrlib_alloc((void **)dst->wems, 0, 0);
 	}
 	return err;
 }
@@ -79,8 +84,6 @@ NeWispOpen(struct NeWisp *const dst, const char *const path)
 	struct NeWisp wsp = {0};
 	struct NeFile file = {0};
 	NeErr err = NeERGNONE;
-	brrof rd = 0;
-	void *blk;
 	if (!dst || !path || !*path)
 		return err;
 
@@ -100,23 +103,23 @@ NeWispDelete(struct NeWisp *const wisp)
 	if (!wisp)
 		return;
 	NeStrDel(&wisp->path);
-	wisp->wems = NeSafeAlloc(wisp->wems, 0, 0);
+	brrlib_alloc((void **)wisp->wems, 0, 0);
 	wisp->wemCount = 0;
 }
 
 static NeErr savewem(struct NeFile *file, struct NeWem *wem, brrct idx, brrct maxidx, int autoogg) {
 	NeErr err = NeERGNONE;
-	brrby *block = NULL;
 	brrby *data = NULL;
 	brrof rd = 0;
 	struct NeStr outpath = {0};
 
+	// Allocate space for file data
+	if (!brrlib_alloc((void **)&data, wem->size, 1))
+		return NeERMUNSPECIFIED;
 	NeStrPrint(&outpath,
 			NeStrRindex(file->path, NeStrShallow(".",1), file->path.length), -1,
-			"_%*0u", NeDigitCount(maxidx),file->path.cstr, idx);
+			"_%*0u", brrlib_ndigits(false, maxidx, 10),file->path.cstr, idx);
 	NeStrMerge(&outpath, NeStrShallow(".wem", -1));
-	// Allocate space for file data
-	data = NeSafeAlloc(data, wem->size, 1);
 	rd = 0;
 	// Read data
 	NeFileJump(file, wem->offset);
@@ -135,8 +138,7 @@ static NeErr savewem(struct NeFile *file, struct NeWem *wem, brrct idx, brrct ma
 		// ConvertWEM(outpath, inplace, yada);
 	}
 
-	block = NeSafeAlloc(block, 0, 0);
-	data = NeSafeAlloc(data, 0, 0);
+	brrlib_alloc((void **)&data, 0, 0);
 	NeStrDel(&outpath);
 	return err;
 }

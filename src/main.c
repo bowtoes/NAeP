@@ -19,10 +19,10 @@ limitations under the License.
 #include <string.h>
 
 #include <brrtools/brrdebug.h>
+#include <brrtools/brrlib.h>
 #include <brrtools/brrlog.h>
 
 #include "common/NeLibrary.h"
-#include "common/NeMisc.h"
 #include "common/NeStr.h"
 #include "wisp/NeWisp.h"
 
@@ -126,27 +126,27 @@ int main(int argc, char **argv)
 		} else if (NeStrCmp(arg, 0, "-o", "-ogg", NULL)) {
 			opt.oggs  = 1; opt.weem = opt.wisp = opt.bank = 0; continue;
 		} else if (NeStrCmp(arg, 0, "-R", "-recurse", NULL)) {
-			NeTOGGLE(opt.bankrecurse); continue;
+			BRRMISC_TOGGLE(opt.bankrecurse); continue;
 		} else if (NeStrCmp(arg, 0, "-O", "-weem2ogg", NULL)) {
-			NeTOGGLE(opt.autoogg); continue;
+			BRRMISC_TOGGLE(opt.autoogg); continue;
 		} else if (NeStrCmp(arg, 0, "-oi", "-ogg-inplace", NULL)) {
-			NeTOGGLE(opt.ogginplace); continue;
+			BRRMISC_TOGGLE(opt.ogginplace); continue;
 		} else if (NeStrCmp(arg, 0, "-r", "-revorb", NULL)) {
-			NeTOGGLE(opt.autorvb); continue;
+			BRRMISC_TOGGLE(opt.autorvb); continue;
 		} else if (NeStrCmp(arg, 0, "-ri", "-rvb-inplace", NULL)) {
-			NeTOGGLE(opt.rvbinplace); continue;
+			BRRMISC_TOGGLE(opt.rvbinplace); continue;
 		} else if (NeStrCmp(arg, 0, "-d", "-debug", NULL)) {
-			NeTOGGLE(opt.logdebug); continue;
+			BRRMISC_TOGGLE(opt.logdebug); continue;
 		} else if (NeStrCmp(arg, 0, "-c", "-color", NULL)) {
-			NeTOGGLE(opt.logcolor); continue;
+			BRRMISC_TOGGLE(opt.logcolor); continue;
 		} else if (NeStrCmp(arg, 0, "-q", "-quiet", NULL)) {
 			opt.loglevel = opt.loglevel - 1 < 0 ? 0 : opt.loglevel - 1; continue;
 		} else if (NeStrCmp(arg, 0, "-Q", "-qq", "-too-quiet", NULL)) {
-			NeTOGGLE(opt.logoff); continue;
+			BRRMISC_TOGGLE(opt.logoff); continue;
 		} else if (NeStrCmp(arg, 0, "-n", "-dry", "-dryrun", NULL)) {
-			NeTOGGLE(opt.dryrun); continue;
+			BRRMISC_TOGGLE(opt.dryrun); continue;
 		} else if (NeStrCmp(arg, 0, "-reset", NULL)) {
-			NeTOGGLE(rst); continue;
+			BRRMISC_TOGGLE(rst); continue;
 		} else if ((t = NeFindArg(args, arg))) {
 			t->opt = opt; opt = def; continue;
 		}
@@ -157,12 +157,13 @@ int main(int argc, char **argv)
 		if (narg.arg.length > args.maxarg)
 			args.maxarg = narg.arg.length;
 		args.argcount++;
-		args.args = NeSafeAlloc(args.args, args.argcount * sizeof(struct NeArg), 0);
+		if (!brrlib_alloc((void **)&args.args, args.argcount * sizeof(struct NeArg), 0))
+			break;
 		args.args[args.argcount - 1] = narg;
 		if (rst)
 			opt = def;
 	}
-	args.argdigit = NeDigitCount(args.argcount);
+	args.argdigit = brrlib_ndigits(false, args.argcount, 10);
 
 	/* Process files */
 	if (args.argcount) {
@@ -225,7 +226,7 @@ int main(int argc, char **argv)
 		brrlog_setmaxpriority(opt.logdebug ? brrlog_priority_debug : opt.loglevel);
 		BRRLOG_ERR("No files passed");
 	}
-	args.args = NeSafeAlloc(args.args, 0, 0);
+	brrlib_alloc((void **)&args.args, 0, 0);
 
 	return 0;
 }

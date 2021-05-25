@@ -17,8 +17,6 @@ limitations under the License.
 #ifndef NeMisc_h
 #define NeMisc_h
 
-#include <brrtools/brrtypes.h>
-
 /* https://graphics.stanford.edu/~seander/bithacks.html#SwappingBitsXOR */
 #define NeSWAP(a, b) (((a) ^= (b)), ((b) ^= (a)), ((a) ^= (b)))
 
@@ -41,10 +39,5 @@ limitations under the License.
 			(((d) & 0x40) >> 6),\
 			(((d) & 0x80) >> 7)
 #define NeTOGGLE(a) ((a)=!(a))
-
-/* Return 'in % mod', with overflow checking */
-brrof NeGCF(brrof a, brrof b);
-brrof NeSmartMod(brrof in, brrsz mod, brrof of);
-brrsz NeDigitCount(brrof n);
 
 #endif /* NeMisc_h */

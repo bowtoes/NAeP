@@ -19,14 +19,15 @@ limitations under the License.
 #include <stdint.h>
 #include <stdlib.h>
 
-#include <brrtools/brrplatform.h>
 #include <sys/stat.h>
 #include <errno.h>
 
+#include <brrtools/brrplatform.h>
+#include <brrtools/brrlib.h>
 #include <brrtools/brrlog.h>
+#include <brrtools/brrmem.h>
 
 #include "common/NeLibrary.h"
-#include "common/NeMisc.h"
 #include "common/NeStr.h"
 
 const brrfccT WEEMCC = {.code=0x46464952};
@@ -180,7 +181,7 @@ NeFileSkip(struct NeFile *const file, brrof bytes)
 	brrsz newpos;
 	if (!bytes || !file || !f->file)
 		return;
-	newpos = NeSmartMod(bytes + (brrof)file->position, file->size, 0);
+	newpos = brrlib_wrap(bytes + (brrof)file->position, file->size, 0);
 	// TODO fseek portability?
 	fseek(f->file, newpos, SEEK_SET);
 	f->position = newpos;
@@ -221,11 +222,12 @@ brrof
 NeFileStream(struct NeFile *const file, void *dst, brrsz dstlen)
 {
 	brrof rd = 0;
-	void *blk;
+	void *blk = NULL;
 	if (!file || !file->file || !dst || !dstlen)
 		return 0;
 
-	blk = NeSafeAlloc(NULL, dstlen, 1);
+	if (!brrlib_alloc(&blk, dstlen, 1))
+		return -1;
 	// TODO are fread, ferror, clearerr cross-platform/portable?
 	rd = fread(blk, 1, dstlen, file->file);
 	if (ferror(file->file) != 0) {
@@ -233,10 +235,10 @@ NeFileStream(struct NeFile *const file, void *dst, brrsz dstlen)
 		clearerr(file->file);
 		rd = -1;
 	} else { /* copy tmp into dst */
-		NeCopy(dst, dstlen, blk, rd);
+		brrmem_copy(dst, dstlen, blk, rd);
 		file->position += rd;
 	}
-	blk = NeSafeAlloc(blk, 0, 0);
+	brrlib_alloc(&blk, 0, 0);
 
 	nneeof(file);
 	return rd;
@@ -248,7 +250,7 @@ NeFileSegment(struct NeFile *const file, void *dest,
 {
 	brrof rd = 0;
 	brrsz first = 0;
-	int rv = 0;
+	brrsz rv = 0;
 	if (!file || !file->file || !dest || !maxlen || start == end)
 		return 0;
 
@@ -265,10 +267,7 @@ NeFileSegment(struct NeFile *const file, void *dest,
 	rd = NeFileStream(file, dest, end - start);
 	if (rd > 0) { // no ferror
 		if (rv) { // reverse read bytes
-			brrby *const d = (brrby *const)dest;
-			for (brrsz i = 0; i < rd/2; ++i) {
-				NeSWAP(d[start + i], d[start + rd - 1 - i]);
-			}
+			brrmem_static_reverse((brrby *)dest + start, rd);
 		}
 	}
 	NeFileJump(file, first);

@@ -25,9 +25,9 @@ limitations under the License.
 #include <brrtools/brrplatform.h>
 #include <brrtools/brrdebug.h>
 #include <brrtools/brrlog.h>
+#include <brrtools/brrlib.h>
 
 #include "common/NeLibrary.h"
-#include "common/NeMisc.h"
 
 #if defined(BRRPLATFORMTYPE_UNIX)
 #include <strings.h>
@@ -51,10 +51,12 @@ NeStrNew(struct NeStr *const str, const char *const cstr, brrsz maxlen)
 	BRRDEBUG_ASSERTM(str->cstr != cstr, "cstr and str->cstr must not overlap");
 	/* !cstr || !maxlen produces valid string that can be deleted with NeStrDel */
 
-	str->length = NeStrlen(cstr, maxlen);
-	str->cstr = NeSafeAlloc(str->cstr, str->length + 1, 1);
-	for (brrsz i = 0; i < str->length; ++i)
-		str->cstr[i] = cstr[i];
+	maxlen = NeStrlen(cstr, maxlen);
+	if (brrlib_alloc((void **)&str->cstr, maxlen + 1, 1)) {
+		str->length = maxlen;
+		for (brrsz i = 0; i < str->length; ++i)
+			str->cstr[i] = cstr[i];
+	}
 }
 
 void
@@ -62,7 +64,7 @@ NeStrDel(struct NeStr *const str)
 {
 	if (!str)
 		return;
-	str->cstr = NeSafeAlloc(str->cstr, 0, 0);
+	brrlib_alloc((void **)&str->cstr, 0, 0);
 	str->length = 0;
 }
 
@@ -93,6 +95,7 @@ NeStrRindex(const struct NeStr hay, const struct NeStr ndl, brrsz iof)
 	return NeRfind(hay.cstr, hay.length, ndl.cstr, ndl.length, iof);
 }
 
+#define NeBLOCKSIZE 2048
 brrof
 NeStrPrint(struct NeStr *dst, brrof offset, brrsz strlen, const char *const fmt, ...)
 {
@@ -101,25 +104,31 @@ NeStrPrint(struct NeStr *dst, brrof offset, brrsz strlen, const char *const fmt,
 	if (!dst || !fmt)
 		return 0;
 	if (!strlen) {
-		dst->cstr = NeSafeAlloc(dst->cstr, 1, 1);
-		dst->cstr[0] = 0;
-		dst->length = 0;
-		return 0;
+		if (brrlib_alloc((void **)&dst->cstr, 1, 1)) {
+			dst->length = 0;
+			return 0;
+		} else {
+			return -1;
+		}
 	} else if (strlen > NeBLOCKSIZE - 1) {
 		strlen = NeBLOCKSIZE - 1;
 	}
 
-	dst->cstr = NeSafeAlloc(dst->cstr, strlen + 1, 0);
-	va_start(lptr, fmt);
-	prt = vsnprintf(dst->cstr + offset, strlen + 1 - offset, fmt, lptr);
-	va_end(lptr);
-	if (prt > 0) { /* no error printing */
-		if (prt > strlen - offset) /* print was truncated */
-			prt = strlen - offset;
-		dst->length = prt + offset;
+	if (brrlib_alloc((void **)&dst->cstr, strlen + 1, 0)) {
+		va_start(lptr, fmt);
+		prt = vsnprintf(dst->cstr + offset, strlen + 1 - offset, fmt, lptr);
+		va_end(lptr);
+		if (prt > 0) { /* no error printing */
+			if (prt > strlen - offset) /* print was truncated */
+				prt = strlen - offset;
+			dst->length = prt + offset;
+		}
+		/* total len */
+		if (!brrlib_alloc((void **)&dst->cstr, dst->length + 1, 0))
+			prt = -1;
+	} else {
+		return -1;
 	}
-	/* total len */
-	dst->cstr = NeSafeAlloc(dst->cstr, dst->length + 1, 0);
 
 	return prt;
 }
@@ -131,8 +140,8 @@ NeStrSlice(struct NeStr *const out, const struct NeStr str, brrof start, brrof e
 	if (!out || !str.length)
 		return;
 
-	start = NeSmartMod(start, str.length, 1);
-	end = NeSmartMod(end, str.length, 1);
+	start = brrlib_wrap(start, str.length, 1);
+	end = brrlib_wrap(end, str.length, 1);
 
 	if (start == end)
 		return;
@@ -144,16 +153,16 @@ NeStrSlice(struct NeStr *const out, const struct NeStr str, brrof start, brrof e
 		rv = 1;
 	}
 
-	out->length = end - start;
-	out->cstr = NeSafeAlloc(out->cstr, out->length + 1, 1);
-
-	if (rv) {
-		for (brrof k = end - 1, rv = 0; k >= start; --k, ++rv) {
-			out->cstr[rv] = str.cstr[k];
+	if (brrlib_alloc((void **)&out->cstr, end - start + 1, 1)) {
+		out->length = end - start;
+		if (rv) {
+			for (brrof k = end - 1, rv = 0; k >= start; --k, ++rv) {
+				out->cstr[rv] = str.cstr[k];
+			}
+		} else {
+			for (brrof k = start, rv = 0; k < end; ++k, ++rv)
+				out->cstr[rv] = str.cstr[k];
 		}
-	} else {
-		for (brrof k = start, rv = 0; k < end; ++k, ++rv)
-			out->cstr[rv] = str.cstr[k];
 	}
 }
 
@@ -171,12 +180,13 @@ NeStrJoin(struct NeStr *const out, const struct NeStr a, const struct NeStr b)
 		return;
 	}
 
-	out->length = a.length + b.length;
-	out->cstr = NeSafeAlloc(out->cstr, out->length + 1, 1);
-	for (brrsz i = 0; i < a.length; ++i)
-		out->cstr[i] = a.cstr[i];
-	for (brrsz i = a.length; i < out->length; ++i)
-		out->cstr[i] = b.cstr[i - a.length];
+	if (brrlib_alloc((void **)&out->cstr, a.length + b.length, 1)) {
+		out->length = a.length + b.length;
+		for (brrsz i = 0; i < a.length; ++i)
+			out->cstr[i] = a.cstr[i];
+		for (brrsz i = a.length; i < out->length; ++i)
+			out->cstr[i] = b.cstr[i - a.length];
+	}
 }
 
 void
@@ -184,10 +194,11 @@ NeStrMerge(struct NeStr *const str, const struct NeStr mg)
 {
 	if (!str || !mg.length)
 		return;
-	str->length += mg.length;
-	str->cstr = NeSafeAlloc(str->cstr, str->length + 1, 0);
-	for (brrsz i = str->length - mg.length; i < str->length; ++i)
-		str->cstr[i] = mg.cstr[i - str->length + mg.length];
+	if (brrlib_alloc((void **)&str->cstr, str->length + mg.length + 1, 0)) {
+		str->length += mg.length;
+		for (brrsz i = str->length - mg.length; i < str->length; ++i)
+			str->cstr[i] = mg.cstr[i - str->length + mg.length];
+	}
 }
 
 int

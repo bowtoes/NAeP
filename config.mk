@@ -275,7 +275,6 @@ $(PROJECT)_LDFLAGS=$(LNK) $(PRF) $(LDFLAGS)
 SRC:=\
 	src/common/NeLibrary.c\
 	src/common/NeFile.c\
-	src/common/NeMisc.c\
 	src/common/NeStr.c\
 	src/wisp/NeWisp.c\
 	src/revorbc/revorbc.c\
