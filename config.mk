@@ -239,25 +239,31 @@ DEFS:=-D$(UPROJECT)_MAJOR=$($(PROJECT)_MAJOR)\
       -D$(UPROJECT)_MINOR=$($(PROJECT)_MINOR)\
       -D$(UPROJECT)_REVIS=$($(PROJECT)_REVIS)\
       -D$(UPROJECT)_VERSION='$($(PROJECT)_MAJOR).$($(PROJECT)_MINOR).$($(PROJECT)_REVIS)'\
-      -DNeASSERTS -DNeDEBUGGING\
+
+ifdef DEBUG
+ DEFS:=$(DEFS) -D$(UPROJECT)_DEBUG
+ ifdef MEMCHECK
+  DEFS:=$(DEFS) -D$(UPROJECT)_MEMCHECK
+ endif
+endif
 
 # PRF: Performance options (applied at compile & link-time)
 # OPT: Optimization options (applied at compile-time)
 ifdef DEBUG
- # valgrind no-like '-pg -no-pie' options
- ifndef MEMCHECK
-  PRF:=-pg -no-pie
- else
-  PRF:=
- endif ## MEMCHECK
  OPT:=-O0 -g
+ # valgrind no-like '-pg -no-pie' options
+ ifdef MEMCHECK
+  PRF:=
+ else
+  PRF:=-pg -no-pie
+ endif ## MEMCHECK
 else
+ OPT:=-O3 -Ofast
  ifeq ($(TARGET),SHARED)
   PRF:=-s
  else
   PRF:=
  endif
- OPT:=-O3 -Ofast
 endif ## DEBUG
 # Binary bit-ness
 ifeq ($(BITS),32)
@@ -274,15 +280,11 @@ $(PROJECT)_LDFLAGS=$(LNK) $(PRF) $(LDFLAGS)
 # should be specified relative to CURDIR
 SRC:=\
 	src/common/NeFile.c\
-	src/common/NeStr.c\
 	src/revorbc/revorbc.c\
 	src/NeArg.c\
 	src/main.c\
-	#src/wisp/NeWisp.c\
 
 HDR:=\
 	src/common/NeFile.h\
-	src/common/NeStr.h\
 	src/revorbc/revorbc.h\
 	src/NeArg.h\
-	#src/wisp/NeWisp.h\

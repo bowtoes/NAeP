@@ -22,6 +22,16 @@ options:
 	@echo "CC         : $(CC)"
 	@echo "OUTDIR     : $(OUTDIR)"
 	@echo "PREFIX     : $(prefix)"
+ifdef DEBUG
+	@echo "DEBUG      : ON"
+ ifdef MEMCHECK
+	@echo "MEMCHECK   : ON"
+ else
+	@echo "MEMCHECK   : OFF"
+ endif
+else
+	@echo "DEBUG      : OFF"
+endif
 	@echo ""
 	@echo "$(PROJECT)_CFLAGS   =$($(PROJECT)_CFLAGS)"
 	@echo "$(PROJECT)_CPPFLAGS =$($(PROJECT)_CPPFLAGS)"
