@@ -18,7 +18,8 @@ limitations under the License.
 #define NeFile_h
 
 #include <stdio.h>
-#include "common/NeStr.h"
+#include <brrtools/brrtypes.h>
+#include <brrtools/brrstr.h>
 #include "common/NeErrors.h"
 
 /* TODO some kind of buffer system? not sure, but definetely
@@ -40,7 +41,7 @@ extern const char *const NeFileModeStr[];
 
 /* Structure for more portalizable file operations */
 struct NeFile {
-	struct NeStr path;
+	brrstrT path;
 	FILE *file;
 	brrsz size;
 	brrsz position;

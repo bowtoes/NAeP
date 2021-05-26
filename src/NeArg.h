@@ -24,7 +24,7 @@ limitations under the License.
 struct NeArgs {
 	struct NeArg {
 		/* file to process */
-		struct NeStr arg;
+		brrstrT arg;
 		union {
 			struct NeArgOpt {
 				brrby oggs:1;

@@ -18,15 +18,16 @@ limitations under the License.
 
 #include <brrtools/brrlog.h>
 #include <brrtools/brrdebug.h>
+#include <brrtools/brrstr.h>
 
 #include "revorbc/revorbc.h"
-#include "wisp/NeWisp.h"
+//#include "wisp/NeWisp.h"
 
 struct NeArg *
 NeFindArg(struct NeArgs args, const char *const arg)
 {
 	for (int i = 0; i < args.argcount; ++i) {
-		if (NeStrCmp(arg, 0, args.args[i].arg.cstr, NULL))
+		if (brrstr_cstr_compare(arg, 0, brrstr_cstr(&args.args[i].arg), NULL))
 			return &args.args[i];
 	}
 	return NULL;
@@ -80,9 +81,9 @@ NeDetectType(struct NeArg *arg, struct NeFile *f)
 	brrfccT fcc;
 	if (NeFileSegment(f, &fcc, 0, 4, 4) != NeERFREAD) {
 		if (fcc.code == WEEMCC.code) {
-			if (NeStrEndswith(f->path, NeStrShallow(".wsp", 4)))
+			if (brrstr_ends_with(&f->path, ".wsp", true))
 				arg->opt.wisp = 1;
-			else if (NeStrEndswith(f->path, NeStrShallow(".wem", 4)))
+			else if (brrstr_ends_with(&f->path, ".wem", true))
 				arg->opt.weem = 1;
 			/* assume wisp because wisps are a superset of weems */
 			else
@@ -103,7 +104,7 @@ NeErrT
 NeRevorbOgg(struct NeArg arg, struct NeFile *infile)
 {
 	struct NeFile out;
-	struct NeStr opath = {0};
+	brrstrT opath = {0};
 	NeErrT err = NeERGNONE;
 	if (!infile || !infile->stat.exist)
 		return err;
@@ -114,10 +115,10 @@ NeRevorbOgg(struct NeArg arg, struct NeFile *infile)
 			infile->path.length + 10, "_rvb.ogg");
 	if (!arg.opt.dryrun) {
 		BRRLOG_DEBN("Open ");
-		BRRLOG_MESSAGE_FGNP(brrlog_format_debug.level, brrlog_color_cyan, "%s", opath.cstr);
+		BRRLOG_MESSAGE_FGNP(brrlog_format_debug.level, brrlog_color_cyan, "%s", brrstr_cstr(&opath));
 		BRRLOG_DEBP(" for revorbtion output");
-		if (NeFileOpen(&out, opath.cstr, NeFileModeWrite) != NeERGNONE) {
-			BRRLOG_ERR("Failed to open %s for revorb output : %m", opath.cstr);
+		if (NeFileOpen(&out, brrstr_cstr(&opath), NeFileModeWrite) != NeERGNONE) {
+			BRRLOG_ERR("Failed to open %s for revorb output : %m", brrstr_cstr(&opath));
 			err = NeERFFILE;
 		} else if (revorb(infile->file, out.file) != NeERGNONE) {
 			BRRLOG_ERR("Failed to revorb %s", infile->path.cstr);
@@ -131,15 +132,15 @@ NeRevorbOgg(struct NeArg arg, struct NeFile *infile)
 			BRRLOG_MESSAGE_FGNP(brrlog_format_debug.level, brrlog_color_cyan, "%s", infile->path.cstr);
 			if ((err = NeFileRemove(infile)) == NeERGNONE) {
 				BRRLOG_DEBN("Move ");
-				BRRLOG_MESSAGE_FGNP(brrlog_format_debug.level, brrlog_color_cyan, "%s", opath.cstr);
+				BRRLOG_MESSAGE_FGNP(brrlog_format_debug.level, brrlog_color_cyan, "%s", brrstr_cstr(&opath));
 				BRRLOG_DEBUGNP(" -> ");
-				BRRLOG_MESSAGE_FGP(brrlog_format_debug.level, brrlog_color_cyan, "%s", ipath.cstr);
-				if ((err = NeFileRename(opath.cstr, ipath.cstr)) != NeERGNONE) {
-					BRRLOG_ERR("Failed to rename %s to %s : %m", err, opath.cstr, ipath.cstr);
+				BRRLOG_MESSAGE_FGP(brrlog_format_debug.level, brrlog_color_cyan, "%s", brrstr_cstr(&ipath));
+				if ((err = NeFileRename(brrstr_cstr(&opath), brrstr_cstr(&ipath))) != NeERGNONE) {
+					BRRLOG_ERR("Failed to rename %s to %s : %m", err, brrstr_cstr(&opath), brrstr_cstr(&ipath));
 					err = NeERFFILE;
 				}
 			} else {
-				BRRLOG_ERR("Failed to remove %s when renaming : %m", ipath.cstr);
+				BRRLOG_ERR("Failed to remove %s when renaming : %m", brrstr_cstr(&ipath));
 				err = NeERFFILE;
 			}
 			NeStrDel(&ipath);
@@ -147,13 +148,13 @@ NeRevorbOgg(struct NeArg arg, struct NeFile *infile)
 	} else {
 #endif
 		BRRLOG_DEBN("Open ");
-		BRRLOG_MESSAGE_FGNP(brrlog_format_debug.level, brrlog_color_cyan, "%s", opath.cstr);
+		BRRLOG_MESSAGE_FGNP(brrlog_format_debug.level, brrlog_color_cyan, "%s", brrstr_cstr(&opath));
 		BRRLOG_DEBP(" for revorbtion output");
 		if (arg.opt.rvbinplace) {
 			BRRLOG_DEBN("Move ");
-			BRRLOG_MESSAGE_FGNP(brrlog_format_debug.level, brrlog_color_cyan, "%s", opath.cstr);
+			BRRLOG_MESSAGE_FGNP(brrlog_format_debug.level, brrlog_color_cyan, "%s", brrstr_cstr(&opath));
 			BRRLOG_DEBNP(" -> ");
-			BRRLOG_MESSAGE_FGP(brrlog_format_debug.level, brrlog_color_cyan, "%s", infile->path.cstr);
+			BRRLOG_MESSAGE_FGP(brrlog_format_debug.level, brrlog_color_cyan, "%s", brrstr_cstr(&infile->path));
 		}
 #if 0
 	}
@@ -173,9 +174,9 @@ NeConvertWeem(struct NeArg arg, struct NeFile *infile)
 NeErrT
 NeExtractWisp(struct NeArg arg, struct NeFile *infile)
 {
+	/*
 	struct NeWisp wsp;
 	NeErrT err = NeERGNONE;
-	/*
 	if (!infile || !infile->stat.exist)
 		return err;
 
@@ -187,9 +188,10 @@ NeExtractWisp(struct NeArg arg, struct NeFile *infile)
 		}
 	} else {
 	}
-	*/
 
 	return err;
+	*/
+	return 0;
 }
 NeErrT
 NeExtractBank(struct NeArg arg, struct NeFile *infile)

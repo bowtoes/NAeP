@@ -21,9 +21,9 @@ limitations under the License.
 #include <brrtools/brrdebug.h>
 #include <brrtools/brrlib.h>
 #include <brrtools/brrlog.h>
+#include <brrtools/brrstr.h>
 
-#include "common/NeStr.h"
-#include "wisp/NeWisp.h"
+//#include "wisp/NeWisp.h"
 
 // TODO
 // TODO
@@ -112,49 +112,49 @@ int main(int argc, char **argv)
 	/* Parse arguments */
 	for (int i = 1; i < argc; ++i, arg = argv[i]) {
 		struct NeArg narg = {0}, *t;
-		if (NeStrCmp(arg, 1, "-h", "-help", "--help", "-v", "-version", "--version", NULL)) {
+		if (brrstr_cstr_compare(arg, true, "-h", "-help", "--help", "-v", "-version", "--version", NULL)) {
 			printhelp();
-		} else if (NeStrCmp(arg, 0, "-a", "-auto", "-detect", NULL)) {
+		} else if (brrstr_cstr_compare(arg, false, "-a", "-auto", "-detect", NULL)) {
 			opt.weem = opt.wisp = opt.bank = opt.oggs = 0; continue;
-		} else if (NeStrCmp(arg, 0, "-w", "-wem", "-weem", NULL)) {
+		} else if (brrstr_cstr_compare(arg, false, "-w", "-wem", "-weem", NULL)) {
 			opt.weem = 1; opt.oggs = opt.wisp = opt.bank = 0; continue;
-		} else if (NeStrCmp(arg, 0, "-W", "-wsp", "-wisp", NULL)) {
+		} else if (brrstr_cstr_compare(arg, false, "-W", "-wsp", "-wisp", NULL)) {
 			opt.wisp = 1; opt.weem = opt.oggs = opt.bank = 0; continue;
-		} else if (NeStrCmp(arg, 0, "-b", "-bnk", "-bank", NULL)) {
+		} else if (brrstr_cstr_compare(arg, false, "-b", "-bnk", "-bank", NULL)) {
 			opt.bank = 1; opt.weem = opt.wisp = opt.oggs = 0; continue;
-		} else if (NeStrCmp(arg, 0, "-o", "-ogg", NULL)) {
+		} else if (brrstr_cstr_compare(arg, false, "-o", "-ogg", NULL)) {
 			opt.oggs  = 1; opt.weem = opt.wisp = opt.bank = 0; continue;
-		} else if (NeStrCmp(arg, 0, "-R", "-recurse", NULL)) {
+		} else if (brrstr_cstr_compare(arg, false, "-R", "-recurse", NULL)) {
 			BRRMISC_TOGGLE(opt.bankrecurse); continue;
-		} else if (NeStrCmp(arg, 0, "-O", "-weem2ogg", NULL)) {
+		} else if (brrstr_cstr_compare(arg, false, "-O", "-weem2ogg", NULL)) {
 			BRRMISC_TOGGLE(opt.autoogg); continue;
-		} else if (NeStrCmp(arg, 0, "-oi", "-ogg-inplace", NULL)) {
+		} else if (brrstr_cstr_compare(arg, false, "-oi", "-ogg-inplace", NULL)) {
 			BRRMISC_TOGGLE(opt.ogginplace); continue;
-		} else if (NeStrCmp(arg, 0, "-r", "-revorb", NULL)) {
+		} else if (brrstr_cstr_compare(arg, false, "-r", "-revorb", NULL)) {
 			BRRMISC_TOGGLE(opt.autorvb); continue;
-		} else if (NeStrCmp(arg, 0, "-ri", "-rvb-inplace", NULL)) {
+		} else if (brrstr_cstr_compare(arg, false, "-ri", "-rvb-inplace", NULL)) {
 			BRRMISC_TOGGLE(opt.rvbinplace); continue;
-		} else if (NeStrCmp(arg, 0, "-d", "-debug", NULL)) {
+		} else if (brrstr_cstr_compare(arg, false, "-d", "-debug", NULL)) {
 			BRRMISC_TOGGLE(opt.logdebug); continue;
-		} else if (NeStrCmp(arg, 0, "-c", "-color", NULL)) {
+		} else if (brrstr_cstr_compare(arg, false, "-c", "-color", NULL)) {
 			BRRMISC_TOGGLE(opt.logcolor); continue;
-		} else if (NeStrCmp(arg, 0, "-q", "-quiet", NULL)) {
+		} else if (brrstr_cstr_compare(arg, false, "-q", "-quiet", NULL)) {
 			opt.loglevel = opt.loglevel - 1 < 0 ? 0 : opt.loglevel - 1; continue;
-		} else if (NeStrCmp(arg, 0, "-Q", "-qq", "-too-quiet", NULL)) {
+		} else if (brrstr_cstr_compare(arg, false, "-Q", "-qq", "-too-quiet", NULL)) {
 			BRRMISC_TOGGLE(opt.logoff); continue;
-		} else if (NeStrCmp(arg, 0, "-n", "-dry", "-dryrun", NULL)) {
+		} else if (brrstr_cstr_compare(arg, false, "-n", "-dry", "-dryrun", NULL)) {
 			BRRMISC_TOGGLE(opt.dryrun); continue;
-		} else if (NeStrCmp(arg, 0, "-reset", NULL)) {
+		} else if (brrstr_cstr_compare(arg, false, "-reset", NULL)) {
 			BRRMISC_TOGGLE(rst); continue;
 		} else if ((t = NeFindArg(args, arg))) {
 			t->opt = opt; opt = def; continue;
 		}
 
-		narg.arg = NeStrShallow(arg, -1);
+		narg.arg = brrstr_new(arg, -1);
 		narg.opt = opt;
 
-		if (narg.arg.length > args.maxarg)
-			args.maxarg = narg.arg.length;
+		if (brrstr_strlen(&narg.arg) > args.maxarg)
+			args.maxarg = brrstr_strlen(&narg.arg);
 		args.argcount++;
 		if (!brrlib_alloc((void **)&args.args, args.argcount * sizeof(struct NeArg), 0))
 			break;
@@ -173,10 +173,10 @@ int main(int argc, char **argv)
 			brrlogctl_debugon = arg->opt.logdebug;
 			brrlogctl_styleon = arg->opt.logcolor;
 			brrlog_setmaxpriority(arg->opt.logoff?brrlog_priority_none:arg->opt.loglevel);
-			NeFileStat(&stat, NULL, arg->arg.cstr);
+			NeFileStat(&stat, NULL, brrstr_cstr(&arg->arg));
 			if (!stat.exist || !stat.isreg || (!stat.canwt && (arg->opt.ogginplace || arg->opt.rvbinplace)) || !stat.canrd) {
 				BRRLOG_WARN("Cannot parse ");
-				BRRLOG_MESSAGE_STNP(brrlog_format_last.level, brrlog_color_cyan, -1, brrlog_style_bold, "%s", arg->arg.cstr);
+				BRRLOG_MESSAGE_STNP(brrlog_format_last.level, brrlog_color_cyan, -1, brrlog_style_bold, "%s", brrstr_cstr(&arg->arg));
 				BRRLOG_MESSAGE_EMNP(brrlog_format_last.level, " : ");
 				if (!stat.exist)
 					BRRLOG_MESSAGE_STP(brrlog_format_last.level, brrlog_color_green, -1, brrlog_style_bold, "File does not exist.");
@@ -186,11 +186,13 @@ int main(int argc, char **argv)
 					BRRLOG_MESSAGE_STP(brrlog_format_last.level, brrlog_color_green, -1, brrlog_style_bold, "Cannot write to file for in-place convert/revorb.");
 				else if (!stat.canrd)
 					BRRLOG_MESSAGE_STP(brrlog_format_last.level, brrlog_color_blue, -1, brrlog_style_bold, "Cannot read file.");
+				brrbuffer_delete(&arg->arg);
 				continue;
-			} else if (NeFileOpen(&afile, arg->arg.cstr, NeFileModeReadWrite) != NeERGNONE) {
+			} else if (NeFileOpen(&afile, brrstr_cstr(&arg->arg), NeFileModeReadWrite) != NeERGNONE) {
 				BRRLOG_ERRN("Could not open ");
-				BRRLOG_MESSAGE_STNP(brrlog_format_last.level, brrlog_color_cyan, -1, brrlog_style_bold, "%s", arg->arg.cstr);
+				BRRLOG_MESSAGE_STNP(brrlog_format_last.level, brrlog_color_cyan, -1, brrlog_style_bold, "%s", brrstr_cstr(&arg->arg));
 				BRRLOG_ERRP(" for parsing.");
+				brrbuffer_delete(&arg->arg);
 				continue;
 			}
 			BRRLOG_NORN("Parsing ");
@@ -201,16 +203,16 @@ int main(int argc, char **argv)
 				NeDetectType(arg, &afile);
 			}
 			if (arg->opt.oggs) {
-				BRRLOG_MESSAGE_FGP(brrlog_format_last.level, brrlog_color_blue, "%-*s", args.maxarg, arg->arg.cstr);
+				BRRLOG_MESSAGE_FGP(brrlog_format_last.level, brrlog_color_blue, "%-*s", args.maxarg, brrstr_cstr(&arg->arg));
 				NeRevorbOgg(*arg, &afile);
 			} else if (arg->opt.weem) {
-				BRRLOG_MESSAGE_FGP(brrlog_format_last.level, brrlog_color_green, "%-*s", args.maxarg, arg->arg.cstr);
+				BRRLOG_MESSAGE_FGP(brrlog_format_last.level, brrlog_color_green, "%-*s", args.maxarg, brrstr_cstr(&arg->arg));
 				NeConvertWeem(*arg, &afile);
 			} else if (arg->opt.wisp) {
-				BRRLOG_MESSAGE_FGP(brrlog_format_last.level, brrlog_color_yellow, "%-*s", args.maxarg, arg->arg.cstr);
+				BRRLOG_MESSAGE_FGP(brrlog_format_last.level, brrlog_color_yellow, "%-*s", args.maxarg, brrstr_cstr(&arg->arg));
 				NeExtractWisp(*arg, &afile);
 			} else if (arg->opt.bank) {
-				BRRLOG_MESSAGE_FGP(brrlog_format_last.level, brrlog_color_red, "%-*s", args.maxarg, arg->arg.cstr);
+				BRRLOG_MESSAGE_FGP(brrlog_format_last.level, brrlog_color_red, "%-*s", args.maxarg, brrstr_cstr(&arg->arg));
 				NeExtractBank(*arg, &afile);
 			} else {
 				BRRLOG_ERRN("Could not determine filetype for ");

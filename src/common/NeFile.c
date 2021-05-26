@@ -27,8 +27,6 @@ limitations under the License.
 #include <brrtools/brrlog.h>
 #include <brrtools/brrmem.h>
 
-#include "common/NeStr.h"
-
 const brrfccT WEEMCC = {.code=0x46464952};
 const brrfccT BANKCC = {.code=0x44484b42};
 const brrfccT OGGSCC = {.code=0x5367674f};
@@ -43,20 +41,20 @@ const char *const NeFileModeStr[] = {
 static NeErrT nneopen(struct NeFile *f) {
 	NeErrT err = NeERGNONE;
 	if (f->mode == NeFileModeRead) {
-		f->file = fopen(f->path.cstr, "rb");
+		f->file = fopen(brrstr_cstr(&f->path), "rb");
 	} else if (f->mode == NeFileModeWrite) {
 		if (!f->stat.exist) {
 			f->stat.isnew = 1;
 			f->stat.exist = 1;
 		}
-		f->file = fopen(f->path.cstr, "wb+");
+		f->file = fopen(brrstr_cstr(&f->path), "wb+");
 	} else if (f->mode == NeFileModeReadWrite) {
 		if (!f->stat.exist) {
 			f->stat.isnew = 1;
 			f->stat.exist = 1;
-			f->file = fopen(f->path.cstr, "wb+");
+			f->file = fopen(brrstr_cstr(&f->path), "wb+");
 		} else {
-			f->file = fopen(f->path.cstr, "rb+");
+			f->file = fopen(brrstr_cstr(&f->path), "rb+");
 		}
 	} else {
 		err = NeERFMODE;
@@ -82,7 +80,7 @@ NeFileStat(struct NeFileStat *fs, brrsz *fsize, const char *const path)
 	if (stat(path, &s) == 0) {
 		fs->exist = 1;
 		fs->canrd = fs->canwt = fs->isreg = 1;
-		/*
+		/* TODO windows version
 		fs->isreg = S_ISREG(s.st_mode);
 		fs->canwt = ((s.st_mode & S_IWUSR) && s.st_uid == getuid()) ||
 			((s.st_mode & S_IWGRP) && s.st_gid == getgid());
@@ -109,7 +107,7 @@ NeFileOpen(struct NeFile *const file, const char *const path,
 	if (!file || !path || !*path)
 		return err;
 
-	NeStrNew(&f.path, path, -1);
+	f.path = brrstr_new(path, -1);
 	f.mode = mode;
 	if ((err = NeFileStat(&f.stat, &f.size, path)) != NeERGNONE) {
 		BRRLOG_ERR("Could not stat %s : %m", path);
@@ -129,7 +127,7 @@ NeFileOpen(struct NeFile *const file, const char *const path,
 	}
 
 	if (err) {
-		NeStrDel(&f.path);
+		brrbuffer_delete(&f.path);
 		f.mode = NeFileModeNone;
 		f.status = 0;
 	}
@@ -150,27 +148,27 @@ NeFileClose(struct NeFile *const file)
 		file->size = 0;
 		file->status = 0;
 	} else {
-		BRRLOG_ERR("Failed to close file %s : %m", file->path.cstr);
+		BRRLOG_ERR("Failed to close file %s : %m", brrstr_cstr(&file->path));
 		err = NeERFFILE;
 	}
-	NeStrDel(&file->path);
+	brrbuffer_delete(&file->path);
 	return err;
 }
 
 void
 NeFileReopen(struct NeFile *const file, enum NeFileMode newmode)
 {
-	struct NeStr p = {0};
+	brrstrT p = {0};
 	if (!file)
 		return;
 	if (newmode == file->mode) {
 		NeFileReset(file);
 		return;
 	}
-	NeStrCopy(&p, file->path);
+	p = brrbuffer_copy(&file->path);
 	NeFileClose(file);
-	NeFileOpen(file, p.cstr, newmode);
-	NeStrDel(&p);
+	NeFileOpen(file, brrstr_cstr(&p), newmode);
+	brrbuffer_delete(&p);
 }
 
 void
@@ -230,7 +228,7 @@ NeFileStream(struct NeFile *const file, void *dst, brrsz dstlen)
 	// TODO are fread, ferror, clearerr cross-platform/portable?
 	rd = fread(blk, 1, dstlen, file->file);
 	if (ferror(file->file) != 0) {
-		BRRLOG_ERR("Failed to read %zu bytes from %s : %m", dstlen, file->path.cstr);
+		BRRLOG_ERR("Failed to read %zu bytes from %s : %m", dstlen, brrstr_cstr(&file->path));
 		clearerr(file->file);
 		rd = -1;
 	} else { /* copy tmp into dst */
@@ -283,7 +281,7 @@ NeFileWrite(struct NeFile *const file, const void *const data, brrsz datalen)
 
 	// TODO is fwrite cross-platform/portable?
 	if ((wt = fwrite(data, 1, datalen, f->file)) != datalen) {
-		BRRLOG_ERR("Failed to write %zu bytes to %s : %m", datalen, f->path.cstr);
+		BRRLOG_ERR("Failed to write %zu bytes to %s : %m", datalen, brrstr_cstr(&f->path));
 	}
 	f->position += wt;
 	nneeof(f);
@@ -293,19 +291,19 @@ NeFileWrite(struct NeFile *const file, const void *const data, brrsz datalen)
 NeErrT
 NeFileRemove(struct NeFile *const file)
 {
-	struct NeStr path = {0};
+	brrstrT path = {0};
 	NeErrT err = NeERGNONE;
 	if (!file || !file->file)
 		return err;
-	NeStrCopy(&path, file->path);
+	path = brrbuffer_copy(&file->path);
 	if ((err = NeFileClose(file)) == NeERGNONE) {
 		// TODO remove is not cross-platform/portable
-		if ((err = remove(path.cstr)) != 0) {
-			BRRLOG_ERR("Could not remove %s : %m", file->path.cstr);
+		if ((err = remove(brrstr_cstr(&path))) != 0) {
+			BRRLOG_ERR("Could not remove %s : %m", brrstr_cstr(&file->path));
 			err = NeERFREMOVE;
 		}
 	}
-	NeStrDel(&path);
+	brrbuffer_delete(&path);
 	return err;
 }
 
