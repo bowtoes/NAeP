@@ -53,7 +53,7 @@ $(ASS): $(HDR) Makefile config.mk
 $(INT): $(HDR) Makefile config.mk
 $(OBJ): $(HDR) Makefile config.mk
 
-brrtools: ; make -C vendor/brrtools SRCDIR=src HDRDIR=src MODE=STATIC UNISTANAME=libbrrtools.a WINSTANAME=libbrrtools.lib
+brrtools: ; make -C vendor/brrtools PEDANTIC=1 SRCDIR=src HDRDIR=src MODE=STATIC UNISTANAME=libbrrtools.a WINSTANAME=libbrrtools.lib
 
 $(PROJECT): brrtools setup options $(OBJ)
 ifeq ($(TARGET),UNIX)

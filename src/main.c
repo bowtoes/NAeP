@@ -14,41 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
+#include <errno.h>
 
-#include <brrtools/brrdebug.h>
+#include <brrtools/brrplatform.h>
 #include <brrtools/brrlib.h>
 #include <brrtools/brrlog.h>
-#include <brrtools/brrstr.h>
+#include <brrtools/brrstg.h>
+#include <brrtools/brrtil.h>
+#include <brrtools/brrpath.h>
 
-//#include "wisp/NeWisp.h"
+#include "NeArg.h"
 
-// TODO
-// TODO
-// TODO
-// TODO
-// TODO
-// TODO
-// TODO
-// TODO NeArg, NeFile, NeWisp need a desperate rework/redesign/refactor all of it.
-// TODO Also, the first file doesn't seem to take the arguments? Everything after does though?
-
-#if 0
-#define TEST(a, b) do { \
-	printf("%s %s end with %s\n", a.cstr, NeStrEndswith(a, b)?"does":"does not", b.cstr); \
-	printf("%s %s end with %s\n", b.cstr, NeStrEndswith(b, a)?"does":"does not", a.cstr); \
-} while (0);
-int main(int argc, char **argv) {
-	struct NeStr a = NeStrShallow("woah.mp4.as", -1),
-				 b = NeStrShallow(".mp4.as", -1),
-				 c = NeStrShallow(".as", -1);
-	TEST(a,b);
-	TEST(a,c);
-	TEST(b,c);
-}
-#else
 static const char *const usg =
 "Usage: NAeP [[OPTIONS] FILE]..."
 "\nOptions:"
@@ -74,8 +55,8 @@ static const char *const usg =
 "\n        -Q, -qq, -too-quiet  Suppress all output."
 "\n        -n, -dry, -dryrun    Don't actually do anything, just log what would happen."
 ;
-
-static void printhelp()
+static void BRRCALL
+printhelp()
 {
 	BRRLOG_NOR("NAeP - NieR: Automata extraction Protocol");
 	BRRLOG_NOR("Compiled on "__DATE__", " __TIME__"\n");
@@ -87,144 +68,154 @@ static void printhelp()
  * First, process all cmd arguments and build list of files, each with different,
  * specific options. Then go through the list and yada yada, do the extractions/conversions.
  * */
-
-#include "NeArg.h"
-struct NeArgOpt def = {0};
 int main(int argc, char **argv)
 {
-	struct NeArgOpt opt = {0};
-	struct NeArgs args = {0};
-	char *arg = argv[1];
-	brrct maxargs = 1024;
+	static const NeArgOptionsT default_options = {
+		.logEnabled=1,
+		.logPriority=brrlog_priority_debug,
+		.logColorEnabled=1
+	};
+	static const brrct max_args_to_process = 1024;
+
+	NeArgOptionsT opt = default_options;
+	NeArgArrayT args = {0};
+	brrsz max_arg_length = 0;
+	char *arg = NULL;
 	brrby rst = 0;
 
 	brrlog_setlogmax(0);
-	brrlogctl_styleon = true;
-	brrlogctl_flushon = true;
-
-	def.loglevel = brrlog_priority_debug;
-	def.logcolor = 1;
-	opt = def;
+	gbrrlogctl.style_enabled = 1;
+	gbrrlogctl.flush_enabled = 1;
 
 	if (argc == 1)
 		printhelp();
+	arg = argv[1];
 
 	/* Parse arguments */
 	for (int i = 1; i < argc; ++i, arg = argv[i]) {
-		struct NeArg narg = {0}, *t;
-		if (brrstr_cstr_compare(arg, true, "-h", "-help", "--help", "-v", "-version", "--version", NULL)) {
+		NeArgT narg = {0}, *t;
+		if (-1 != brrstg_cstr_compare(arg, 0, "-h", "-help", "--help", "-v", "-version", "--version", NULL)) {
 			printhelp();
-		} else if (brrstr_cstr_compare(arg, false, "-a", "-auto", "-detect", NULL)) {
+		} else if (-1 != brrstg_cstr_compare(arg, 1, "-a", "-auto", "-detect", NULL)) {
 			opt.weem = opt.wisp = opt.bank = opt.oggs = 0; continue;
-		} else if (brrstr_cstr_compare(arg, false, "-w", "-wem", "-weem", NULL)) {
+		} else if (-1 != brrstg_cstr_compare(arg, 1, "-w", "-wem", "-weem", NULL)) {
 			opt.weem = 1; opt.oggs = opt.wisp = opt.bank = 0; continue;
-		} else if (brrstr_cstr_compare(arg, false, "-W", "-wsp", "-wisp", NULL)) {
+		} else if (-1 != brrstg_cstr_compare(arg, 1, "-W", "-wsp", "-wisp", NULL)) {
 			opt.wisp = 1; opt.weem = opt.oggs = opt.bank = 0; continue;
-		} else if (brrstr_cstr_compare(arg, false, "-b", "-bnk", "-bank", NULL)) {
+		} else if (-1 != brrstg_cstr_compare(arg, 1, "-b", "-bnk", "-bank", NULL)) {
 			opt.bank = 1; opt.weem = opt.wisp = opt.oggs = 0; continue;
-		} else if (brrstr_cstr_compare(arg, false, "-o", "-ogg", NULL)) {
+		} else if (-1 != brrstg_cstr_compare(arg, 1, "-o", "-ogg", NULL)) {
 			opt.oggs  = 1; opt.weem = opt.wisp = opt.bank = 0; continue;
-		} else if (brrstr_cstr_compare(arg, false, "-R", "-recurse", NULL)) {
-			BRRMISC_TOGGLE(opt.bankrecurse); continue;
-		} else if (brrstr_cstr_compare(arg, false, "-O", "-weem2ogg", NULL)) {
-			BRRMISC_TOGGLE(opt.autoogg); continue;
-		} else if (brrstr_cstr_compare(arg, false, "-oi", "-ogg-inplace", NULL)) {
-			BRRMISC_TOGGLE(opt.ogginplace); continue;
-		} else if (brrstr_cstr_compare(arg, false, "-r", "-revorb", NULL)) {
-			BRRMISC_TOGGLE(opt.autorvb); continue;
-		} else if (brrstr_cstr_compare(arg, false, "-ri", "-rvb-inplace", NULL)) {
-			BRRMISC_TOGGLE(opt.rvbinplace); continue;
-		} else if (brrstr_cstr_compare(arg, false, "-d", "-debug", NULL)) {
-			BRRMISC_TOGGLE(opt.logdebug); continue;
-		} else if (brrstr_cstr_compare(arg, false, "-c", "-color", NULL)) {
-			BRRMISC_TOGGLE(opt.logcolor); continue;
-		} else if (brrstr_cstr_compare(arg, false, "-q", "-quiet", NULL)) {
-			opt.loglevel = opt.loglevel - 1 < 0 ? 0 : opt.loglevel - 1; continue;
-		} else if (brrstr_cstr_compare(arg, false, "-Q", "-qq", "-too-quiet", NULL)) {
-			BRRMISC_TOGGLE(opt.logoff); continue;
-		} else if (brrstr_cstr_compare(arg, false, "-n", "-dry", "-dryrun", NULL)) {
-			BRRMISC_TOGGLE(opt.dryrun); continue;
-		} else if (brrstr_cstr_compare(arg, false, "-reset", NULL)) {
-			BRRMISC_TOGGLE(rst); continue;
+		} else if (-1 != brrstg_cstr_compare(arg, 1, "-R", "-recurse", NULL)) {
+			BRRTIL_TOGGLE(opt.recurseBanks); continue;
+		} else if (-1 != brrstg_cstr_compare(arg, 1, "-O", "-weem2ogg", NULL)) {
+			BRRTIL_TOGGLE(opt.autoOgg); continue;
+		} else if (-1 != brrstg_cstr_compare(arg, 1, "-oi", "-ogg-inplace", NULL)) {
+			BRRTIL_TOGGLE(opt.oggInplace); continue;
+		} else if (-1 != brrstg_cstr_compare(arg, 1, "-r", "-revorb", NULL)) {
+			BRRTIL_TOGGLE(opt.autoRevorb); continue;
+		} else if (-1 != brrstg_cstr_compare(arg, 1, "-ri", "-rvb-inplace", NULL)) {
+			BRRTIL_TOGGLE(opt.revorbInplace); continue;
+		} else if (-1 != brrstg_cstr_compare(arg, 1, "-d", "-debug", NULL)) {
+			BRRTIL_TOGGLE(opt.logDebug); continue;
+		} else if (-1 != brrstg_cstr_compare(arg, 1, "-c", "-color", NULL)) {
+			BRRTIL_TOGGLE(opt.logColorEnabled); continue;
+		} else if (-1 != brrstg_cstr_compare(arg, 1, "-q", "-quiet", NULL)) {
+			opt.logPriority = opt.logPriority - 1 < 0 ? 0 : opt.logPriority - 1; continue;
+		} else if (-1 != brrstg_cstr_compare(arg, 1, "-Q", "-qq", "-too-quiet", NULL)) {
+			BRRTIL_TOGGLE(opt.logEnabled); continue;
+		} else if (-1 != brrstg_cstr_compare(arg, 1, "-n", "-dry", "-dryrun", NULL)) {
+			BRRTIL_TOGGLE(opt.dryRun); continue;
+		} else if (-1 != brrstg_cstr_compare(arg, 1, "-reset", NULL)) {
+			BRRTIL_TOGGLE(rst); continue;
 		} else if ((t = NeFindArg(args, arg))) {
-			t->opt = opt; opt = def; continue;
+			t->options = opt; opt = default_options; continue;
 		}
 
-		narg.arg = brrstr_new(arg, -1);
-		narg.opt = opt;
+		if (brrstg_new(&narg.argument, arg, -1)) {
+			/* TODO error */
+		}
+		narg.options = opt;
 
-		if (brrstr_strlen(&narg.arg) > args.maxarg)
-			args.maxarg = brrstr_strlen(&narg.arg);
-		args.argcount++;
-		if (!brrlib_alloc((void **)&args.args, args.argcount * sizeof(struct NeArg), 0))
-			break;
-		args.args[args.argcount - 1] = narg;
+		if (narg.argument.length > max_arg_length)
+			max_arg_length = narg.argument.length;
+		if (brrlib_alloc((void **)&args.args, (args.arg_count+1) * sizeof(NeArgT), 0)) {
+			BRRDEBUG_TRACE("Could not allocate enough space for parsing %zu arguments", args.arg_count+1);
+		}
+		args.args[args.arg_count++] = narg;
 		if (rst)
-			opt = def;
+			opt = default_options;
 	}
-	args.argdigit = brrlib_ndigits(false, args.argcount, 10);
+	args.arg_digit = brrlib_ndigits(args.arg_count, 0, 10);
 
 	/* Process files */
-	if (args.argcount) {
-		struct NeArg *arg = &args.args[0];
-		struct NeFileStat stat;
-		struct NeFile afile;
-		for (int i = 0; i < args.argcount; ++i, arg = &args.args[i]) {
-			brrlogctl_debugon = arg->opt.logdebug;
-			brrlogctl_styleon = arg->opt.logcolor;
-			brrlog_setmaxpriority(arg->opt.logoff?brrlog_priority_none:arg->opt.loglevel);
-			NeFileStat(&stat, NULL, brrstr_cstr(&arg->arg));
-			if (!stat.exist || !stat.isreg || (!stat.canwt && (arg->opt.ogginplace || arg->opt.rvbinplace)) || !stat.canrd) {
+	if (args.arg_count) {
+		NeArgT *arg = &args.args[0];
+		brrpath_stat_resultT st;
+		for (int i = 0; i < args.arg_count; ++i, arg = &args.args[i]) {
+			gbrrlogctl.debug_enabled = arg->options.logDebug;
+			gbrrlogctl.style_enabled = arg->options.logColorEnabled;
+			brrlog_setmaxpriority(arg->options.logEnabled?arg->options.logPriority:brrlog_priority_none);
+			if (brrpath_stat(&arg->argument, &st)) {
+				BRRLOG_ERR("Failed to stat '%s': %s", BRRTIL_NULSTR((char *)arg->argument.opaque), strerror(errno));
+				brrstg_delete(&arg->argument);
+				continue;
+			} else if (!st.exists || st.type != brrpath_type_file) {
 				BRRLOG_WARN("Cannot parse ");
-				BRRLOG_MESSAGE_STNP(brrlog_format_last.level, brrlog_color_cyan, -1, brrlog_style_bold, "%s", brrstr_cstr(&arg->arg));
-				BRRLOG_MESSAGE_EMNP(brrlog_format_last.level, " : ");
-				if (!stat.exist)
-					BRRLOG_MESSAGE_STP(brrlog_format_last.level, brrlog_color_green, -1, brrlog_style_bold, "File does not exist.");
-				else if (!stat.isreg)
-					BRRLOG_MESSAGE_STP(brrlog_format_last.level, brrlog_color_blue, -1, brrlog_style_bold, "File is not regular.");
-				else if (!stat.canwt)
-					BRRLOG_MESSAGE_STP(brrlog_format_last.level, brrlog_color_green, -1, brrlog_style_bold, "Cannot write to file for in-place convert/revorb.");
-				else if (!stat.canrd)
-					BRRLOG_MESSAGE_STP(brrlog_format_last.level, brrlog_color_blue, -1, brrlog_style_bold, "Cannot read file.");
-				brrbuffer_delete(&arg->arg);
+				BRRLOG_MESSAGESNP(gbrrlog_type_last.level, brrlog_color_cyan, -1, brrlog_style_bold, -1, "%s", BRRTIL_NULSTR((char *)arg->argument.opaque));
+				BRRLOG_WARNP(" : ");
+				if (!st.exists)
+					BRRLOG_MESSAGESP(gbrrlog_type_last.level, brrlog_color_red, -1, brrlog_style_bold, -1, "File does not exist");
+				else if (st.type != brrpath_type_file)
+					BRRLOG_MESSAGESP(gbrrlog_type_last.level, brrlog_color_magenta, -1, brrlog_style_bold, -1, "File is not regular");
+				brrstg_delete(&arg->argument);
 				continue;
-			} else if (NeFileOpen(&afile, brrstr_cstr(&arg->arg), NeFileModeReadWrite) != NeERGNONE) {
+			} else {
+				BRRLOG_MESSAGESN(gbrrlog_type_debug.level, brrlog_color_green, gbrrlog_type_debug.format.foreground, brrlog_style_bold, -1, "TODO: ");
+				BRRLOG_DEBUGP(" Check if can open file and open");
+			}
+#if 0
+			} else if (!brrbuffer_from_file(BRRTIL_NULSTR((char *)arg->argument.opaque), NeFileModeReadWrite) != NeArgErr_None) {
 				BRRLOG_ERRN("Could not open ");
-				BRRLOG_MESSAGE_STNP(brrlog_format_last.level, brrlog_color_cyan, -1, brrlog_style_bold, "%s", brrstr_cstr(&arg->arg));
+				BRRLOG_MESSAGE_STNP(brrlog_format_last.level, brrlog_color_cyan, -1, brrlog_style_bold, "%s", BRRTIL_NULSTR((char *)arg->argument.opaque));
 				BRRLOG_ERRP(" for parsing.");
-				brrbuffer_delete(&arg->arg);
+				brrstg_delete(&arg->argument);
 				continue;
 			}
+#endif
 			BRRLOG_NORN("Parsing ");
-			BRRLOG_MESSAGE_FGNP(brrlog_format_last.level, brrlog_color_magenta, "%*i / %*i ", args.argdigit, i + 1, args.argdigit, args.argcount);
-			if (arg->opt.logdebug)
-				NePrintArg(*arg, args.maxarg, arg->opt.logoff);
-			if ((arg->opt.oggs | arg->opt.weem | arg->opt.wisp | arg->opt.bank) == 0) {
-				NeDetectType(arg, &afile);
-			}
-			if (arg->opt.oggs) {
-				BRRLOG_MESSAGE_FGP(brrlog_format_last.level, brrlog_color_blue, "%-*s", args.maxarg, brrstr_cstr(&arg->arg));
-				NeRevorbOgg(*arg, &afile);
-			} else if (arg->opt.weem) {
-				BRRLOG_MESSAGE_FGP(brrlog_format_last.level, brrlog_color_green, "%-*s", args.maxarg, brrstr_cstr(&arg->arg));
-				NeConvertWeem(*arg, &afile);
-			} else if (arg->opt.wisp) {
-				BRRLOG_MESSAGE_FGP(brrlog_format_last.level, brrlog_color_yellow, "%-*s", args.maxarg, brrstr_cstr(&arg->arg));
-				NeExtractWisp(*arg, &afile);
-			} else if (arg->opt.bank) {
-				BRRLOG_MESSAGE_FGP(brrlog_format_last.level, brrlog_color_red, "%-*s", args.maxarg, brrstr_cstr(&arg->arg));
-				NeExtractBank(*arg, &afile);
+			BRRLOG_MESSAGESNP(gbrrlog_type_last.level, brrlog_color_magenta, -1, -1, -1, "%*i / %*i ", args.arg_digit, i + 1, args.arg_digit, args.arg_count);
+			if (arg->options.logDebug)
+				NePrintArg(*arg, arg->options.logEnabled, max_arg_length);
+			if ((arg->options.oggs | arg->options.weem | arg->options.wisp | arg->options.bank) == 0)
+				NeDetectType(arg, &st, BRRTIL_NULSTR((char *)arg->argument.opaque));
+			if (arg->options.oggs) {
+				BRRLOG_MESSAGESP(gbrrlog_type_last.level, brrlog_color_blue, -1, -1, -1, "%-*s", max_arg_length, BRRTIL_NULSTR((char *)arg->argument.opaque));
+				NeRevorbOgg(arg, &st, BRRTIL_NULSTR((char *)arg->argument.opaque));
+			} else if (arg->options.weem) {
+				BRRLOG_MESSAGESP(gbrrlog_type_last.level, brrlog_color_green, -1, -1, -1, "%-*s", max_arg_length, BRRTIL_NULSTR((char *)arg->argument.opaque));
+				NeConvertWeem(arg, &st, BRRTIL_NULSTR((char *)arg->argument.opaque));
+			} else if (arg->options.wisp) {
+				BRRLOG_MESSAGESP(gbrrlog_type_last.level, brrlog_color_yellow, -1, -1, -1, "%-*s", max_arg_length, BRRTIL_NULSTR((char *)arg->argument.opaque));
+				NeExtractWisp(arg, &st, BRRTIL_NULSTR((char *)arg->argument.opaque));
+			} else if (arg->options.bank) {
+				BRRLOG_MESSAGESP(gbrrlog_type_last.level, brrlog_color_red, -1, -1, -1, "%-*s", max_arg_length, BRRTIL_NULSTR((char *)arg->argument.opaque));
+				NeExtractBank(arg, &st, BRRTIL_NULSTR((char *)arg->argument.opaque));
 			} else {
 				BRRLOG_ERRN("Could not determine filetype for ");
-				BRRLOG_MESSAGE_FGNP(brrlog_format_last.level, brrlog_color_cyan, "%s", arg->arg);
+				BRRLOG_MESSAGESNP(gbrrlog_type_last.level, brrlog_color_cyan, -1, -1, -1, "%s", BRRTIL_NULSTR((char *)arg->argument.opaque));
 				BRRLOG_ERRP(", cannot parse");
 			}
+			BRRLOG_MESSAGESN(gbrrlog_type_debug.level, brrlog_color_green, gbrrlog_type_debug.format.foreground, brrlog_style_bold, -1, "TODO: ");
+			BRRLOG_DEBUGP(" Close file");
+			/*
 			if (NeFileClose(&afile) != NeERGNONE) {
 				BRRDEBUG_TRACE("AAA");
 			}
+			*/
 		}
 	} else {
-		brrlog_setmaxpriority(opt.logdebug ? brrlog_priority_debug : opt.loglevel);
+		brrlog_setmaxpriority(opt.logDebug?brrlog_priority_debug:opt.logPriority);
 		BRRLOG_ERR("No files passed");
 	}
 	brrlib_alloc((void **)&args.args, 0, 0);
@@ -274,5 +265,4 @@ static int extractwisp(struct NeArg a, struct NeWeem **dst) {
 	NeWispClose(&wsp);
 	return wemcount;
 }
-#endif
 #endif

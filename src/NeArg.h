@@ -17,51 +17,59 @@ limitations under the License.
 #ifndef NeArg_h
 #define NeArg_h
 
-#include <brrtools/brrtypes.h>
+#include <brrtools/brrapi.h>
+#include <brrtools/brrlog.h>
+#include <brrtools/brrstg.h>
+#include <brrtools/brrpath.h>
 
-#include "common/NeFile.h"
+BRRCPPSTART
 
-struct NeArgs {
-	struct NeArg {
-		/* file to process */
-		brrstrT arg;
-		union {
-			struct NeArgOpt {
-				brrby oggs:1;
-				brrby weem:1;
-				brrby wisp:1;
-				brrby bank:1;        /* b=4 */
+typedef struct NeArgOptions {
+	union {
+		struct {
+			brrby oggs:1;
+			brrby weem:1;
+			brrby wisp:1;
+			brrby bank:1;        /* b=4 */
 
-				brrby logdebug:1;
-				brrby loglevel:3;    /* b=8 */
-				brrby logoff:1;
-				brrby logcolor:1;
+			brrby autoOgg:1;
+			brrby oggInplace:1;
+			brrby autoRevorb:1;
+			brrby revorbInplace:1;  /* b=8 */
 
-				brrby bankrecurse:1;
+			brrby recurseBanks:1;
+			brrby dryRun:1;
 
-				brrby autoogg:1;     /* b=12 */
-				brrby ogginplace:1;
-				brrby autorvb:1;
-				brrby rvbinplace:1;
-
-				brrby dryrun:1;      /* b=16 */
-
-			} opt;
-			brru2 options;
+			brrby logDebug:1;
+			brrby logEnabled:1;
+			brrby logColorEnabled:1;
 		};
-	} *args;
-	brrsz maxarg;
-	brrct argcount;
-	brrby argdigit;
-};
+		brru2 optionsInt;
+	};
+	brrlog_priorityT logPriority;
+} NeArgOptionsT;
+typedef struct NeArg {
+	brrstgT argument;
+	NeArgOptionsT options;
+} NeArgT;
 
-struct NeArg *NeFindArg(struct NeArgs args, const char *const arg);
-void NePrintArg(struct NeArg arg, brrsz maxarg, int newline);
+typedef struct NeArgArray {
+	NeArgT *args;
+	brrct arg_count;
+	brrby arg_digit; /* ??? */
+} NeArgArrayT;
 
-void  NeDetectType(struct NeArg *arg, struct NeFile *f);
-NeErrT NeConvertWeem(struct NeArg arg, struct NeFile *infile);
-NeErrT NeExtractWisp(struct NeArg arg, struct NeFile *infile);
-NeErrT NeExtractBank(struct NeArg arg, struct NeFile *infile);
-NeErrT   NeRevorbOgg(struct NeArg arg, struct NeFile *infile);
+NeArgT *BRRCALL NeFindArg(NeArgArrayT args, const char *const arg);
+void BRRCALL NePrintArg(NeArgT arg, int newline, brrsz max_arg_length);
+
+/* TODO */
+void BRRCALL NeDetectType(NeArgT *arg, const brrpath_stat_resultT *const st, const char *const path);
+int BRRCALL NeConvertWeem(const NeArgT *const arg, const brrpath_stat_resultT *const st, const char *const path);
+int BRRCALL NeExtractWisp(const NeArgT *const arg, const brrpath_stat_resultT *const st, const char *const path);
+int BRRCALL NeExtractBank(const NeArgT *const arg, const brrpath_stat_resultT *const st, const char *const path);
+int BRRCALL NeRevorbOgg(const NeArgT *const arg, const brrpath_stat_resultT *const st, const char *const path);
+/* TODO */
+
+BRRCPPEND
 
 #endif /* NeArg_h */
