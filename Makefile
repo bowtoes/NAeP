@@ -32,6 +32,11 @@ ifdef DEBUG
 else
 	@echo "DEBUG      : OFF"
 endif
+ifdef LIBRECONFIG
+	@echo "LIBRECONFIG: ON"
+else
+	@echo "LIBRECONFIG: OFF"
+endif
 	@echo ""
 	@echo "$(PROJECT)_CFLAGS   =$($(PROJECT)_CFLAGS)"
 	@echo "$(PROJECT)_CPPFLAGS =$($(PROJECT)_CPPFLAGS)"
@@ -53,13 +58,13 @@ $(ASS): $(HDR) Makefile config.mk
 $(INT): $(HDR) Makefile config.mk
 $(OBJ): $(HDR) Makefile config.mk
 
-brrtools: ; make -C vendor/brrtools PEDANTIC=1 SRCDIR=src HDRDIR=src MODE=STATIC UNISTANAME=libbrrtools.a WINSTANAME=libbrrtools.lib
-
 $(PROJECT): brrtools setup options $(OBJ)
 ifeq ($(TARGET),UNIX)
-	$(CC) -o $(OUTDIR)/$(TARGETNAME) $(OBJ) ./vendor/brrtools/$(OUTDIR)/static/libbrrtools.a $($(PROJECT)_LDFLAGS)
+	$(CC) -o $(OUTDIR)/$(TARGETNAME) $(OBJ) ./vendor/brrtools/$(OUTDIR)/static/libbrrtools.a \
+	    $($(PROJECT)_LDFLAGS)
 else
-	$(CC) -o $(OUTDIR)/$(TARGETNAME) $(OBJ) ./vendor/brrtools/$(OUTDIR)/static/libbrrtools.lib $($(PROJECT)_LDFLAGS)
+	$(CC) -o $(OUTDIR)/$(TARGETNAME) $(OBJ) ./vendor/brrtools/$(OUTDIR)/static/libbrrtools.lib \
+	    $($(PROJECT)_LDFLAGS)
 endif
 
 ass: setup options $(ASS) ;
@@ -67,8 +72,20 @@ int: setup options $(INT) ;
 obj: setup options $(OBJ) ;
 aio: setup options $(ASS) $(INT) $(OBJ) ;
 
+install: all
+	@cp -fv $(PROJECT) $(prefix)/bin
+uninstall:
+	@rm -fv $(prefix)/bin/$(PROJECT)
+
+brrtools:
+	make -C vendor/brrtools PEDANTIC=1 SRCDIR=src HDRDIR=src MODE=STATIC \
+	    UNISTANAME=libbrrtools.a WINSTANAME=libbrrtools.lib
+libs: brrtools
+
+clean-brrtools: ; make -c vendor/brrtools clean
+clean-libs: clean-brrtools
+clean-all: clean-libs clean
 clean:
-	make -C vendor/brrtools clean
 	$(RM) $(ASS)
 	$(RM) $(INT)
 	$(RM) $(OBJ)
@@ -91,15 +108,11 @@ else
 endif
 
 again: clean all
+again-brrtools: clean-brrtools brrtools
+again-libs: again-brrtools
+again-all: again-libs again
 
-install-lib: brrtools ; make -C vendor/brrtools install
-install: all
-	@cp -fv $(PROJECT) $(prefix)/bin
-uninstall:
-	@rm -fv $(prefix)/bin/$(PROJECT)
-test: $(PROJECT)
-	@test/test-dryrun.py
-test-ogg: $(PROJECT)
-	@test/test-ogg.py
-
-.PHONY: setup options ass int obj aio all clean again install test brrtools
+.PHONY: brrtools libs
+.PHONY: clean clean-brrtools clean-libs clean-all
+.PHONY: again again-brrtools again-libs again-all
+.PHONY: setup options ass int obj aio install uninstall

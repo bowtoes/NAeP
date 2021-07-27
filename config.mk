@@ -25,6 +25,9 @@ STD:=c11
 endif
 # Default linker options
 ifndef LNK
+# I would like to statically link these, and eventually have them be submodules
+# so that they don't need to be installed seperately to compile.
+# If nothing else, at least static linkage.
 LNK:=-logg -lvorbis
 endif
 
