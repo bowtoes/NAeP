@@ -1,3 +1,9 @@
 [submodule "vendor/brrtools"]
 	path = vendor/brrtools
 	url = https://github.com/bowtoes/brrtools.git
+[submodule "vendor/ogg"]
+	path = vendor/ogg
+	url = https://gitlab.xiph.org/xiph/ogg.git
+[submodule "vendor/vorbis"]
+	path = vendor/vorbis
+	url = https://gitlab.xiph.org/xiph/vorbis.git
