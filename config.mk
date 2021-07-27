@@ -6,7 +6,8 @@ ifndef PROJECT
 PROJECT:=$(notdir $(CURDIR))
 endif
 ifndef UPROJECT
-UPROJECT:=$(shell echo '$(PROJECT)' | tr '[:lower:]' '[:upper:]')
+UPROJECT:=Ne
+#$(shell echo '$(PROJECT)' | tr '[:lower:]' '[:upper:]')
 endif
 # Default installation prefix
 ifndef prefix
@@ -235,15 +236,15 @@ WRNS:=-Wall -Wextra -Wpedantic -pedantic -Werror=pedantic -pedantic-errors\
       -Werror=implicit-function-declaration -Werror=missing-declarations\
       -Wno-unused-function -Wno-sign-compare -Wno-unused-parameter
 # Defines
-DEFS:=-D$(UPROJECT)_MAJOR=$($(PROJECT)_MAJOR)\
-      -D$(UPROJECT)_MINOR=$($(PROJECT)_MINOR)\
-      -D$(UPROJECT)_REVIS=$($(PROJECT)_REVIS)\
-      -D$(UPROJECT)_VERSION='$($(PROJECT)_MAJOR).$($(PROJECT)_MINOR).$($(PROJECT)_REVIS)'\
+DEFS:=-D$(UPROJECT)MAJOR=$($(PROJECT)_MAJOR)\
+      -D$(UPROJECT)MINOR=$($(PROJECT)_MINOR)\
+      -D$(UPROJECT)REVIS=$($(PROJECT)_REVIS)\
+      -D$(UPROJECT)VERSION='$($(PROJECT)_MAJOR).$($(PROJECT)_MINOR).$($(PROJECT)_REVIS)'\
 
 ifdef DEBUG
- DEFS:=$(DEFS) -D$(UPROJECT)_DEBUG
+ DEFS:=$(DEFS) -D$(UPROJECT)DEBUG
  ifdef MEMCHECK
-  DEFS:=$(DEFS) -D$(UPROJECT)_MEMCHECK
+  DEFS:=$(DEFS) -D$(UPROJECT)MEMCHECK
  endif
 endif
 
@@ -280,9 +281,10 @@ $(PROJECT)_LDFLAGS=$(LNK) $(PRF) $(LDFLAGS)
 # should be specified relative to CURDIR
 SRC:=\
 	src/revorbc/revorbc.c\
-	src/NeArg.c\
 	src/main.c\
+	src/process.c\
 
 HDR:=\
 	src/revorbc/revorbc.h\
-	src/NeArg.h\
+	src/common.h\
+	src/process.h\
