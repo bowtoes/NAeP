@@ -25,10 +25,7 @@ STD:=c11
 endif
 # Default linker options
 ifndef LNK
-# I would like to statically link these, and eventually have them be submodules
-# so that they don't need to be installed seperately to compile.
-# If nothing else, at least static linkage.
-LNK:=-logg -lvorbis
+LNK:=-lm -lmvec
 endif
 
 # # # DIRECTORY CONFIG
@@ -233,7 +230,7 @@ endif
 
 # # # CC ARGS
 # Includes
-INCS:=-I$(SRCDIR) -I./vendor/brrtools/src
+INCS:=-I$(SRCDIR) -I./vendor/brrtools/src -I./vendor/ogg/include -I./vendor/vorbis/include
 # Warnings/errors
 WRNS:=-Wall -Wextra -Wpedantic -pedantic -Werror=pedantic -pedantic-errors\
       -Werror=implicit-function-declaration -Werror=missing-declarations\

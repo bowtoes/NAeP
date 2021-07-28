@@ -58,12 +58,14 @@ $(ASS): $(HDR) Makefile config.mk
 $(INT): $(HDR) Makefile config.mk
 $(OBJ): $(HDR) Makefile config.mk
 
-$(PROJECT): brrtools setup options $(OBJ)
+$(PROJECT): libs setup options $(OBJ)
 ifeq ($(TARGET),UNIX)
 	$(CC) -o $(OUTDIR)/$(TARGETNAME) $(OBJ) ./vendor/brrtools/$(OUTDIR)/static/libbrrtools.a \
+	    ./vendor/vorbis/lib/.libs/libvorbis.a ./vendor/ogg/src/.libs/libogg.a \
 	    $($(PROJECT)_LDFLAGS)
 else
 	$(CC) -o $(OUTDIR)/$(TARGETNAME) $(OBJ) ./vendor/brrtools/$(OUTDIR)/static/libbrrtools.lib \
+	    ./vendor/vorbis/lib/.libs/libvorbis.lib ./vendor/ogg/src/.libs/libogg.lib \
 	    $($(PROJECT)_LDFLAGS)
 endif
 
@@ -80,10 +82,26 @@ uninstall:
 brrtools:
 	make -C vendor/brrtools PEDANTIC=1 SRCDIR=src HDRDIR=src MODE=STATIC \
 	    UNISTANAME=libbrrtools.a WINSTANAME=libbrrtools.lib
-libs: brrtools
+ogg:
+ifdef LIBRECONFIG
+	cd vendor/ogg && ./autogen.sh
+	cd vendor/ogg && ./configure --disable-shared
+endif
+	make -C vendor/ogg
+vorbis:
+ifdef LIBRECONFIG
+	cd vendor/vorbis && ./autogen.sh
+	cd vendor/vorbis && ./configure --with-ogg-libs=../ogg/src/.libs \
+	    --with-ogg-includes=../ogg/include --disable-shared --disable-docs --disable-examples \
+	    --disable-oggtest
+endif
+	make -C vendor/vorbis
+libs: brrtools ogg vorbis
 
-clean-brrtools: ; make -c vendor/brrtools clean
-clean-libs: clean-brrtools
+clean-brrtools: ; make -C vendor/brrtools clean
+clean-ogg: ; make -C vendor/ogg clean
+clean-vorbis: ; make -C vendor/ogg vorbis
+clean-libs: clean-brrtools clean-ogg clean-vorbis
 clean-all: clean-libs clean
 clean:
 	$(RM) $(ASS)
@@ -109,10 +127,12 @@ endif
 
 again: clean all
 again-brrtools: clean-brrtools brrtools
+again-ogg: clean-ogg ogg
+again-vorbis: clean-vorbis vorbis
 again-libs: again-brrtools
 again-all: again-libs again
 
-.PHONY: brrtools libs
-.PHONY: clean clean-brrtools clean-libs clean-all
-.PHONY: again again-brrtools again-libs again-all
+.PHONY: brrtools ogg vorbis libs
+.PHONY: clean clean-brrtools clean-ogg clean-vorbis clean-libs clean-all
+.PHONY: again again-brrtools again-ogg again-vorbis again-libs again-all
 .PHONY: setup options ass int obj aio install uninstall
