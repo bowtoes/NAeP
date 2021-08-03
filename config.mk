@@ -282,9 +282,12 @@ $(PROJECT)_LDFLAGS=$(LNK) $(PRF) $(LDFLAGS)
 SRC:=\
 	src/revorbc/revorbc.c\
 	src/main.c\
+	src/common.c\
 	src/process.c\
+	src/process_files.c\
 
 HDR:=\
 	src/revorbc/revorbc.h\
 	src/common.h\
 	src/process.h\
+	src/process_files.h\

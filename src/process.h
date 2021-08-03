@@ -23,8 +23,14 @@ limitations under the License.
 #include <brrtools/brrpath.h>
 #include <brrtools/brrstg.h>
 
+#include "common.h"
+
 BRRCPPSTART
 
+typedef struct global_options {
+	brrby should_reset:1;
+	brrby log_style_enabled:1;
+} global_optionsT;
 typedef struct input_options {
 	brrlog_priorityT log_priority; /* Priority used if logging for the input is enabled. */
 
@@ -47,39 +53,20 @@ typedef struct input_options {
 	brrby dry_run:1; /* Do not process any input or output, just print what would happen. */
 } input_optionsT;
 typedef struct input {
-	brrstgT input;
+	brrstgT path;
 	input_optionsT options;
 } inputT;
-
-typedef union fourcc {
-	struct {
-		brru1 _0;
-		brru1 _1;
-		brru1 _2;
-		brru1 _3;
-	} bytes;
-	brru4 integer;
-} fourccT;
-
-extern const fourccT goggfcc;
-extern const fourccT gwemfcc;
-extern const fourccT gbnkfcc;
 
 void BRRCALL input_delete(inputT *const input);
 void BRRCALL input_print(brrlog_priorityT priority, int newline, const inputT *const input, brrsz max_input_length);
 
 inputT *BRRCALL find_argument(const char *const arg, const inputT *const inputs, brrsz input_count);
 int BRRCALL parse_argument(void (*const print_help)(void),
-    const char *const arg, int *const reset, input_optionsT *const options,
+    const char *const arg, global_optionsT *const global, input_optionsT *const options,
     inputT *const inputs, brrsz input_count, const input_optionsT *const default_options);
 
-/* Returns 0 on success, return negative value on error. */
-
-#define TYPE_ERR_NONE 0
-#define TYPE_ERR_INPUT -1
-#define TYPE_ERR_READ -2
-#define TYPE_ERR_TYPE -3
-int BRRCALL determine_type(inputT *const input, const brrpath_infoT *const input_info);
+int BRRCALL process_input(inputT *const input, numbersT *const numbers,
+    const brrpath_stat_resultT *const path_stat, brrsz index);
 
 BRRCPPEND
 

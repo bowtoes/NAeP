@@ -17,12 +17,91 @@ limitations under the License.
 #ifndef COMMON_H
 #define COMMON_H
 
+#include <brrtools/brrlog.h>
+#include <brrtools/brrtypes.h>
+
 #if defined(BRRTOOLS_BRRLOG_H)
 # define NeTODO(...) do { \
+	brrlog_formatT _tf_ = gbrrlog_format_last; \
+	brrlog_levelT _lf_ = gbrrlog_level_last; \
 	BRRLOG_DEBUGNP(""); \
-	BRRLOG_FONTNP(brrlog_color_green, brrlog_color_normal, -1, -1, " TODO:"); \
-	BRRLOG_FONTNP(brrlog_color_normal, brrlog_color_normal, -1, -1, __VA_ARGS__); \
+	BRRLOG_FORENP(brrlog_color_green, " TODO:"); \
+	BRRLOG_FORENP(brrlog_color_normal, __VA_ARGS__); \
+	gbrrlog_format_last = _tf_; \
+	gbrrlog_level_last = _lf_; \
 } while (0)
 #endif /* BRRTOOLS_BRRLOG_H */
+
+#define OGG_FORMAT ((brrlog_formatT){brrlog_color_blue,    -1, -1, -1})
+#define OGG_COLOR OGG_FORMAT.foreground
+#define OGG_BGCOL OGG_FORMAT.background
+#define OGG_STYLE OGG_FORMAT.style
+#define OGG_FONT OGG_FORMAT.font
+
+#define WEM_FORMAT ((brrlog_formatT){brrlog_color_green,   -1, -1, -1})
+#define WEM_COLOR WEM_FORMAT.foreground
+#define WEM_BGCOL WEM_FORMAT.background
+#define WEM_STYLE WEM_FORMAT.style
+#define WEM_FONT WEM_FORMAT.font
+
+#define WSP_FORMAT ((brrlog_formatT){brrlog_color_yellow,  -1, -1, -1})
+#define WSP_COLOR WSP_FORMAT.foreground
+#define WSP_BGCOL WSP_FORMAT.background
+#define WSP_STYLE WSP_FORMAT.style
+#define WSP_FONT WSP_FORMAT.font
+
+#define BNK_FORMAT ((brrlog_formatT){brrlog_color_red,     -1, -1, -1})
+#define BNK_COLOR BNK_FORMAT.foreground
+#define BNK_BGCOL BNK_FORMAT.background
+#define BNK_STYLE BNK_FORMAT.style
+#define BNK_FONT BNK_FORMAT.font
+
+#define AUT_FORMAT ((brrlog_formatT){brrlog_color_magenta, -1, brrlog_style_bold, -1})
+#define AUT_COLOR AUT_FORMAT.foreground
+#define AUT_BGCOL AUT_FORMAT.background
+#define AUT_STYLE AUT_FORMAT.style
+#define AUT_FONT AUT_FORMAT.font
+
+#define DRY_COLOR brrlog_color_magenta
+#define WET_COLOR brrlog_color_cyan
+
+#define MANUAL_COLOR brrlog_color_red
+#define INPLACE_COLOR brrlog_color_yellow
+#define SEPARATE_COLOR brrlog_color_cyan
+#define ENABLED_COLOR brrlog_color_green
+#define DISABLED_COLOR brrlog_color_red
+
+#define PATH_COLOR brrlog_color_cyan
+#define INFO_COLOR brrlog_color_magenta
+
+typedef union fourcc {
+	struct {
+		brru1 _0;
+		brru1 _1;
+		brru1 _2;
+		brru1 _3;
+	} bytes;
+	brru4 integer;
+} fourccT;
+
+#define _init_fcc(_a_, _b_, _c_, _d_) {.bytes={(_a_), (_b_), (_c_), (_d_)}}
+#define _fcc_lit(_l_) _init_fcc((_l_)[0], (_l_)[1], (_l_)[2], (_l_)[3])
+#define MAKE_FCC(_l_) _fcc_lit(#_l_)
+#define GET_FCC_BYTES(_f_) (_f_).bytes._0, (_f_).bytes._1, (_f_).bytes._2, (_f_).bytes._3
+
+extern const fourccT goggfcc;
+extern const fourccT gwemfcc;
+extern const fourccT gbnkfcc;
+
+typedef struct numbers {
+	brrsz paths_count;
+	brrsz path_maximum_length; /* For log padding */
+
+	brrsz bnks_to_process, bnks_processed;
+	brrsz wsps_to_process, wsps_processed;
+	brrsz wems_extracted;
+	brrsz wems_to_convert, wems_converted;
+	brrsz oggs_to_revorb, oggs_revorbed;
+} numbersT;
 
 #endif /* COMMON_H */
