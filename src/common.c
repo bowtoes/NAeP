@@ -43,7 +43,7 @@ cstr_compare(const char *const a, const char *const b, brrsz max_length, int cas
 #endif
 	} else {
 #if defined(BRRPLATFORMTYPE_WINDOWS)
-		return _strincmp(a, b, max_length);
+		return _strnicmp(a, b, max_length);
 #else
 		return strncasecmp(a, b, max_length);
 #endif

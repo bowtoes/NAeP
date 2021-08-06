@@ -65,7 +65,7 @@ ifeq ($(TARGET),UNIX)
 	    $($(PROJECT)_LDFLAGS)
 else
 	$(CC) -o $(OUTDIR)/$(TARGETNAME) $(OBJ) ./vendor/brrtools/$(OUTDIR)/static/libbrrtools.lib \
-	    ./vendor/vorbis/lib/.libs/libvorbis.lib ./vendor/ogg/src/.libs/libogg.lib \
+	    ./vendor/vorbis/lib/.libs/libvorbis.a ./vendor/ogg/src/.libs/libogg.a \
 	    $($(PROJECT)_LDFLAGS)
 endif
 
@@ -85,15 +85,42 @@ brrtools:
 ogg:
 ifdef LIBRECONFIG
 	cd vendor/ogg && ./autogen.sh
-	cd vendor/ogg && ./configure --disable-shared
+ ifeq ($(TARGET),UNIX)
+	# Unix-compile probably needs 32-,64-bit compilation options as well.
+	cd vendor/ogg && ./configure --disable-shared --disable-docs
+ else
+  ifeq ($(BITS),32)
+	cd vendor/ogg && ./configure --disable-shared --disable-docs \
+	    --host=i686-w64-mingw32 --target=i686-w64-mingw32 --build=i686-linux
+  else
+	cd vendor/ogg && ./configure --disable-shared --disable-docs \
+	    --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32 --build=x86_64-linux
+  endif
+ endif
 endif
 	make -C vendor/ogg
 vorbis:
 ifdef LIBRECONFIG
 	cd vendor/vorbis && ./autogen.sh
+ ifeq ($(TARGET),UNIX)
+	# Unix-compile probably needs 32-,64-bit compilation options as well.
 	cd vendor/vorbis && ./configure --with-ogg-libs=../ogg/src/.libs \
 	    --with-ogg-includes=../ogg/include --disable-shared --disable-docs --disable-examples \
 	    --disable-oggtest
+ else
+  ifeq ($(BITS),32)
+	cd vendor/vorbis && ./configure --with-ogg-libs=../ogg/src/.libs \
+	    --with-ogg-includes=../ogg/include --disable-shared --disable-docs --disable-examples \
+	    --disable-oggtest \
+	    --host=i686-w64-mingw32 --target=i686-w64-mingw32 --build=i686-linux
+  else
+	cd vendor/vorbis && ./configure --with-ogg-libs=../ogg/src/.libs \
+	    --with-ogg-includes=../ogg/include --disable-shared --disable-docs --disable-examples \
+	    --disable-oggtest \
+	    --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32 --build=x86_64-linux
+
+  endif
+ endif
 endif
 	make -C vendor/vorbis
 libs: brrtools ogg vorbis

@@ -25,7 +25,10 @@ STD:=c11
 endif
 # Default linker options
 ifndef LNK
-LNK:=-lm -lmvec
+LNK:=-lm
+ ifeq ($(TARGET),UNIX)
+LNK:=$(LNK) -lmvec
+ endif
 endif
 
 # # # DIRECTORY CONFIG
