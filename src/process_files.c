@@ -27,8 +27,25 @@ limitations under the License.
 #include <brrtools/brrpath.h>
 #include <brrtools/brrmem.h>
 
-#define SYNC_BUFFER_SIZE 4096
+static void BRRCALL
+replace_ext(const char *const input, brrsz *const inlen,
+    char *const output, brrsz *const outlen, const char *const replacement)
+{
+	brrsz dot = 0, sep = 0;
+	brrsz ilen, olen, nlen = 0;
+	ilen = brrstg_strlen(input, BRRPATH_MAX_PATH);
+	for (sep = ilen; sep > 0 && input[sep] != BRRPATH_SEP_CHR; --sep);
+	for (dot = ilen; dot > sep && input[dot] != '.'; --dot);
+	if (dot > sep + 1)
+		nlen = dot;
+	olen = snprintf(output, BRRPATH_MAX_PATH + 1, "%*.*s_rvb.ogg", (int)nlen, (int)nlen, input);
+	if (inlen)
+		*inlen = ilen;
+	if (outlen)
+		*outlen = olen;
+}
 
+#define SYNC_BUFFER_SIZE 4096
 typedef enum ogg_sync_status {
 	sync_wrote_success = 0,
 	sync_pageout_success = 1,
@@ -43,7 +60,6 @@ typedef enum ogg_stream_status {
 	stream_packetout_incomplete = 0,
 	stream_packetout_success = 1,
 } ogg_stream_statusT;
-
 typedef enum ogg_get_page_error {
 	ogg_get_page_success = sync_pageout_success,
 	ogg_get_page_buffer_error = -1,
@@ -81,7 +97,7 @@ int_regranularize(const char *const input, const char *const output)
 	FILE *in = NULL;
 	FILE *out = NULL;
 	if (!(in = fopen(input, "rb"))) {
-		BRRLOG_ERR("Failed to open input ogg for regranularization '%s' : %s", input, strerror(errno));
+		BRRLOG_ERRN("Failed to open input ogg for regranularization '%s' : %s", input, strerror(errno));
 		err = -1;
 	} else {
 		ogg_sync_state input_sync;
@@ -90,11 +106,11 @@ int_regranularize(const char *const input, const char *const output)
 		err = ogg_get_next_page(in, &page, &input_sync);
 		if (ogg_get_page_success != err) {
 			if (err == ogg_get_page_buffer_error)
-				BRRLOG_ERR("Error starting sync of ogg page buffer for '%s' : %s", input, strerror(errno));
+				BRRLOG_ERRN("Error starting sync of ogg page buffer for '%s' : %s", input, strerror(errno));
 			else if (err == ogg_get_page_io_error)
-				BRRLOG_ERR("Failed to read first ogg page from input '%s' : %s", input, strerror(errno));
+				BRRLOG_ERRN("Failed to read first ogg page from input '%s' : %s", input, strerror(errno));
 			else if (err == ogg_get_page_file_truncated_error)
-				BRRLOG_ERR("Ogg page truncated '%s'", input);
+				BRRLOG_ERRN("Ogg page truncated '%s'", input);
 			err = -1;
 		} else {
 			ogg_stream_state input_stream;
@@ -102,19 +118,19 @@ int_regranularize(const char *const input, const char *const output)
 			int stream_serial = ogg_page_serialno(&page);
 			err = 0;
 			if (ogg_stream_init(&input_stream, stream_serial)) {
-				BRRLOG_ERR("Could not initialize input ogg stream for '%s' : %s", input, strerror(errno));
+				BRRLOG_ERRN("Could not initialize input ogg stream for '%s' : %s", input, strerror(errno));
 				err = -1;
 			} else if (ogg_stream_init(&output_stream, stream_serial)) {
-				BRRLOG_ERR("Could not initialize output ogg stream for '%s' : %s", input, strerror(errno));
+				BRRLOG_ERRN("Could not initialize output ogg stream for '%s' : %s", input, strerror(errno));
 				err = -1;
 			} else if (ogg_stream_pagein(&input_stream, &page)) {
-				BRRLOG_ERR("Failed to read first page into input stream for '%s' : %s", input, strerror(errno));
+				BRRLOG_ERRN("Failed to read first page into input stream for '%s' : %s", input, strerror(errno));
 				err = -1;
 			} else {
 				ogg_packet packet;
 				/* TODO check packet errors */
 				if (1 != (err = ogg_stream_packetout(&input_stream, &packet))) {
-					BRRLOG_ERR("Failed retrieving packet from input stream '%s' : %s", input, strerror(errno));
+					BRRLOG_ERRN("Failed retrieving packet from input stream '%s' : %s", input, strerror(errno));
 					err = -1;
 				} else {
 					vorbis_info vorb_info;
@@ -123,14 +139,14 @@ int_regranularize(const char *const input, const char *const output)
 					vorbis_comment_init(&vorb_comment);
 					if ((err = vorbis_synthesis_headerin(&vorb_info, &vorb_comment, &packet))) {
 						if (err == OV_EFAULT)
-							BRRLOG_ERR("Failed to synthesize vorbis header info for input '%s' : %s", input, strerror(errno));
+							BRRLOG_ERRN("Failed to synthesize vorbis header info for input '%s' : %s", input, strerror(errno));
 						else if (err == OV_ENOTVORBIS)
-							BRRLOG_ERR("Input ogg is not vorbis '%s'", input, strerror(errno));
+							BRRLOG_ERRN("Input ogg is not vorbis '%s'", input);
 						else if (err == OV_EBADHEADER)
-							BRRLOG_ERR("Input ogg has bad vorbis header '%s'", input, strerror(errno));
+							BRRLOG_ERRN("Input ogg has bad vorbis header '%s'", input);
 						err = -1;
 					} else if (stream_packetin_success != ogg_stream_packetin(&output_stream, &packet)) {
-						BRRLOG_ERR("Failed to write first header packet to output stream '%s' : %s", output, strerror(errno));
+						BRRLOG_ERRN("Failed to write first header packet to output stream '%s' : %s", output, strerror(errno));
 						err = -1;
 					} else {
 						int completed_headers = 0;
@@ -138,14 +154,14 @@ int_regranularize(const char *const input, const char *const output)
 							err = ogg_get_next_page(in, &page, &input_sync);
 							if (ogg_get_page_success != err) {
 								if (err == ogg_get_page_buffer_error)
-									BRRLOG_ERR("Error syncing ogg page buffer for '%s' : %s", input, strerror(errno));
+									BRRLOG_ERRN("Error syncing ogg page buffer for '%s' : %s", input, strerror(errno));
 								else if (err == ogg_get_page_io_error)
-									BRRLOG_ERR("Failed to read ogg page from input '%s' : %s", input, strerror(errno));
+									BRRLOG_ERRN("Failed to read ogg page from input '%s' : %s", input, strerror(errno));
 								else if (err == ogg_get_page_file_truncated_error)
-									BRRLOG_ERR("Ogg page truncated '%s'", input);
+									BRRLOG_ERRN("Ogg page truncated '%s'", input);
 								err = -1;
 							} else if (ogg_stream_pagein(&input_stream, &page)) {
-								BRRLOG_ERR("Failed to read page %zu into input stream for '%s' : %s",
+								BRRLOG_ERRN("Failed to read page %zu into input stream for '%s' : %s",
 								    ogg_page_pageno(&page), input, strerror(errno));
 								err = -1;
 							} else {
@@ -154,20 +170,20 @@ int_regranularize(const char *const input, const char *const output)
 									if (stream_packetout_incomplete == (err = ogg_stream_packetout(&input_stream, &packet))) {
 										break;
 									} else if (stream_packetout_desync == err) {
-										BRRLOG_ERR("Corrupted header in ogg '%s'");
+										BRRLOG_ERRN("Corrupted header in ogg '%s'");
 										err = -1;
 									} else {
 										packet.granulepos = 0;
 										if ((err = vorbis_synthesis_headerin(&vorb_info, &vorb_comment, &packet))) {
 											if (err == OV_EFAULT)
-												BRRLOG_ERR("Failed to synthesize vorbis header info for input '%s' : %s", input, strerror(errno));
+												BRRLOG_ERRN("Failed to synthesize vorbis header info for input '%s' : %s", input, strerror(errno));
 											else if (err == OV_ENOTVORBIS)
-												BRRLOG_ERR("Input ogg is not vorbis '%s'", input, strerror(errno));
+												BRRLOG_ERRN("Input ogg is not vorbis '%s'", input);
 											else if (err == OV_EBADHEADER)
-												BRRLOG_ERR("Input ogg has bad vorbis header '%s'", input, strerror(errno));
+												BRRLOG_ERRN("Input ogg has bad vorbis header '%s'", input);
 											err = -1;
 										} else if ((err = ogg_stream_packetin(&output_stream, &packet))) {
-											BRRLOG_ERR("Failed to write header packet to output stream '%s' : %s", output, strerror(errno));
+											BRRLOG_ERRN("Failed to write header packet to output stream '%s' : %s", output, strerror(errno));
 											err = -1;
 										} else {
 											completed_headers++;
@@ -185,15 +201,15 @@ int_regranularize(const char *const input, const char *const output)
 								err = ogg_get_next_page(in, &page, &input_sync);
 								if (err != ogg_get_page_success) {
 									if (err == ogg_get_page_buffer_error)
-										BRRLOG_ERR("Error syncing ogg page buffer for '%s' : %s", input, strerror(errno));
+										BRRLOG_ERRN("Error syncing ogg page buffer for '%s' : %s", input, strerror(errno));
 									else if (err == ogg_get_page_io_error)
-										BRRLOG_ERR("Failed to read ogg page from input '%s' : %s", input, strerror(errno));
+										BRRLOG_ERRN("Failed to read ogg page from input '%s' : %s", input, strerror(errno));
 									else if (err == ogg_get_page_file_truncated_error)
-										BRRLOG_ERR("Ogg page truncated '%s'", input);
+										BRRLOG_ERRN("Ogg page truncated '%s'", input);
 									err = -1;
 									break;
 								} else if (stream_pagein_success != ogg_stream_pagein(&input_stream, &page)) {
-									BRRLOG_ERR("Error reading page into input stream '%s' : %s", input ,strerror(errno));
+									BRRLOG_ERRN("Error reading page into input stream '%s' : %s", input ,strerror(errno));
 									err = -1;
 									break;
 								} else if (ogg_page_eos(&page)) {
@@ -207,9 +223,10 @@ int_regranularize(const char *const input, const char *const output)
 										err = 0;
 										break;
 									} else if (stream_packetout_desync == err) {
-										BRRLOG_WAR("Bitstream desync in '%s'");
+										BRRLOG_WAR("Bitstream desync at input packet %lld", packet.packetno);
 									} else {
 										err = 0;
+										/* How is this done? */
 										blocksize = vorbis_packet_blocksize(&vorb_info, &packet);
 										if (last_block)
 											total_granule += (last_block + blocksize) / 4;
@@ -232,43 +249,27 @@ int_regranularize(const char *const input, const char *const output)
 			fclose(in);
 			if (!err) {
 				if (!(out = fopen(output, "wb"))) {
-					BRRLOG_ERR("Failed to open regranularization output '%s' : %s", input, strerror(errno));
+					BRRLOG_ERRN("Failed to open regranularization output '%s' : %s", input, strerror(errno));
 					err = -1;
-				}
-				while (!err && (ogg_stream_pageout(&output_stream, &page) || ogg_stream_flush(&output_stream, &page))) {
-					if (page.header_len != fwrite(page.header, 1, page.header_len, out)) {
-						BRRLOG_ERROR("Failed writing page %zu header to output '%s' : %s", ogg_page_pageno(&page), output, strerror(errno));
-						err = -1;
-					} else if (page.body_len != fwrite(page.body, 1, page.body_len, out)) {
-						BRRLOG_ERROR("Failed writing page %zu body to output '%s' : %s", ogg_page_pageno(&page), output, strerror(errno));
-						err = -1;
+				} else {
+					while (!err && (ogg_stream_pageout(&output_stream, &page) || ogg_stream_flush(&output_stream, &page))) {
+						if (page.header_len != fwrite(page.header, 1, page.header_len, out)) {
+							BRRLOG_ERRN("Failed writing page %zu header to output '%s' : %s", ogg_page_pageno(&page), output, strerror(errno));
+							err = -1;
+						} else if (page.body_len != fwrite(page.body, 1, page.body_len, out)) {
+							BRRLOG_ERRN("Failed writing page %zu body to output '%s' : %s", ogg_page_pageno(&page), output, strerror(errno));
+							err = -1;
+						}
 					}
+					fclose(out);
 				}
 			}
 			ogg_stream_clear(&output_stream);
 			ogg_stream_clear(&input_stream);
 		}
 		ogg_sync_clear(&input_sync);
-		fclose(out);
 	}
 	return err;
-}
-static void BRRCALL
-replace_ext(const char *const input, brrsz *const inlen,
-    char *const output, brrsz *const outlen, const char *const replacement)
-{
-	brrsz dot = 0, sep = 0;
-	brrsz ilen, olen, nlen = 0;
-	ilen = brrstg_strlen(input, BRRPATH_MAX_PATH);
-	for (sep = ilen; sep > 0 && input[sep] != BRRPATH_SEP_CHR; --sep);
-	for (dot = ilen; dot > sep && input[dot] != '.'; --dot);
-	if (dot > sep + 1)
-		nlen = dot;
-	olen = snprintf(output, BRRPATH_MAX_PATH + 1, "%*.*s_rvb.ogg", (int)nlen, (int)nlen, input);
-	if (inlen)
-		*inlen = ilen;
-	if (outlen)
-		*outlen = olen;
 }
 int BRRCALL
 regranularize_ogg(numbersT *const numbers, int dry_run, const char *const path,
@@ -292,9 +293,9 @@ regranularize_ogg(numbersT *const numbers, int dry_run, const char *const path,
 	}
 	if (!err) {
 		numbers->oggs_regranularized++;
-		BRRLOG_MESSAGETP(gbrrlog_level_last, SUCCESS_FORMAT, "Success!");
+		BRRLOG_MESSAGETP(gbrrlog_level_last, SUCCESS_FORMAT, " Success!");
 	} else {
-		BRRLOG_MESSAGETP(gbrrlog_level_last, FAILURE_FORMAT, "Failure! (%d)", err);
+		BRRLOG_MESSAGETP(gbrrlog_level_last, FAILURE_FORMAT, " Failure! (%d)", err);
 		/* remove 'output' */
 	}
 	return err;

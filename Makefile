@@ -84,23 +84,29 @@ brrtools:
 	    UNISTANAME=libbrrtools.a WINSTANAME=libbrrtools.lib
 ogg:
 ifdef LIBRECONFIG
+	cd vendor/ogg && make maintainer-clean 2>/dev/null || :
 	cd vendor/ogg && ./autogen.sh
  ifeq ($(TARGET),UNIX)
 	# Unix-compile probably needs 32-,64-bit compilation options as well.
-	cd vendor/ogg && ./configure --disable-shared --disable-docs
+  ifeq ($(BITS),32)
+	cd vendor/ogg && ./configure --disable-shared --build=i686-pc-linux
+  else
+	cd vendor/ogg && ./configure --disable-shared --build=x86_64-pc-linux
+  endif
  else
   ifeq ($(BITS),32)
-	cd vendor/ogg && ./configure --disable-shared --disable-docs \
-	    --host=i686-w64-mingw32 --target=i686-w64-mingw32 --build=i686-linux
+	cd vendor/ogg && ./configure --disable-shared \
+	    --host=i686-w64-mingw32 --target=i686-w64-mingw32 --build=i686-pc-linux
   else
-	cd vendor/ogg && ./configure --disable-shared --disable-docs \
-	    --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32 --build=x86_64-linux
+	cd vendor/ogg && ./configure --disable-shared \
+	    --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32 --build=x86_64-pc-linux
   endif
  endif
 endif
 	make -C vendor/ogg
 vorbis:
 ifdef LIBRECONFIG
+	cd vendor/vorbis && make maintainer-clean 2>/dev/null || :
 	cd vendor/vorbis && ./autogen.sh
  ifeq ($(TARGET),UNIX)
 	# Unix-compile probably needs 32-,64-bit compilation options as well.
@@ -127,7 +133,7 @@ libs: brrtools ogg vorbis
 
 clean-brrtools: ; make -C vendor/brrtools clean
 clean-ogg: ; make -C vendor/ogg clean
-clean-vorbis: ; make -C vendor/ogg vorbis
+clean-vorbis: ; make -C vendor/vorbis clean
 clean-libs: clean-brrtools clean-ogg clean-vorbis
 clean-all: clean-libs clean
 clean:
