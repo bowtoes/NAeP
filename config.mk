@@ -280,14 +280,12 @@ $(PROJECT)_LDFLAGS=$(LNK) $(PRF) $(LDFLAGS)
 # find source files to compile and headers to check for changes
 # should be specified relative to CURDIR
 SRC:=\
-	src/revorbc/revorbc.c\
 	src/main.c\
 	src/common.c\
 	src/process.c\
 	src/process_files.c\
 
 HDR:=\
-	src/revorbc/revorbc.h\
 	src/common.h\
 	src/process.h\
 	src/process_files.h\

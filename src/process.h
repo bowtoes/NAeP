@@ -43,8 +43,8 @@ typedef struct input_options {
 
 	brrby auto_ogg:1; /* Should output weems automatically be converted to ogg? */
 	brrby inplace_ogg:1; /* Should weem-to-ogg conversion be done in-place (replace)? */
-	brrby auto_revorb:1; /* Should output oggs be revorbed automatically? */
-	brrby inplace_revorb:1; /* Should revorbed oggs replace the original? */
+	brrby auto_regranularize:1; /* Should output oggs be regranularized automatically? */
+	brrby inplace_regranularize:1; /* Should regranularized oggs replace the original? */
 	brrby bank_recurse:1; /* Should input bank files be recursed, searching for referenced bank files? */
 
 	brrby log_enabled:1; /* Is output logging enabled? */

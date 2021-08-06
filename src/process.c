@@ -121,10 +121,10 @@ parse_argument(void (*const print_help)(void),
 		BRRTIL_TOGGLE(options->auto_ogg); return 1;
 	} else IF_CHECK_ARG(1, "-oi", "-ogg-inplace") {
 		BRRTIL_TOGGLE(options->inplace_ogg); return 1;
-	} else IF_CHECK_ARG(1, "-r", "-revorb") {
-		BRRTIL_TOGGLE(options->auto_revorb); return 1;
-	} else IF_CHECK_ARG(1, "-ri", "-rvb-inplace") {
-		BRRTIL_TOGGLE(options->inplace_revorb); return 1;
+	} else IF_CHECK_ARG(1, "-r", "-regranularize", "-revorb") {
+		BRRTIL_TOGGLE(options->auto_regranularize); return 1;
+	} else IF_CHECK_ARG(1, "-ri", "-rgrn-inplace", "-rvb_inplace") {
+		BRRTIL_TOGGLE(options->inplace_regranularize); return 1;
 	} else IF_CHECK_ARG(1, "-Q", "-qq", "-too-quiet") {
 		BRRTIL_TOGGLE(options->log_enabled); return 1;
 	} else IF_CHECK_ARG(1, "-c", "-color") {
@@ -254,25 +254,25 @@ process_input(inputT *const input, numbersT *const numbers,
 		if (input->options.type == INPUT_TYPE_OGG) {
 			BRRLOG_MESSAGETNP(gbrrlog_level_last, OGG_FORMAT, "%-*s",
 			    numbers->path_maximum_length, BRRTIL_NULSTR((char *)input->path.opaque));
-			revorb_ogg(numbers, input->options.dry_run, input->path.opaque,
-			    input->options.inplace_revorb);
+			regranularize_ogg(numbers, input->options.dry_run, input->path.opaque,
+			    input->options.inplace_regranularize);
 		} else if (input->options.type == INPUT_TYPE_WEM) {
 			BRRLOG_MESSAGETNP(gbrrlog_level_last, WEM_FORMAT, "%-*s",
 			    numbers->path_maximum_length, BRRTIL_NULSTR((char *)input->path.opaque));
 			convert_wem(numbers, input->options.dry_run, input->path.opaque,
-			    input->options.inplace_revorb, input->options.auto_revorb,
+			    input->options.inplace_regranularize, input->options.auto_regranularize,
 			    input->options.inplace_ogg);
 		} else if (input->options.type == INPUT_TYPE_WSP) {
 			BRRLOG_MESSAGETNP(gbrrlog_level_last, WSP_FORMAT, "%-*s",
 			    numbers->path_maximum_length, BRRTIL_NULSTR((char *)input->path.opaque));
 			extract_wsp(numbers, input->options.dry_run, input->path.opaque,
-			    input->options.inplace_revorb, input->options.auto_revorb,
+			    input->options.inplace_regranularize, input->options.auto_regranularize,
 			    input->options.inplace_ogg, input->options.auto_ogg);
 		} else if (input->options.type == INPUT_TYPE_BNK) {
 			BRRLOG_MESSAGETNP(gbrrlog_level_last, BNK_FORMAT, "%-*s",
 			    numbers->path_maximum_length, BRRTIL_NULSTR((char *)input->path.opaque));
 			extract_bnk(numbers, input->options.dry_run, input->path.opaque,
-			    input->options.inplace_revorb, input->options.auto_revorb,
+			    input->options.inplace_regranularize, input->options.auto_regranularize,
 			    input->options.inplace_ogg, input->options.auto_ogg,
 			    input->options.bank_recurse);
 		}

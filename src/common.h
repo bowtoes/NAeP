@@ -71,6 +71,18 @@ limitations under the License.
 #define ENABLED_COLOR brrlog_color_green
 #define DISABLED_COLOR brrlog_color_red
 
+#define SUCCESS_FORMAT ((brrlog_formatT){brrlog_color_green, -1, brrlog_style_bold, -1})
+#define SUCCESS_COLOR SUCCESS_FORMAT.foreground
+#define SUCCESS_BGCOL SUCCESS_FORMAT.background
+#define SUCCESS_STYLE SUCCESS_FORMAT.style
+#define SUCCESS_FONT SUCCESS_FORMAT.font
+
+#define FAILURE_FORMAT ((brrlog_formatT){brrlog_color_red, -1, brrlog_style_bold, -1})
+#define FAILURE_COLOR FAILURE_FORMAT.foreground
+#define FAILURE_BGCOL FAILURE_FORMAT.background
+#define FAILURE_STYLE FAILURE_FORMAT.style
+#define FAILURE_FONT FAILURE_FORMAT.font
+
 #define PATH_COLOR brrlog_color_cyan
 #define INFO_COLOR brrlog_color_magenta
 
@@ -101,7 +113,13 @@ typedef struct numbers {
 	brrsz wsps_to_process, wsps_processed;
 	brrsz wems_extracted;
 	brrsz wems_to_convert, wems_converted;
-	brrsz oggs_to_revorb, oggs_revorbed;
+	brrsz oggs_to_regranularize, oggs_regranularized;
 } numbersT;
+
+/* Compares 'a' and 'b' with case-(in)sensitive versions of 'strcmp' and
+ * returns the result.
+ * If 'max_length' is greater than 0, uses max-length versions of 'strcmp'
+ * */
+int BRRCALL cstr_compare(const char *const a, const char *const b, brrsz max_length, int case_sensitive);
 
 #endif /* COMMON_H */
