@@ -19,6 +19,5 @@ test/
 codebooks/
 src/bnkextr/
 src/revorbc/
-docs/
 
 compile_commands.json
