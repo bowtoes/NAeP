@@ -36,7 +36,7 @@ SoundBank sections known to exist <sup>*citation needed*</sup> :
 [aoTuV original]:http://www.geocities.jp/aoyoume/aotuv/index.html
 [oggenc]:https://rarewares.org/ogg-oggenc.php#oggenc-aotuv
 [eve online]:http://www.eveonline.com/ingameboard.asp?a=topic&threadID=1018956
-[xentax forum]:https://forum.xentax.com/viewtopic.php?f=17&t=3477)
+[xentax forum]:https://forum.xentax.com/viewtopic.php?f=17&t=3477
 [ww2ogg]:https://github.com/hcs64/ww2ogg
 [xentax wiki on bnk]:https://wiki.xentax.com/index.php/Wwise_SoundBank_(*.bnk)
 [mcgill riff]:http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/Docs/riffmci.pdf

@@ -1,4 +1,4 @@
-# `akd ` Chunk
+# AudioKinetic Data `akd ` Chunk
 This is just a chunk storing Wwise project-specific metadata, irrelevant to decoding
 and converting the actual audio data.
 
@@ -13,7 +13,7 @@ and converting the actual audio data.
    `BGM_0_000_11.wem`  
    `BGM_0_000_12.wem`  
 
-   Those ones are weird in their own way however. More noteworthy lack of presence in  
+   Those ones are weird in their own way, however a more noteworthy lack of presence in  
    `BGM_0_001_09.wem`  
    `BGM_0_007_*.wem`  
    `BGM_0_008_00.wem`  
@@ -50,4 +50,4 @@ and converting the actual audio data.
       * `BGM_3_000_00.wem`  
       * `BGM_3_000_03.wem`  
       * `BGM_3_001_1.wem`  
-* Always preceded by `JUNK` chunk, with size of 2 bytes and `NULL` data. Alignment? But it isn't because the offset isn't always the same. Maybe the offset is always one of two values?  
+* Always preceded by `JUNK` chunk, with size of 2 bytes of 0. Alignment? But it can't be because the offset isn't always the same. Maybe the offset is always one of two values?  

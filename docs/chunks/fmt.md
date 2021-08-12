@@ -1,16 +1,16 @@
 # `fmt` Chunk
 `WAVE` files have a `fmt ` chunk, used to detail various aspects of the audio
 stored within. In Ogg/Vorbis, this information is stored in a different format
-in a `vorb` header.  
+in the identification & setup `vorbis` headers.  
 
-In weems, the `fmt ` chunk contains many fields some are standard to the WAVE
+In WEMs, the `fmt ` chunk contains many fields; some are standard to the WAVE
 specification, however many are custom. It also seems many fields are not
-meaningfully standard across weems from different games, probably dependent on
+meaningfully standard across WEMs from different games, probably dependent on
 Wwise version, so there are some bits and pieces of the chunk that remain unknown.  
 
 See this [MGSV soundswap guide][mgsv soundswap],
-[Topher Lee's page][topher lee pcm] and
-[some weem format blueprints][wem format blueprints] as some examples of what I mean.
+[Topher Lee's page][topher lee pcm], and
+[some WEM format blueprints][wem format blueprints] as some examples of what I mean.
 
 ## `fmt` Chunk Layouts According to Win10 SDK (`mmreg.h`)
 
