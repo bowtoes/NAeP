@@ -1,62 +1,71 @@
 # Common Windows Type Definitions
-These definitions are taken from `shared/intsafe.h` from the Windows 10 SDK.  
+These definitions are taken from various files in the Windows 10 SDK
+(specifically version 10.0.18362.0)
+* `shared/intsafe.h`
+  * #### Basic Types
+    |Alias     |Type     |Size (bytes)|Architecture|Alias Type|
+    |:---      |:---     |:---:       |:---:       |:---:     |
+    |`CHAR`    |`char`   |1           |x86-64      |`typedef` |
+    |`SHORT`   |`short`  |2           |x86-64      |`typedef` |
+    |`INT`     |`int`    |4           |x86-64      |`typedef` |
+    |`LONG`    |`long`   |4           |x86-64      |`typedef` |
+    |`LONGLONG`|`__int64`|8           |x86-64      |`typedef` |
+  * #### Unsigned Types
+    |Alias      |Type              |Size (bytes)|Architecture|Alias Type|
+    |:---       |:---              |:---:       |:---:       |:---:     |
+    |`UCHAR`    |`unsigned char`   |1           |x86-64      |`typedef` |
+    |`USHORT`   |`unsigned short`  |2           |x86-64      |`typedef` |
+    |`UINT`     |`unsigned int`    |4           |x86-64      |`typedef` |
+    |`ULONG`    |`unsigned long`   |4           |x86-64      |`typedef` |
+    |`ULONGLONG`|`unsigned __int64`|8           |x86-64      |`typedef` |
+  * #### Bit-width Types
+    |Alias  |Type            |Size (bytes)|Architecture|Alias Type|
+    |:---   |:---            |:---:       |:---:       |:---:     |
+    |`INT8` |`signed char`   |1           |x86-64      |`typedef` |
+    |`INT16`|`signed short`  |2           |x86-64      |`typedef` |
+    |`INT32`|`signed int`    |4           |x86-64      |`typedef` |
+    |`INT64`|`signed __int64`|8           |x86-64      |`typedef` |
+  * #### Bit-width Unsigned Types
+    |Alias   |Type              |Size (bytes)|Architecture|Alias Type|
+    |:---    |:---              |:---:       |:---:       |:---:     |
+    |`UINT8` |`unsigned char`   |1           |x86-64      |`typedef` |
+    |`UINT16`|`unsigned short`  |2           |x86-64      |`typedef` |
+    |`UINT32`|`unsigned int`    |4           |x86-64      |`typedef` |
+    |`UINT64`|`unsigned __int64`|8           |x86-64      |`typedef` |
+  * #### Pointer Types
+    |Alias      |Type                              |Size (bytes)|Architecture|Alias Type|
+    |:---       |:---                              |:---:       |:---:       |:---:     |
+    |`INT_PTR`  |`int`/`__int64`                   |4/8         |x86/x64     |`typedef` |
+    |`UINT_PTR` |`unsigned int`/`unsigned __int64` |4/8         |x86/x64     |`typedef` |
+    |`LONG_PTR` |`long`/`__int64`                  |4/8         |x86/x64     |`typedef` |
+    |`ULONG_PTR`|`unsigned long`/`unsigned __int64`|4/8         |x86/x64     |`typedef` |
+  * #### Microsoft's Named Aliases
+    |Alias      |Type            |Size (bytes)|Architecture|Alias Type|
+    |:---       |:---            |:---:       |:---:       |:---:     |
+    |`BYTE`     |`unsigned char` |1           |x86-64      |`typedef` |
+    |`WORD`     |`unsigned short`|2           |x86-64      |`typedef` |
+    |`DWORD`    |`unsigned long` |4           |x86-64      |`typedef` |
+    |`DWORD_PTR`|`ULONG_PTR`     |4/8         |x86/x64      |`typedef` |
+    |`SSIZE_T`  |`LONG_PTR`      |4/8         |x86/x64      |`typedef` |
+    |`SIZE_T`   |`ULONG_PTR`     |4/8         |x86/x64      |`typedef` |
+  * #### Other Aliases
+    |Alias      |Type                             |Size (bytes)|Architecture|Alias Type|
+    |:---       |:---                             |:---:       |:---:       |:---:     |
+    |`ptrdiff_t`|`int`/`__int64`                  |4/8         |x86/x64     |`typedef` |
+    |`size_t`   |`unsigned int`/`unsigned __int64`|4/8         |x86/x64     |`typedef` |
+    |`DWORD64`  |`unsigned __int64`               |8           |x86-64      |`typedef` |
+    |`DWORDLONG`|`unsigned __int64`               |8           |x86-64      |`typedef` |
+    |`LONG64`   |`__int64`                        |8           |x86-64      |`typedef` |
+    |`ULONG64`  |`unsigned __int64`               |8           |x86-64      |`typedef` |
 
-<table align=center>
-  <thead>
-    <th>Alias</th>
-    <th>Type</th>
-    <th>Size (bytes)</th>
-    <th>Architecture</th>
-    <th>Alias Method</th>
-  </thead>
-  <tbody align=center>
-    <th colspan=5>Standard Types</th>
-    <tr><td><code>     CHAR</code></td><td><code>            char</code></td><td>1  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <tr><td><code>    SHORT</code></td><td><code>           short</code></td><td>2  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <tr><td><code>      INT</code></td><td><code>             int</code></td><td>4  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <tr><td><code>     LONG</code></td><td><code>            long</code></td><td>4  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <tr><td><code> LONGLONG</code></td><td><code>         __int64</code></td><td>8  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <th colspan=5>Unsigned Types</th>
-    <tr><td><code>    UCHAR</code></td><td><code>   unsigned char</code></td><td>1  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <tr><td><code>   USHORT</code></td><td><code>  unsigned short</code></td><td>2  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <tr><td><code>     UINT</code></td><td><code>    unsigned int</code></td><td>4  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <tr><td><code>    ULONG</code></td><td><code>   unsigned long</code></td><td>4  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <tr><td><code>ULONGLONG</code></td><td><code>unsigned __int64</code></td><td>8  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <th colspan=5>Bit-width Types</th>
-    <tr><td><code>     INT8</code></td><td><code>     signed char</code></td><td>1  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <tr><td><code>    INT16</code></td><td><code>    signed short</code></td><td>2  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <tr><td><code>    INT32</code></td><td><code>      signed int</code></td><td>4  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <tr><td><code>    INT64</code></td><td><code>  signed __int64</code></td><td>8  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <th colspan=5>Bit-width Unsigned Types</th>
-    <tr><td><code>    UINT8</code></td><td><code>   unsigned char</code></td><td>1  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <tr><td><code>   UINT16</code></td><td><code>  unsigned short</code></td><td>2  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <tr><td><code>   UINT32</code></td><td><code>    unsigned int</code></td><td>4  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <tr><td><code>   UINT64</code></td><td><code>unsigned __int64</code></td><td>8  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <th colspan=5>Pointer Types</th>
-    <tr><td><code>  INT_PTR</code></td><td><code>             int</code></td><td>4  </td><td>x86   </td><td><code>typedef</code></td></tr>
-    <tr><td><code>  INT_PTR</code></td><td><code>         __int64</code></td><td>8  </td><td>x64   </td><td><code>typedef</code></td></tr>
-    <tr><td><code> UINT_PTR</code></td><td><code>unsigned     int</code></td><td>4  </td><td>x86   </td><td><code>typedef</code></td></tr>
-    <tr><td><code> UINT_PTR</code></td><td><code>unsigned __int64</code></td><td>8  </td><td>x64   </td><td><code>typedef</code></td></tr>
-    <tr><td><code> LONG_PTR</code></td><td><code>            long</code></td><td>4  </td><td>x86   </td><td><code>typedef</code></td></tr>
-    <tr><td><code> LONG_PTR</code></td><td><code>         __int64</code></td><td>8  </td><td>x64   </td><td><code>typedef</code></td></tr>
-    <tr><td><code>ULONG_PTR</code></td><td><code>unsigned    long</code></td><td>4  </td><td>x86   </td><td><code>typedef</code></td></tr>
-    <tr><td><code>ULONG_PTR</code></td><td><code>unsigned __int64</code></td><td>8  </td><td>x64   </td><td><code>typedef</code></td></tr>
-    <th colspan=5>Microsoft Aliases</th>
-    <tr><td><code>     BYTE</code></td><td><code>   unsigned char</code></td><td>1  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <tr><td><code>     WORD</code></td><td><code>  unsigned short</code></td><td>2  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <tr><td><code>    DWORD</code></td><td><code>   unsigned long</code></td><td>4  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <tr><td><code>DWORD_PTR</code></td><td><code>       ULONG_PTR</code></td><td>4/8</td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <tr><td><code>  SSIZE_T</code></td><td><code>        LONG_PTR</code></td><td>4/8</td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <tr><td><code>   SIZE_T</code></td><td><code>       ULONG_PTR</code></td><td>4/8</td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <th colspan=5>Other Aliases</th>
-    <tr><td><code>ptrdiff_t</code></td><td><code>             int</code></td><td>4  </td><td>x86   </td><td><code>typedef</code></td></tr>
-    <tr><td><code>ptrdiff_t</code></td><td><code>         __int64</code></td><td>8  </td><td>x64   </td><td><code>typedef</code></td></tr>
-    <tr><td><code>   size_t</code></td><td><code>unsigned     int</code></td><td>4  </td><td>x86   </td><td><code>typedef</code></td></tr>
-    <tr><td><code>   size_t</code></td><td><code>unsigned __int64</code></td><td>8  </td><td>x64   </td><td><code>typedef</code></td></tr>
-    <tr><td><code>  DWORD64</code></td><td><code>unsigned __int64</code></td><td>8  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <tr><td><code>DWORDLONG</code></td><td><code>unsigned __int64</code></td><td>8  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <tr><td><code>   LONG64</code></td><td><code>         __int64</code></td><td>8  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-    <tr><td><code>  ULONG64</code></td><td><code>unsigned __int64</code></td><td>8  </td><td>x86-64</td><td><code>typedef</code></td></tr>
-  </tbody>
-</table>
+* Miscellaneous structs:
+  * `GUID` - `shared/guiddef.h`
+    |Field  |Type              |Size (bytes)|Misc info|
+    |:---   |:---              |:---:       |:---     |
+    |`Data1`|`unsigned long`   |4           |         |
+    |`Data2`|`unsigned short`  |2           |         |
+    |`Data3`|`unsigned short`  |2           |         |
+    |`Data4`|`unsigned char[8]`|8           |         |
+
+    **Total Size:** 16 `0x10` bytes
 

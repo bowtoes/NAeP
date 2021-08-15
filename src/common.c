@@ -16,17 +16,37 @@ limitations under the License.
 
 #include "common.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include <brrtools/brrpath.h>
 #include <brrtools/brrplatform.h>
+#include <brrtools/brrstg.h>
 #if defined(BRRPLATFORMTYPE_UNIX)
 # include <strings.h>
 #endif
 
-const fourccT goggfcc = MAKE_FCC(OggS);
-const fourccT gwemfcc = MAKE_FCC(RIFF);
-const fourccT gbnkfcc = MAKE_FCC(BKHD);
+int BRRCALL
+replace_ext(const char *const input, brrsz *const inlen,
+    char *const output, brrsz *const outlen, const char *const replacement)
+{
+	brrsz dot = 0, sep = 0;
+	brrsz ilen, olen, nlen = 0;
+	if (!input || !output)
+		return 0;
+	ilen = brrstg_strlen(input, BRRPATH_MAX_PATH);
+	for (sep = ilen; sep > 0 && input[sep] != BRRPATH_SEP_CHR; --sep);
+	for (dot = ilen; dot > sep && input[dot] != '.'; --dot);
+	if (dot > sep + 1)
+		nlen = dot;
+	olen = snprintf(output, BRRPATH_MAX_PATH + 1, "%*.*s_rvb.ogg", (int)nlen, (int)nlen, input);
+	if (inlen)
+		*inlen = ilen;
+	if (outlen)
+		*outlen = olen;
+	return 0;
+}
 
 int BRRCALL
 cstr_compare(const char *const a, const char *const b, brrsz max_length, int case_sensitive)
@@ -48,4 +68,26 @@ cstr_compare(const char *const a, const char *const b, brrsz max_length, int cas
 		return strncasecmp(a, b, max_length);
 #endif
 	}
+}
+
+brrsz BRRCALL
+read_to_offset(void *const data, brrsz offset, brrsz to_read, FILE *const file)
+{
+	if (!data || !file || !to_read)
+		return 0;
+	return fread((char *)data + offset, 1, to_read, file);
+}
+brrsz BRRCALL
+read_to_offsetr(void *const data, brrsz offset, brrsz to_read, FILE *const file)
+{
+	char *d = NULL;
+	brrsz read = 0;
+	if (!data || !file || !to_read)
+		return 0;
+	d = (char *)data;
+	if (to_read != (read = fread(d + offset, 1, to_read, file)))
+		return read;
+	for (brrsz i = 0; i < offset / 2; ++i)
+		d[i] = d[offset - i];
+	return read;
 }

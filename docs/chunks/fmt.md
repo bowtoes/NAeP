@@ -14,47 +14,57 @@ See this [MGSV soundswap guide][mgsv soundswap],
 
 ## `fmt` Chunk Layouts According to Win10 SDK (`mmreg.h`)
 
-<table>
-  <thead>
-    <th>Field</th>
-    <th>Type</th>
-    <th>Description</th>
-  </thead>
-  <tbody>
-    <th colspan=3>Universal Format Fields</th>
-    <tr>
-      <td><code>wFormatTag</code></td>
-      <td><code>WORD</code></td>
-      <td>Format type (see <a href="#woah">format types</a>)</td>
-    </tr>
-    <tr>
-      <td><code>nChannels</code></td>
-      <td><code>WORD</code></td>
-      <td>Number of channels (i.e. 1=mono, 2=stereo, ...)</td>
-    </tr>
-    <tr>
-      <td><code>nSamplesPerSec</code></td>
-      <td><code>DWORD</code></td>
-      <td>Sample rate</td>
-    </tr>
-    <tr>
-      <td><code>nAvgBytesPerSec</code></td>
-      <td><code>DWORD</code></td>
-      <td>Average byte-rate of file (used 'for buffer estimation'?)</td>
-    </tr>
-    <tr>
-      <td><code>nBlockAlign</code></td>
-      <td><code>WORD</code></td>
-      <td>Block size of data (whatever that means)</td>
-    </tr>
-    <th colspan=3>PCM Format Extras</th>
-    <tr>
-      <td><code>wBitsPerSample</code></td>
-      <td><code>WORD</code></td>
-      <td>Not </td>
-    </tr>
-  </tbody>
-</table>
+* #### Common `fmt ` chunk structure (`waveformat_tag` `WAVEFORMAT`)
+  |Field            |Type   |Size (bytes)|Description                                               |
+  |:----            |:----  |:---:       |:----                                                     |
+  |`wFormatTag`     |`WORD` |2           |Format type (see <a href="#format-types">format types</a>)|
+  |`nChannels`      |`WORD` |2           |Number of channels (i.e. mono, stereo, ...)               |
+  |`nSamplesPerSec` |`DWORD`|4           |Sample rate of the audio                                  |
+  |`nAvgBytesPerSec`|`DWORD`|4           |For buffer estimation (whatever that means)               |
+  |`nBlockAlign`    |`WORD` |2           |Block size of data (wtm)                                  |
+
+  **Total Size:** 14 `0x0E` bytes
+* #### PCM Extra format (`pcmwaveformat_tag` `PCMWAVEFORMAT`)
+  |Field           |Type        |Size (bytes)|Description                                  |
+  |:----           |:----       |:---:       |:----                                        |
+  |`wf`            |`WAVEFORMAT`|14          |Inherits all fields of standard `fmt ` chunk.|
+  |`wBitsPerSample`|`WORD`      |2           |Bits used per PCM audio sample               |
+
+  **Total Size:** 16 `0x10` bytes
+* #### Standard extended format structure (`tWAVEFORMATEX` `WAVEFORMATEX`)
+  |Field            |Type   |Size (bytes)|Description                                                    |
+  |:----            |:----  |:---:       |:----                                                          |
+  |`wFormatTag`     |`WORD` |2           |Format type (see <a href="#format-types">format types</a>)     |
+  |`nChannels`      |`WORD` |2           |Number of channels (i.e. mono, stereo, ...)                    |
+  |`nSamplesPerSec` |`DWORD`|4           |Sample rate of the audio                                       |
+  |`nAvgBytesPerSec`|`DWORD`|4           |For buffer estimation (whatever that means)                    |
+  |`nBlockAlign`    |`WORD` |2           |Block size of data (wtm)                                       |
+  |`wBitsPerSample` |`WORD` |2           |Bits-per-sample of mono data                                   |
+  |`cbSize`         |`WORD` |2           |Size of the extra format information, starting after this field|
+
+  **Total Size:**  18 `0x12` bytes
+* #### New extended format structure (`WAVEFORMATEXTENSIBLE`)
+  |Field                 |Type          |Size (bytes)|Description                             |
+  |:----                 |:----         |:---:       |:----                                   |
+  |`Format`              |`WAVEFORMATEX`|18          |Standard extended information           |
+  |`Samples`             |`union WORD`  |2           |Union of the following fields:          |
+  |`.wValidBitsPerSample`|`WORD`        |2           |Bits of precision per audio sample.     |
+  |`.wSamplesPerBlock`   |`WORD`        |2           |Valid if `Format.wBitsPerSample` is 0   |
+  |`.wReserved`          |`WORD`        |2           |Reserved                                |
+  |`dwChannelMask`       |`DWORD`       |4           |Which channels are present in the stream|
+  |`SubFormat`           |`GUID`        |16          |TBD                                     |
+
+  **Total Size:** 42 `0x2A` bytes
+
+## Format Types
+The format type for a given WAVE file is stored in the `wFormatTag` field of
+the `fmt ` structure.  
+Notable format types:
+
+|Name                    |Value   |Description|
+|:---                    |:---:   |:---       |
+|`WAVE_FORMAT_EXTENSIBLE`|`0xFFFE`|Format used for some extended WAVE format not registered with Microsoft; the `GUID` field is the unique type identifier|
+|`WAVE_FORMAT_DEVELOPMENT`|`0xFFFF`|Indicates the format is unofficial, or is in its development stages, to be registered with Microsoft|
 
 [mgsv soundswap]:https://bobdoleowndu.github.io/mgsv/documentation/soundswapping.html
 [wem format blueprints]:https://github.com/rickvg/Wwise-audiobanks-wem-format-blueprints/blob/master/WEM-File%20Template.bt

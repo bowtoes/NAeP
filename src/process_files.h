@@ -27,17 +27,13 @@ int BRRCALL regranularize_ogg(numbersT *const numbers, int dry_run, const char *
     int inplace_regranularize);
 
 int BRRCALL convert_wem(numbersT *const numbers, int dry_run, const char *const path,
-    int inplace_regranularize, int auto_regranularize,
-	int inplace_ogg);
+    int inplace_regranularize, int inplace_ogg);
 
 int BRRCALL extract_wsp(numbersT *const numbers, int dry_run, const char *const path,
-    int inplace_regranularize, int auto_regranularize,
-	int inplace_ogg, int auto_ogg);
+    int inplace_regranularize, int inplace_ogg, int auto_ogg);
 
 int BRRCALL extract_bnk(numbersT *const numbers, int dry_run, const char *const path,
-    int inplace_regranularize, int auto_regranularize,
-	int inplace_ogg, int auto_ogg,
-	int bnk_recurse);
+    int inplace_regranularize, int inplace_ogg, int auto_ogg, int bnk_recurse);
 
 BRRCPPEND
 

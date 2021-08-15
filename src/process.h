@@ -43,7 +43,6 @@ typedef struct input_options {
 
 	brrby auto_ogg:1; /* Should output weems automatically be converted to ogg? */
 	brrby inplace_ogg:1; /* Should weem-to-ogg conversion be done in-place (replace)? */
-	brrby auto_regranularize:1; /* Should output oggs be regranularized automatically? */
 	brrby inplace_regranularize:1; /* Should regranularized oggs replace the original? */
 	brrby bank_recurse:1; /* Should input bank files be recursed, searching for referenced bank files? */
 
@@ -65,8 +64,7 @@ int BRRCALL parse_argument(void (*const print_help)(void),
     const char *const arg, global_optionsT *const global, input_optionsT *const options,
     inputT *const inputs, brrsz input_count, const input_optionsT *const default_options);
 
-int BRRCALL process_input(inputT *const input, numbersT *const numbers,
-    const brrpath_stat_resultT *const path_stat, brrsz index);
+int BRRCALL process_input(inputT *const input, numbersT *const numbers, brrsz index);
 
 BRRCPPEND
 

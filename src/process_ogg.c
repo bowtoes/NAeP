@@ -18,32 +18,13 @@ limitations under the License.
 
 #include <errno.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include <ogg/ogg.h>
 #include <vorbis/codec.h>
 
+#include <brrtools/brrlog.h>
 #include <brrtools/brrpath.h>
-#include <brrtools/brrmem.h>
-
-static void BRRCALL
-replace_ext(const char *const input, brrsz *const inlen,
-    char *const output, brrsz *const outlen, const char *const replacement)
-{
-	brrsz dot = 0, sep = 0;
-	brrsz ilen, olen, nlen = 0;
-	ilen = brrstg_strlen(input, BRRPATH_MAX_PATH);
-	for (sep = ilen; sep > 0 && input[sep] != BRRPATH_SEP_CHR; --sep);
-	for (dot = ilen; dot > sep && input[dot] != '.'; --dot);
-	if (dot > sep + 1)
-		nlen = dot;
-	olen = snprintf(output, BRRPATH_MAX_PATH + 1, "%*.*s_rvb.ogg", (int)nlen, (int)nlen, input);
-	if (inlen)
-		*inlen = ilen;
-	if (outlen)
-		*outlen = olen;
-}
 
 #define SYNC_BUFFER_SIZE 4096
 typedef enum ogg_sync_status {
@@ -149,6 +130,8 @@ int_regranularize(const char *const input, const char *const output)
 						BRRLOG_ERRN("Failed to write first header packet to output stream '%s' : %s", output, strerror(errno));
 						err = -1;
 					} else {
+						/* TODO What's the nicest way to avoid this endless
+						 * if-else nesting? */
 						int completed_headers = 0;
 						while (!err && completed_headers < 2) {
 							err = ogg_get_next_page(in, &page, &input_sync);
@@ -281,12 +264,13 @@ regranularize_ogg(numbersT *const numbers, int dry_run, const char *const path,
 	if (dry_run) {
 		BRRLOG_FOREP(DRY_COLOR, " Regranularize OGG");
 	} else {
-		brrsz outlen = 0, inlen = 0;
+		brrsz inlen = 0, outlen = 0;
 		BRRLOG_FORENP(WET_COLOR, " Regranularizing OGG... ");
 		replace_ext(path, &inlen, output, &outlen, "_rvb.ogg");
 		err = int_regranularize(path, output);
 		if (!err) {
 			if (inplace_regranularize) {
+				NeTODO("ANTIGRAIN IN-PLACE");
 				/* remove 'path' and rename 'output' to 'path' */
 			}
 		}
@@ -295,78 +279,9 @@ regranularize_ogg(numbersT *const numbers, int dry_run, const char *const path,
 		numbers->oggs_regranularized++;
 		BRRLOG_MESSAGETP(gbrrlog_level_last, SUCCESS_FORMAT, " Success!");
 	} else {
-		BRRLOG_MESSAGETP(gbrrlog_level_last, FAILURE_FORMAT, " Failure! (%d)", err);
 		/* remove 'output' */
-	}
-	return err;
-}
-
-int BRRCALL
-convert_wem(numbersT *const numbers, int dry_run, const char *const path,
-    int inplace_regranularize, int auto_regranularize,
-	int inplace_ogg)
-{
-	int err = 0;
-	numbers->wems_to_convert++;
-	if (dry_run) {
-		BRRLOG_FOREP(DRY_COLOR, " Convert WEM");
-	} else {
-		NeTODO("Implement 'convert_wem' priority 3 ");
-		BRRLOG_FOREP(WET_COLOR, "Converting WEM...");
-		/* convert to 'path_base.ogg'
-		 * inplace_ogg: replace 'path' with 'path_base.ogg'
-		 * auto_regranularize: regranularize_ogg(numbers, 'path_base.ogg' or 'path', ...);
-		 * */
-	}
-	if (!err) {
-		numbers->wems_converted++;
-	}
-	return err;
-}
-
-int BRRCALL
-extract_wsp(numbersT *const numbers, int dry_run, const char *const path,
-    int inplace_regranularize, int auto_regranularize,
-	int inplace_ogg, int auto_ogg)
-{
-	int err = 0;
-	numbers->wsps_to_process++;
-	if (dry_run) {
-		BRRLOG_FOREP(DRY_COLOR, " Extract WSP");
-	} else {
-		NeTODO("Implement 'extract_wsp' priority 2 ");
-		BRRLOG_FOREP(WET_COLOR, " Extracting WSP...");
-		/* for each 'wem' in 'path':
-		 *   extract 'wem' to 'path_base_%0*d.wem'
-		 *   auto_ogg: convert_wem(numbers, 'path_base_%0*d.wem', ...);
-		 * */
-	}
-	if (!err) {
-		numbers->wsps_processed++;
-	}
-	return err;
-}
-
-int BRRCALL
-extract_bnk(numbersT *const numbers, int dry_run, const char *const path,
-    int inplace_regranularize, int auto_regranularize,
-	int inplace_ogg, int auto_ogg,
-	int bnk_recurse)
-{
-	int err = 0;
-	numbers->bnks_to_process++;
-	if (dry_run) {
-		BRRLOG_FOREP(DRY_COLOR, " Extract BNK");
-	} else {
-		NeTODO("Implement 'extract_bnk' priority ZZZ (sleeping) ");
-		BRRLOG_FOREP(WET_COLOR, " Extracting BNK...");
-		/* Very similar to 'extract_wsp', however banks may reference other banks and wsps.
-		 * TODO: How should this be done?
-		 * Hold off until the rest are done.
-		 * */
-	}
-	if (!err) {
-		numbers->bnks_processed++;
+		NeTODO("ANTIGRAIN ERROR REMOVE OUTPUT");
+		BRRLOG_MESSAGETP(gbrrlog_level_last, FAILURE_FORMAT, " Failure! (%d)", err);
 	}
 	return err;
 }

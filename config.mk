@@ -286,7 +286,10 @@ SRC:=\
 	src/main.c\
 	src/common.c\
 	src/process.c\
-	src/process_files.c\
+	src/process_ogg.c\
+	src/process_wem.c\
+	src/process_wsp.c\
+	src/process_bnk.c\
 
 HDR:=\
 	src/common.h\

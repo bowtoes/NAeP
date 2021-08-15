@@ -50,7 +50,6 @@ print_help()
 	"\n        -O, -weem2ogg . . . . . . . . . . . .Convert extracted weems to oggs."
 	"\n        -oi, -ogg-inplace . . . . . . . . . .All weem-to-ogg conversion is done in-place;"
 	"\n                                             weems are replaced with their converted oggs."
-	"\n        -r, -regranularize, -revorb . . . . .All extracted oggs are regranularized automatically."
 	"\n        -ri, -rgrn-inplace, -rvb-inplace. . .Oggs are regranularized in-place."
 	"\n    Miscellaneous options:"
 	"\n        -d, -debug. . . . . . . . . . . . . .Enable debug output, irrespective of quiet settings."
@@ -158,7 +157,7 @@ int main(int argc, char **argv)
 			BRRLOG_FORENP(brrlog_color_cyan, "%s", BRRTIL_NULSTR((char *)input->path.opaque));
 			BRRLOG_WARP(" : Path is not a regular file");
 		} else {
-			process_input(input, &numbers, &path_stat, i);
+			process_input(input, &numbers, i);
 		}
 		input_delete(input);
 	}

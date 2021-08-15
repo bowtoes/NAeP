@@ -28,6 +28,11 @@ limitations under the License.
 
 #include "process_files.h"
 
+/* For auto type detection */
+const fourccT oggfcc = FCC_MAKE(OggS);
+const fourccT wemfcc = FCC_MAKE(RIFF);
+const fourccT bnkfcc = FCC_MAKE(BKHD);
+
 void BRRCALL
 input_delete(inputT *const input)
 {
@@ -121,8 +126,6 @@ parse_argument(void (*const print_help)(void),
 		BRRTIL_TOGGLE(options->auto_ogg); return 1;
 	} else IF_CHECK_ARG(1, "-oi", "-ogg-inplace") {
 		BRRTIL_TOGGLE(options->inplace_ogg); return 1;
-	} else IF_CHECK_ARG(1, "-r", "-regranularize", "-revorb") {
-		BRRTIL_TOGGLE(options->auto_regranularize); return 1;
 	} else IF_CHECK_ARG(1, "-ri", "-rgrn-inplace", "-rvb_inplace") {
 		BRRTIL_TOGGLE(options->inplace_regranularize); return 1;
 	} else IF_CHECK_ARG(1, "-Q", "-qq", "-too-quiet") {
@@ -195,17 +198,17 @@ determine_type(inputT *const input, const char *const extension)
 	}
 	fclose(fp);
 	if (!err) {
-		BRRLOG_DEBUGNP(" FCC %08X = %02X %02X %02X %02X", input_fcc, GET_FCC_BYTES(input_fcc));
-		if (input_fcc.integer == goggfcc.integer) {
+		BRRLOG_DEBUGNP(" FCC %08X = %02X %02X %02X %02X", input_fcc, FCC_GET_BYTES(input_fcc));
+		if (input_fcc.integer == oggfcc.integer) {
 			input->options.type = INPUT_TYPE_OGG;
-		} else if (input_fcc.integer == gwemfcc.integer) {
+		} else if (input_fcc.integer == wemfcc.integer) {
 			if (!brrstg_cstr_compare(extension, 0, "wem", NULL))
 				input->options.type = INPUT_TYPE_WEM;
 			else if (!brrstg_cstr_compare(extension, 0, "wsp", NULL))
 				input->options.type = INPUT_TYPE_WSP;
 			else
 				return TYPE_ERR_TYPE;
-		} else if (input_fcc.integer == gbnkfcc.integer) {
+		} else if (input_fcc.integer == bnkfcc.integer) {
 			input->options.type = INPUT_TYPE_BNK;
 		} else {
 			err = TYPE_ERR_TYPE;
@@ -215,8 +218,7 @@ determine_type(inputT *const input, const char *const extension)
 }
 
 int BRRCALL
-process_input(inputT *const input, numbersT *const numbers,
-    const brrpath_stat_resultT *const path_stat, brrsz index)
+process_input(inputT *const input, numbersT *const numbers, brrsz index)
 {
 	int err = 0;
 	brrsz input_count_digits = brrlib_ndigits(numbers->paths_count, 0, 10);
@@ -260,20 +262,17 @@ process_input(inputT *const input, numbersT *const numbers,
 			BRRLOG_MESSAGETNP(gbrrlog_level_last, WEM_FORMAT, "%-*s",
 			    numbers->path_maximum_length, BRRTIL_NULSTR((char *)input->path.opaque));
 			convert_wem(numbers, input->options.dry_run, input->path.opaque,
-			    input->options.inplace_regranularize, input->options.auto_regranularize,
-			    input->options.inplace_ogg);
+			    input->options.inplace_regranularize, input->options.inplace_ogg);
 		} else if (input->options.type == INPUT_TYPE_WSP) {
 			BRRLOG_MESSAGETNP(gbrrlog_level_last, WSP_FORMAT, "%-*s",
 			    numbers->path_maximum_length, BRRTIL_NULSTR((char *)input->path.opaque));
 			extract_wsp(numbers, input->options.dry_run, input->path.opaque,
-			    input->options.inplace_regranularize, input->options.auto_regranularize,
-			    input->options.inplace_ogg, input->options.auto_ogg);
+			    input->options.inplace_regranularize, input->options.inplace_ogg, input->options.auto_ogg);
 		} else if (input->options.type == INPUT_TYPE_BNK) {
 			BRRLOG_MESSAGETNP(gbrrlog_level_last, BNK_FORMAT, "%-*s",
 			    numbers->path_maximum_length, BRRTIL_NULSTR((char *)input->path.opaque));
 			extract_bnk(numbers, input->options.dry_run, input->path.opaque,
-			    input->options.inplace_regranularize, input->options.auto_regranularize,
-			    input->options.inplace_ogg, input->options.auto_ogg,
+			    input->options.inplace_regranularize, input->options.inplace_ogg, input->options.auto_ogg,
 			    input->options.bank_recurse);
 		}
 	}

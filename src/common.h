@@ -17,10 +17,11 @@ limitations under the License.
 #ifndef COMMON_H
 #define COMMON_H
 
-#include <brrtools/brrlog.h>
+#include <stdio.h>
+
+#include <brrtools/brrapi.h>
 #include <brrtools/brrtypes.h>
 
-#if defined(BRRTOOLS_BRRLOG_H)
 # define NeTODO(...) do { \
 	brrlog_formatT _tf_ = gbrrlog_format_last; \
 	brrlog_levelT _lf_ = gbrrlog_level_last; \
@@ -30,7 +31,6 @@ limitations under the License.
 	gbrrlog_format_last = _tf_; \
 	gbrrlog_level_last = _lf_; \
 } while (0)
-#endif /* BRRTOOLS_BRRLOG_H */
 
 #define OGG_FORMAT ((brrlog_formatT){brrlog_color_blue,    -1, -1, -1})
 #define OGG_COLOR OGG_FORMAT.foreground
@@ -86,6 +86,7 @@ limitations under the License.
 #define PATH_COLOR brrlog_color_cyan
 #define INFO_COLOR brrlog_color_magenta
 
+BRRCPPSTART
 typedef union fourcc {
 	struct {
 		brru1 _0;
@@ -96,14 +97,31 @@ typedef union fourcc {
 	brru4 integer;
 } fourccT;
 
-#define _init_fcc(_a_, _b_, _c_, _d_) {.bytes={(_a_), (_b_), (_c_), (_d_)}}
-#define _fcc_lit(_l_) _init_fcc((_l_)[0], (_l_)[1], (_l_)[2], (_l_)[3])
-#define MAKE_FCC(_l_) _fcc_lit(#_l_)
-#define GET_FCC_BYTES(_f_) (_f_).bytes._0, (_f_).bytes._1, (_f_).bytes._2, (_f_).bytes._3
+#define _fcc_init(_a_, _b_, _c_, _d_) {.bytes={(_a_), (_b_), (_c_), (_d_)}}
+#define _fcc_lit(_l_) _fcc_init((_l_)[0], (_l_)[1], (_l_)[2], (_l_)[3])
+#define FCC_INIT(_l_) _fcc_lit(_l_)
+#define FCC_MAKE(_l_) _fcc_lit(#_l_)
+#define FCC_FROM_INT(_i_) _fcc_init( \
+    ((brru1*)(&(_i_)))[0], \
+    ((brru1*)(&(_i_)))[1], \
+    ((brru1*)(&(_i_)))[2], \
+    ((brru1*)(&(_i_)))[3])
+#define FCC_GET_BYTES(_f_) (_f_).bytes._0, (_f_).bytes._1, (_f_).bytes._2, (_f_).bytes._3
+#define FCC_AS_STR(_f_) ((char[5]){(_f_).bytes._0, (_f_).bytes._1, (_f_).bytes._2, (_f_).bytes._3, 0})
+#define FCC_REVERSED(_f_) _fcc_init((_f_).bytes._3, (_f_).bytes._2, (_f_).bytes._1, (_f_).bytes._0)
+#define FCC_REVERSE(_f_) ((_f_) = FCC_REVERSED(_f_))
 
-extern const fourccT goggfcc;
-extern const fourccT gwemfcc;
-extern const fourccT gbnkfcc;
+/* probably numerous better ways for this */
+#define SWAP_2(_s_) ( \
+	((((brru4)(_s_)) >>  0) & 0x00FF) << 8 | \
+	((((brru4)(_s_)) >>  8) & 0x00FF) << 0   \
+)
+#define SWAP_4(_i_) ( \
+	((((brru4)(_i_)) >>  0) & 0x000000FF) << 24 | \
+	((((brru4)(_i_)) >>  8) & 0x000000FF) << 16 | \
+	((((brru4)(_i_)) >> 16) & 0x000000FF) <<  8 | \
+	((((brru4)(_i_)) >> 24) & 0x000000FF) <<  0   \
+)
 
 typedef struct numbers {
 	brrsz paths_count;
@@ -116,10 +134,21 @@ typedef struct numbers {
 	brrsz oggs_to_regranularize, oggs_regranularized;
 } numbersT;
 
+int BRRCALL
+replace_ext(const char *const input, brrsz * const inlen, char *const output,
+	brrsz *const outlen, const char *const replacement);
+
 /* Compares 'a' and 'b' with case-(in)sensitive versions of 'strcmp' and
  * returns the result.
  * If 'max_length' is greater than 0, uses max-length versions of 'strcmp'
  * */
-int BRRCALL cstr_compare(const char *const a, const char *const b, brrsz max_length, int case_sensitive);
+int BRRCALL
+cstr_compare(const char *const a, const char *const b, brrsz max_length, int case_sensitive);
+
+brrsz BRRCALL
+read_to_offset(void *const data, brrsz offset, brrsz to_read, FILE *const file);
+brrsz BRRCALL
+read_to_offsetr(void *const data, brrsz offset, brrsz to_read, FILE *const file);
+BRRCPPEND
 
 #endif /* COMMON_H */
