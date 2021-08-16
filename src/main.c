@@ -83,7 +83,7 @@ int main(int argc, char **argv)
 	static numbersT numbers = {0};
 	global_optionsT global_options = default_global;
 	input_optionsT current_options = default_options;
-	inputT *inputs = NULL;
+	processed_inputT *inputs = NULL;
 
 	if (argc == 1) {
 		print_help();
@@ -92,16 +92,16 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	gbrrlogctl.flush_enabled = 1;
+	gbrrlogctl.flush_always = 1;
 	gbrrlog_level_critical.prefix = "[CRAZY] ";
 	gbrrlog_level_error.prefix    = "[ERROR] ";
 	gbrrlog_level_warning.prefix  = "[CAUTION] ";
 	gbrrlog_level_debug.prefix    = "[DEBUG] ";
 	gbrrlog_format_debug = BRRLOG_FORMAT_FORE(brrlog_color_green);
 
-	/* NOTE PARSE COMMAND-LINE ARGUMENTS */
 	for (int i = 1; i < argc; ++i) {
 		char *arg = argv[i];
-		inputT next = {0};
+		processed_inputT next = {0};
 		if (parse_argument(print_help, arg, &global_options, &current_options, inputs, numbers.paths_count, &default_options))
 			continue;
 
@@ -109,7 +109,7 @@ int main(int argc, char **argv)
 		next.options = current_options;
 		if (brrstg_new(&next.path, arg, -1))
 			BRRDEBUG_TRACE("Failed to initialize argument string %d '%s' : %s", i, arg, strerror(errno));
-		if (brrlib_alloc((void **)&inputs, (numbers.paths_count + 1) * sizeof(inputT), 0))
+		if (brrlib_alloc((void **)&inputs, (numbers.paths_count + 1) * sizeof(processed_inputT), 0))
 			BRRDEBUG_TRACE("Failed to allocate space for next input %d '%s' : %s", i, arg, strerror(errno));
 		inputs[numbers.paths_count++] = next;
 
@@ -132,7 +132,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	for (brrsz i = 0; i < numbers.paths_count; ++i) {
-		inputT *const input = &inputs[i];
+		processed_inputT *const input = &inputs[i];
 		brrpath_stat_resultT path_stat = {0};
 		if (global_options.log_style_enabled) {
 			gbrrlogctl.style_enabled = input->options.log_color_enabled;

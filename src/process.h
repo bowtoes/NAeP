@@ -51,20 +51,20 @@ typedef struct input_options {
 	brrby log_debug:1; /* Is debug logging enabled (implies log_enabled)? */
 	brrby dry_run:1; /* Do not process any input or output, just print what would happen. */
 } input_optionsT;
-typedef struct input {
+typedef struct processed_input {
 	brrstgT path;
 	input_optionsT options;
-} inputT;
+} processed_inputT;
 
-void BRRCALL input_delete(inputT *const input);
-void BRRCALL input_print(brrlog_priorityT priority, int newline, const inputT *const input, brrsz max_input_length);
+void BRRCALL input_delete(processed_inputT *const input);
+void BRRCALL input_print(brrlog_priorityT priority, int newline, const processed_inputT *const input, brrsz max_input_length);
 
-inputT *BRRCALL find_argument(const char *const arg, const inputT *const inputs, brrsz input_count);
+processed_inputT *BRRCALL find_argument(const char *const arg, const processed_inputT *const inputs, brrsz input_count);
 int BRRCALL parse_argument(void (*const print_help)(void),
     const char *const arg, global_optionsT *const global, input_optionsT *const options,
-    inputT *const inputs, brrsz input_count, const input_optionsT *const default_options);
+    processed_inputT *const inputs, brrsz input_count, const input_optionsT *const default_options);
 
-int BRRCALL process_input(inputT *const input, numbersT *const numbers, brrsz index);
+int BRRCALL process_input(processed_inputT *const input, numbersT *const numbers, brrsz index);
 
 BRRCPPEND
 

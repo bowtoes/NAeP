@@ -22,6 +22,7 @@ limitations under the License.
 #include <brrtools/brrapi.h>
 #include <brrtools/brrtypes.h>
 
+#define NeFUNC(...) do { BRRLOG_DEBUGN("'%s' (%s:%zu)    ", __func__, __FILE__, __LINE__); BRRLOG_DEBUGP(__VA_ARGS__); } while (0)
 # define NeTODO(...) do { \
 	brrlog_formatT _tf_ = gbrrlog_format_last; \
 	brrlog_levelT _lf_ = gbrrlog_level_last; \

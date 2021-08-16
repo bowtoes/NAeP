@@ -34,7 +34,7 @@ const fourccT wemfcc = FCC_MAKE(RIFF);
 const fourccT bnkfcc = FCC_MAKE(BKHD);
 
 void BRRCALL
-input_delete(inputT *const input)
+input_delete(processed_inputT *const input)
 {
 	if (input) {
 		brrstg_delete(&input->path);
@@ -42,7 +42,7 @@ input_delete(inputT *const input)
 	}
 }
 void BRRCALL
-input_print(brrlog_priorityT priority, int newline, const inputT *const input, brrsz max_input_length)
+input_print(brrlog_priorityT priority, int newline, const processed_inputT *const input, brrsz max_input_length)
 {
 	gbrrlog_level_last = gbrrlog_level_debug;
 	gbrrlog_format_last = gbrrlog_format_normal;
@@ -87,15 +87,15 @@ input_print(brrlog_priorityT priority, int newline, const inputT *const input, b
 		BRRLOG_LASTP("");
 }
 
-inputT *BRRCALL
-find_argument(const char *const arg, const inputT *const inputs, brrsz input_count)
+processed_inputT *BRRCALL
+find_argument(const char *const arg, const processed_inputT *const inputs, brrsz input_count)
 {
 	if (!inputs || !input_count || !arg) {
 		return NULL;
 	} else {
 		for (brrsz i = 0; i < input_count; ++i) {
 			if (0 == strcmp(inputs[i].path.opaque, arg))
-				return (inputT *)&inputs[i];
+				return (processed_inputT *)&inputs[i];
 		}
 		return NULL;
 	}
@@ -103,10 +103,10 @@ find_argument(const char *const arg, const inputT *const inputs, brrsz input_cou
 int BRRCALL
 parse_argument(void (*const print_help)(void),
     const char *const arg, global_optionsT *const global,
-    input_optionsT *const options, inputT *const inputs, brrsz input_count,
+    input_optionsT *const options, processed_inputT *const inputs, brrsz input_count,
     const input_optionsT *const default_options)
 {
-	inputT *temp = NULL;
+	processed_inputT *temp = NULL;
 #define IF_CHECK_ARG(_cse_, ...) if (-1 != brrstg_cstr_compare(arg, _cse_, __VA_ARGS__, NULL))
 	IF_CHECK_ARG(0, "-h", "-help", "--help", "-v", "-version", "--version") {
 		print_help();
@@ -167,7 +167,7 @@ parse_argument(void (*const print_help)(void),
 #define TYPE_ERR_TYPE -3
 /* Returns 0 on success, return negative value on error. */
 static int BRRCALL
-determine_type(inputT *const input, const char *const extension)
+determine_type(processed_inputT *const input, const char *const extension)
 {
 	int err = 0;
 	fourccT input_fcc = {0};
@@ -198,7 +198,7 @@ determine_type(inputT *const input, const char *const extension)
 	}
 	fclose(fp);
 	if (!err) {
-		BRRLOG_DEBUGNP(" FCC %08X = %02X %02X %02X %02X", input_fcc, FCC_GET_BYTES(input_fcc));
+		BRRLOG_DEBUGNP("FCC %08X = %02X %02X %02X %02X ", input_fcc, FCC_GET_BYTES(input_fcc));
 		if (input_fcc.integer == oggfcc.integer) {
 			input->options.type = INPUT_TYPE_OGG;
 		} else if (input_fcc.integer == wemfcc.integer) {
@@ -218,7 +218,7 @@ determine_type(inputT *const input, const char *const extension)
 }
 
 int BRRCALL
-process_input(inputT *const input, numbersT *const numbers, brrsz index)
+process_input(processed_inputT *const input, numbersT *const numbers, brrsz index)
 {
 	int err = 0;
 	brrsz input_count_digits = brrlib_ndigits(numbers->paths_count, 0, 10);
