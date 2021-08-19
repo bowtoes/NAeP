@@ -21,6 +21,7 @@ limitations under the License.
 
 #include <brrtools/brrapi.h>
 #include <brrtools/brrtypes.h>
+#include <brrtools/brrplatform.h>
 
 #define NeFUNC(...) do { BRRLOG_DEBUGN("'%s' (%s:%zu)    ", __func__, __FILE__, __LINE__); BRRLOG_DEBUGP(__VA_ARGS__); } while (0)
 # define NeTODO(...) do { \
@@ -87,30 +88,22 @@ limitations under the License.
 #define PATH_COLOR brrlog_color_cyan
 #define INFO_COLOR brrlog_color_magenta
 
-BRRCPPSTART
-typedef union fourcc {
-	struct {
-		brru1 _0;
-		brru1 _1;
-		brru1 _2;
-		brru1 _3;
-	} bytes;
-	brru4 integer;
-} fourccT;
+/* helper function return codes */
+#define I_SUCCESS 0
+#define I_BUFFER_ERROR -1
+#define I_IO_ERROR -2
+#define I_FILE_TRUNCATED -3
+#define I_INIT_ERROR -4
+#define I_NOT_VORBIS -5
+#define I_DESYNC -6
+#define I_CORRUPT -7
+#define I_NOT_RIFF -8
+#define I_BAD_ERROR -99
 
-#define _fcc_init(_a_, _b_, _c_, _d_) {.bytes={(_a_), (_b_), (_c_), (_d_)}}
-#define _fcc_lit(_l_) _fcc_init((_l_)[0], (_l_)[1], (_l_)[2], (_l_)[3])
-#define FCC_INIT(_l_) _fcc_lit(_l_)
-#define FCC_MAKE(_l_) _fcc_lit(#_l_)
-#define FCC_FROM_INT(_i_) _fcc_init( \
-    ((brru1*)(&(_i_)))[0], \
-    ((brru1*)(&(_i_)))[1], \
-    ((brru1*)(&(_i_)))[2], \
-    ((brru1*)(&(_i_)))[3])
-#define FCC_GET_BYTES(_f_) (_f_).bytes._0, (_f_).bytes._1, (_f_).bytes._2, (_f_).bytes._3
-#define FCC_AS_STR(_f_) ((char[5]){(_f_).bytes._0, (_f_).bytes._1, (_f_).bytes._2, (_f_).bytes._3, 0})
-#define FCC_REVERSED(_f_) _fcc_init((_f_).bytes._3, (_f_).bytes._2, (_f_).bytes._1, (_f_).bytes._0)
-#define FCC_REVERSE(_f_) ((_f_) = FCC_REVERSED(_f_))
+BRRCPPSTART
+
+const char *BRRCALL
+i_strerr(int err);
 
 /* probably numerous better ways for this */
 #define SWAP_2(_s_) ( \

@@ -44,17 +44,18 @@ See this [MGSV soundswap guide][mgsv soundswap],
 
   **Total Size:**  18 `0x12` bytes
 * #### New extended format structure (`WAVEFORMATEXTENSIBLE`)
-  |Field                 |Type          |Size (bytes)|Description                             |
-  |:----                 |:----         |:---:       |:----                                   |
-  |`Format`              |`WAVEFORMATEX`|18          |Standard extended information           |
-  |`Samples`             |`union WORD`  |2           |Union of the following fields:          |
-  |`.wValidBitsPerSample`|`WORD`        |2           |Bits of precision per audio sample.     |
-  |`.wSamplesPerBlock`   |`WORD`        |2           |Valid if `Format.wBitsPerSample` is 0   |
-  |`.wReserved`          |`WORD`        |2           |Reserved                                |
-  |`dwChannelMask`       |`DWORD`       |4           |Which channels are present in the stream|
-  |`SubFormat`           |`GUID`        |16          |TBD                                     |
+  |Field                 |Type                          |Size (bytes)|Description                             |
+  |:----                 |:----                         |:---:       |:----                                   |
+  |`Format`              |`WAVEFORMATEX`                |18          |Standard extended information           |
+  |`Samples`             |<code><b>union</b> WORD</code>|2           |Union of the following fields:          |
+  |`.wValidBitsPerSample`|`WORD`                        |2           |Bits of precision per audio sample.     |
+  |`.wSamplesPerBlock`   |`WORD`                        |2           |Valid if `Format.wBitsPerSample` is 0   |
+  |`.wReserved`          |`WORD`                        |2           |Reserved                                |
+  |`dwChannelMask`       |`DWORD`                       |4           |Which channels are present in the stream|
+  |`SubFormat`           |`GUID`                        |16          |TBD                                     |
 
-  **Total Size:** 42 `0x2A` bytes
+  **Total Size:** 40 `0x28` bytes
+  **Size without `GUID`:** 24 `0x18` bytes
 
 ## Format Types
 The format type for a given WAVE file is stored in the `wFormatTag` field of

@@ -7,14 +7,21 @@ Primary references for the construction of this program.
 * ## [oggenc][oggenc]
   An encoder implementation with versions using aoTuV library.
 * ## [EVE Online Forum Thread][eve online]
-	The link is dead and no usable archives exist on the Wayback machine, no idea what was said in that thread.
-* ## [XeNTaX Forum Thread][xentax forum]
+  The link is dead and no usable archives exist on the Wayback machine, no idea
+  what was said in that thread.
+* ## [XeNTaX Forum Thread][xentax ww2ogg] ([wayback][xentax ww2ogg wayback])
 	Seemingly, the progenination point of [ww2ogg][ww2ogg].
-* ## [XeNTaX Wiki Page on SoundBanks][xentax wiki on bnk]
+* ## [XeNTaX Wiki Page on SoundBanks][xentax wiki bnk] ([wayback][xentax wiki bnk wayback])
 	A wiki page detailing the known structure of Wwise SoundBank files.
+* ## [McGill Spec Document][mcgill riff] ([wayback][mcgill wayback])
+  A copy of the (official?) documentation for Microsoft RIFF/WAVE audio file
+  format
+* ## [McTernan WAVE document][mcternan riff] ([wayback][mcternan wayback])
+  Another PDF spec for WAVE, giving a condensed version of the PDF at
+  [McGill][mcgill riff]
 
 # Known
-It seems to me that a SoundBank is just a specific version/modification of the [RIFF][mcgill riff] file format specification.
+It seems to me that a SoundBank is just a specific version/modification of the RIFF file format specification.
 Each SoundBank stores a number of Sections (what would be called RIFF chunks), that are layed out similarly:
 * 4    bytes - Chunk header (ckID aka fourcc)
 * 4    bytes - Chunk size (ckSZ)
@@ -36,10 +43,16 @@ SoundBank sections known to exist <sup>*citation needed*</sup> :
 [aoTuV original]:http://www.geocities.jp/aoyoume/aotuv/index.html
 [oggenc]:https://rarewares.org/ogg-oggenc.php#oggenc-aotuv
 [eve online]:http://www.eveonline.com/ingameboard.asp?a=topic&threadID=1018956
-[xentax forum]:https://forum.xentax.com/viewtopic.php?f=17&t=3477
-[ww2ogg]:https://github.com/hcs64/ww2ogg
-[xentax wiki on bnk]:https://wiki.xentax.com/index.php/Wwise_SoundBank_(*.bnk)
+[xentax ww2ogg]:https://forum.xentax.com/viewtopic.php?f=17&t=3477
+[xentax ww2ogg wayback]:https://web.archive.org/web/20210725221759/https://forum.xentax.com/viewtopic.php?f=17&t=3477
+[xentax wiki bnk]:https://wiki.xentax.com/index.php/Wwise_SoundBank_(*.bnk)
+[xentax wiki bnk wayback]:https://web.archive.org/web/20210724000327/http://wiki.xentax.com/index.php/Wwise_SoundBank_(*.bnk)
 [mcgill riff]:http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/Docs/riffmci.pdf
+[mcgill wayback]:https://web.archive.org/web/20210709172831/http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/Docs/riffmci.pdf
+[mcternan riff]:http://www.mcternan.me.uk/MCS/Downloads/wave.pdf
+[mcternan wayback]:https://web.archive.org/web/20210815162202/http://www.mcternan.me.uk/MCS/Downloads/wave.pdf
+
+[ww2ogg]:https://github.com/hcs64/ww2ogg
 
 [bkhd]:https://wiki.xentax.com/index.php/Wwise_SoundBank_(*.bnk)#BKHD_section
 [didx]:https://wiki.xentax.com/index.php/Wwise_SoundBank_(*.bnk)#DIDX_section

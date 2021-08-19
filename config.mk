@@ -285,6 +285,7 @@ $(PROJECT)_LDFLAGS=$(LNK) $(PRF) $(LDFLAGS)
 SRC:=\
 	src/main.c\
 	src/common.c\
+	src/riff.c\
 	src/process.c\
 	src/process_ogg.c\
 	src/process_wem.c\
@@ -293,5 +294,6 @@ SRC:=\
 
 HDR:=\
 	src/common.h\
+	src/riff.h\
 	src/process.h\
 	src/process_files.h\

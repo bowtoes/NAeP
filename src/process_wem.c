@@ -24,109 +24,93 @@ limitations under the License.
 #include <ogg/ogg.h>
 #include <vorbis/codec.h>
 
+#include <brrtools/brrlib.h>
 #include <brrtools/brrlog.h>
 #include <brrtools/brrpath.h>
+#include <brrtools/brrplatform.h>
 #include <brrtools/brrmem.h>
 
-typedef struct wem_chunk {
-	fourccT fcc;
-	brru4 size;
-} wem_chunkT;
-#define WEM_CHUNK_HEAD(_n_) \
-union { \
-    struct { \
-        fourccT fcc; \
-        brru4 size; \
-    }; \
-    wem_chunkT _n_; \
+#include "riff.h"
+
+#define RIFF_BUFFER_APPLY_SUCCESS 0
+#define RIFF_BUFFER_APPLY_FAILURE -1
+
+#define RIFF_BUFFER_INCREMENT 4096
+
+static int BRRCALL
+i_consume_next_chunk(FILE *const file, riffT *const rf, riff_chunkinfoT *const fo)
+{
+	int err = 0;
+	brrsz bytes_read = 0;
+	char *buffer = NULL;
+	while (RIFF_CHUNK_CONSUMED != (err = riff_consume_chunk(rf, fo)) && !feof(file)) {
+		if (err == RIFF_CONSUME_MORE) {
+			continue;
+		} else if (err == RIFF_CHUNK_UNRECOGNIZED) {
+			fseek(file, fo->chunksize, SEEK_CUR);
+		} else if (err != RIFF_CHUNK_INCOMPLETE) {
+			if (err == RIFF_ERROR)
+				return I_BUFFER_ERROR;
+			else if (err == RIFF_NOT_RIFF)
+				return I_NOT_RIFF;
+			else if (err == RIFF_CORRUPTED)
+				return I_CORRUPT;
+			else
+				return I_BAD_ERROR - err;
+		}
+		if (!(buffer = riff_buffer(rf, RIFF_BUFFER_INCREMENT))) {
+			return I_BUFFER_ERROR;
+		}
+		bytes_read = fread(buffer, 1, RIFF_BUFFER_INCREMENT, file);
+		if (ferror(file)) {
+			return I_IO_ERROR;
+		} else if (RIFF_BUFFER_APPLY_SUCCESS != riff_apply_buffer(rf, bytes_read)) {
+			return I_BUFFER_ERROR;
+		}
+	}
+	if (feof(file) && bytes_read != 0 && err != RIFF_CHUNK_CONSUMED) {
+		return I_FILE_TRUNCATED;
+	}
+	return I_SUCCESS;
 }
-typedef struct wem_riff_chunk {
-	WEM_CHUNK_HEAD(chunk_head);
-	fourccT type;
-} wem_riff_chunkT;
-static const fourccT riff_chunk_fcc = FCC_MAKE(RIFF);
-static const fourccT rifx_chunk_fcc = FCC_MAKE(RIFX);
-static const fourccT wave_type_fcc = FCC_MAKE(WAVE);
-
-typedef struct wem_fmt_chunk {
-	WEM_CHUNK_HEAD(chunk_head);
-	brru2 format_tag;
-	brru2 channel_count;
-	brru4 sample_rate;
-	brru4 avg_byte_rate;
-	brru2 block_align;
-	brru2 bits_per_sample;
-	brru2 extra_length;
-	brru2 padding;
-} wem_fmt_chunkT;
-static const fourccT fmt_chunk_fcc = FCC_INIT("fmt ");
-
 static int BRRCALL
 int_convert_wem(const char *const input, const char *const output)
 {
-	FILE *in = NULL;
-	wem_riff_chunkT riff = {0};
-	wem_fmt_chunkT fmt = {0};
-	brrby *extra_fmt = NULL;
-	int endian_need_swap = BRRENDIAN_SYSTEM != BRRENDIAN_LITTLE; /* assuming little endian riff data */
+	int err = 0;
+	FILE *in, *out;
+	riff_chunkinfoT sync_info = {0};
+	riffT rf;
+
 	if (!(in = fopen(input, "rb"))) {
-		BRRLOG_ERRN("Failed to open WEM '%s' for conversion input : %s", input, strerror(errno));
-		return -1;
-	} else if (12 != fread(&riff, 1, 12, in)) {
-		BRRLOG_ERRN("Failed to read 12 bytes of RIFF chunk of WEM '%s' : %s", input, strerror(errno));
-		fclose(in);
-		return -1;
-	} else if (riff.fcc.integer != riff_chunk_fcc.integer) {
-		if (riff.fcc.integer == rifx_chunk_fcc.integer) {
-			endian_need_swap = BRRENDIAN_SYSTEM != BRRENDIAN_BIG;
-			if (endian_need_swap)
-				riff.size = SWAP_4(riff.size);
-		} else {
-			BRRLOG_ERRN("WEM '%s' had invalid fourcc '%s'", FCC_AS_STR(riff.fcc));
-			fclose(in);
-			return -1;
-		}
-	} else if (8 != fread(&fmt, 1, 8, in)) {
-		BRRLOG_ERRN("Failed to read 8 bytes of next chunk of WEM '%s' : %s", input, strerror(errno));
-		fclose(in);
-		return -1;
-	} else {
-		if (fmt.fcc.integer == fmt_chunk_fcc.integer) {
-			brrsz size_to_read = sizeof(wem_fmt_chunkT) - 8;
-			if (size_to_read != read_to_offset(&fmt, 8, size_to_read, in)) {
-				BRRLOG_ERRN("Failed to read %zu bytes of fmt chunk in WEM '%s' : %s", size_to_read, input, strerror(errno));
-				fclose(in);
-				return -1;
-			}
-			if (endian_need_swap) {
-				fmt.size            = SWAP_4(fmt.size);
-				fmt.format_tag      = SWAP_2(fmt.format_tag);
-				fmt.channel_count   = SWAP_2(fmt.channel_count);
-				fmt.sample_rate     = SWAP_4(fmt.sample_rate);
-				fmt.avg_byte_rate   = SWAP_4(fmt.avg_byte_rate);
-				fmt.block_align     = SWAP_2(fmt.block_align);
-				fmt.bits_per_sample = SWAP_2(fmt.bits_per_sample);
-				fmt.extra_length    = SWAP_2(fmt.extra_length);
-			}
-			BRRLOG_NOR("\nGot fmt chunk:");
-			BRRLOG_NOR("    fcc             : %c%c%c%c 0x%02X 0x%02X 0x%02X 0x%02x", FCC_GET_BYTES(fmt.fcc), FCC_GET_BYTES(fmt.fcc));
-			BRRLOG_NOR("    size            : %zu", fmt.size);
-			BRRLOG_NOR("    format_tag      : 0x%04X");
-			BRRLOG_NOR("    channel_count   : %zu", fmt.channel_count);
-			BRRLOG_NOR("    sample_rate     : %zu", fmt.sample_rate);
-			BRRLOG_NOR("    avg_byte_rate   : %zu", fmt.avg_byte_rate);
-			BRRLOG_NOR("    block_align     : %zu", fmt.block_align);
-			BRRLOG_NOR("    bits_per_sample : %zu", fmt.bits_per_sample);
-			BRRLOG_NOR("    extra_length    : %zu", fmt.extra_length);
-		} else {
-			BRRLOG_WARN("Got unexpected second chunk '%s'", FCC_AS_STR(fmt.fcc));
-		}
+		BRRLOG_ERRN("Failed to open wem for conversion input '%s' : %s", input, strerror(errno));
+		return I_IO_ERROR;
 	}
 
+	riff_init(&rf);
+	while (I_SUCCESS == (err = i_consume_next_chunk(in, &rf, &sync_info))) {
+		if (sync_info.is_basic) {
+			riff_basic_chunkinfoT *basic = &rf.basics[sync_info.chunkinfo_index];
+			BRRLOG_NOR("Got chunk : (%zu) '%s'", basic->type, FCC_AS_STR((fourccT){.integer = riff_basictypes[basic->type]}));
+			BRRLOG_NOR("    Size  : %zu", basic->size);
+		} else if (sync_info.is_list) {
+			riff_list_chunkinfoT *list = &rf.lists[sync_info.chunkinfo_index];
+			BRRLOG_NOR("Help");
+			/* etc ... */
+		} else {
+			BRRLOG_NOR("WAH");
+		}
+		brrlib_pause();
+		riff_chunkinfo_clear(&sync_info);
+	}
+	if (err != I_SUCCESS) {
+		BRRLOG_ERRN("Failed to consume RIFF chunk from '%s' : %s", input, i_strerr(err));
+	}
+	riff_clear(&rf);
 	fclose(in);
 
-	return 0;
+	return I_SUCCESS;
 }
+
 int BRRCALL
 convert_wem(numbersT *const numbers, int dry_run, const char *const path,
     int inplace_regranularize, int inplace_ogg)
@@ -138,9 +122,8 @@ convert_wem(numbersT *const numbers, int dry_run, const char *const path,
 		BRRLOG_FORENP(DRY_COLOR, " Convert WEM");
 	} else {
 		brrsz outlen = 0, inlen = 0;
-		NeTODO("Implement 'convert_wem' priority 1 ");
-		BRRLOG_FORENP(WET_COLOR, " Converting WEM... ");
-		replace_ext(path, &inlen, output, &outlen, ".ogg");
+		BRRLOG_FOREP(WET_COLOR, " Converting WEM... ");
+		replace_ext(path, &inlen, output, &outlen, ".txt");
 		err = int_convert_wem(path, output);
 		if (!err) {
 			if (inplace_ogg) {
@@ -154,7 +137,6 @@ convert_wem(numbersT *const numbers, int dry_run, const char *const path,
 		BRRLOG_MESSAGETP(gbrrlog_level_last, SUCCESS_FORMAT, " Success!");
 	} else {
 		/* remove 'output' */
-		NeTODO("WEM ERROR REMOVE OUTPUT");
 		BRRLOG_MESSAGETP(gbrrlog_level_last, FAILURE_FORMAT, " Failure! (%d)", err);
 	}
 	return err;

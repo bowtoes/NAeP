@@ -44,17 +44,6 @@ limitations under the License.
 #define VORBIS_SYNTHESIS_HEADERIN_NOTVORBIS OV_ENOTVORBIS
 #define VORBIS_SYNTHESIS_HEADERIN_BADHEADER OV_EBADHEADER
 
-/* helper function return codes */
-#define I_SUCCESS 0
-#define I_BUFFER_ERROR -1
-#define I_IO_ERROR -2
-#define I_FILE_TRUNCATED -3
-#define I_INIT_ERROR -4
-#define I_NOT_VORBIS -5
-#define I_DESYNC -6
-#define I_CORRUPT -7
-#define I_BAD_ERROR -99
-
 #define SYNC_BUFFER_SIZE 4096
 static int BRRCALL
 i_get_first_page(FILE *const file, ogg_sync_state *const syncer, ogg_page *sync_page)
@@ -121,6 +110,8 @@ i_init_streams(FILE *const file, ogg_sync_state *const syncer, ogg_page *const s
 			ogg_stream_clear(istream);
 			return I_INIT_ERROR;
 		}
+	} else {
+		return err;
 	}
 	if (STREAM_PAGEIN_SUCCESS != (err = ogg_stream_pagein(istream, sync_page))) {
 		return I_BUFFER_ERROR;
@@ -240,45 +231,15 @@ i_regrain(const char *const input, const char *const output)
 	ogg_sync_init(&syncer);
 	if ((err = i_init_streams(in, &syncer, &sync_page, &istream, &ostream))) {
 		i_clear(&in, NULL, &syncer, NULL, NULL, NULL, NULL);
-		BRRLOG_ERRN("Failed to initialize streams for regrain of '%s' : %s", input, strerror(errno));
+		BRRLOG_ERRN("Failed to initialize streams for regrain of '%s' : %s", input, i_strerr(err));
 		return err;
 	} else if ((err = i_init_headers(in, &syncer, &sync_page, &sync_packet, &istream, &ostream, &info, &comment))) {
 		i_clear(&in, NULL, &syncer, &istream, &ostream, NULL, NULL);
-		switch (err) {
-			case I_BUFFER_ERROR:
-				BRRLOG_ERRN("Memory error while initializing vorbis headers : %s", strerror(errno)); break;
-			case I_IO_ERROR:
-				BRRLOG_ERRN("Read error while initializing vorbis headers : %s", strerror(errno)); break;
-			case I_FILE_TRUNCATED:
-				BRRLOG_ERRN("Unexpected EOF while initializing vorbis headers : %s", strerror(errno)); break;
-			case I_NOT_VORBIS:
-				BRRLOG_ERRN("File is not ogg/vorbis or has corrupted headers '%s'", input); break;
-			case I_DESYNC:
-				BRRLOG_ERRN("Unexpected desync while initializing vorbis headers '%s'", input); break;
-			case I_CORRUPT:
-				BRRLOG_ERRN("Corrupted headers '%s'", input); break;
-			default:
-				BRRLOG_ERRN("Unrecognized error code initializing vorbis headers (%zu) '%s'", err, input); break;
-		}
+		BRRLOG_ERRN("Failed to initialize vorbis headers from '%s' : %s", input, i_strerr(err));
 		return err;
 	} else if ((err = i_recompute_grains(in, &syncer, &sync_page, &sync_packet, &istream, &ostream, &info, &comment))) {
 		i_clear(&in, NULL, &syncer, &istream, &ostream, &info, &comment);
-		switch (err) {
-			case I_BUFFER_ERROR:
-				BRRLOG_ERRN("Memory error while recomputing granules : %s", strerror(errno)); break;
-			case I_IO_ERROR:
-				BRRLOG_ERRN("Read error while recomputing granules : %s", strerror(errno)); break;
-			case I_FILE_TRUNCATED:
-				BRRLOG_ERRN("Unexpected EOF while recomputing granules : %s", strerror(errno)); break;
-			case I_NOT_VORBIS:
-				BRRLOG_ERRN("File is not ogg/vorbis or has corrupted headers '%s'", input); break;
-			case I_DESYNC:
-				BRRLOG_ERRN("Unexpected desync while recomputing granules '%s'", input); break;
-			case I_CORRUPT:
-				BRRLOG_ERRN("Corrupted headers '%s'", input); break;
-			default:
-				BRRLOG_ERRN("Unrecognized error code from recomputing granules (%zu) '%s'", err, input); break;
-		}
+		BRRLOG_ERRN("Failed to recompute granules of '%s' : %s", input, i_strerr(err));
 		return err;
 	}
 
@@ -312,7 +273,7 @@ regranularize_ogg(numbersT *const numbers, int dry_run, const char *const path,
 	int err = 0;
 	numbers->oggs_to_regranularize++;
 	if (dry_run) {
-		BRRLOG_FOREP(DRY_COLOR, " Regranularize OGG");
+		BRRLOG_FOREP(DRY_COLOR, " Regranularize OGG ");
 	} else {
 		brrsz inlen = 0, outlen = 0;
 		BRRLOG_FORENP(WET_COLOR, " Regranularizing OGG... ");
@@ -327,7 +288,7 @@ regranularize_ogg(numbersT *const numbers, int dry_run, const char *const path,
 	}
 	if (!err) {
 		numbers->oggs_regranularized++;
-		BRRLOG_MESSAGETP(gbrrlog_level_last, SUCCESS_FORMAT, " Success!");
+		BRRLOG_MESSAGETP(gbrrlog_level_last, SUCCESS_FORMAT, "Success!");
 	} else {
 		/* remove 'output' */
 		BRRLOG_MESSAGETP(gbrrlog_level_last, FAILURE_FORMAT, " Failure! (%d)", err);

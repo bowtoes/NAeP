@@ -27,6 +27,24 @@ limitations under the License.
 # include <strings.h>
 #endif
 
+const char *BRRCALL
+i_strerr(int err)
+{
+	switch (err) {
+		case I_SUCCESS: return "Success";
+		case I_BUFFER_ERROR: return "Buffer/memory error";
+		case I_IO_ERROR: return "File I/O error";
+		case I_FILE_TRUNCATED: return "File truncated";
+		case I_INIT_ERROR: return "Initialization error";
+		case I_NOT_VORBIS: return "Stream is not vorbis";
+		case I_DESYNC: return "Desync while decoding stream";
+		case I_CORRUPT: return "Corrupted headers/stream";
+		case I_BAD_ERROR: return "I don't know what to do";
+		case I_NOT_RIFF: return "Stream is not RIFF";
+		default: return "Unrecognized error code";
+	}
+}
+
 int BRRCALL
 replace_ext(const char *const input, brrsz *const inlen,
     char *const output, brrsz *const outlen, const char *const replacement)
@@ -40,14 +58,13 @@ replace_ext(const char *const input, brrsz *const inlen,
 	for (dot = ilen; dot > sep && input[dot] != '.'; --dot);
 	if (dot > sep + 1)
 		nlen = dot;
-	olen = snprintf(output, BRRPATH_MAX_PATH + 1, "%*.*s_rvb.ogg", (int)nlen, (int)nlen, input);
+	olen = snprintf(output, BRRPATH_MAX_PATH + 1, "%*.*s%s", (int)nlen, (int)nlen, input, replacement);
 	if (inlen)
 		*inlen = ilen;
 	if (outlen)
 		*outlen = olen;
 	return 0;
 }
-
 int BRRCALL
 cstr_compare(const char *const a, const char *const b, brrsz max_length, int case_sensitive)
 {
@@ -69,7 +86,6 @@ cstr_compare(const char *const a, const char *const b, brrsz max_length, int cas
 #endif
 	}
 }
-
 brrsz BRRCALL
 read_to_offset(void *const data, brrsz offset, brrsz to_read, FILE *const file)
 {

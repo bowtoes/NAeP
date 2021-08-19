@@ -27,11 +27,12 @@ limitations under the License.
 #include <brrtools/brrpath.h>
 
 #include "process_files.h"
+#include "fcc.h"
 
 /* For auto type detection */
-const fourccT oggfcc = FCC_MAKE(OggS);
-const fourccT wemfcc = FCC_MAKE(RIFF);
-const fourccT bnkfcc = FCC_MAKE(BKHD);
+const fourccT oggfcc = FCC_INIT("OggS");
+const fourccT wemfcc = FCC_INIT("RIFF");
+const fourccT bnkfcc = FCC_INIT("BKHD");
 
 void BRRCALL
 input_delete(processed_inputT *const input)
