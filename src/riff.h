@@ -25,50 +25,55 @@ limitations under the License.
 #include "fcc.h"
 
 BRRCPPSTART
+
+#define _enum_defs(_l_, _d_) riff_##_l_##_##_d_,
 #define _riff_basictypes(_p_) \
     _p_(basictype, data) \
     _p_(basictype, cue) \
     _p_(basictype, fmt) \
     _p_(basictype, akd) \
+    _p_(basictype, labl)
+/* Simple data chunks */
+typedef enum riff_basictype {
+	riff_basictype_unrecognized = 0,
+	_riff_basictypes(_enum_defs)
+	riff_basictype_count,
+} riff_basictypeT;
+extern const brru4 riff_basictypes[riff_basictype_count - 1];
 
 #define _riff_listtypes(_p_) \
     _p_(listtype, RIFF) \
     _p_(listtype, RIFX) \
     _p_(listtype, XFIR) \
     _p_(listtype, FFIR) \
-    _p_(listtype, LIST) \
-
-#define _riff_subtypes(_p_) \
-    _p_(subtype, adtl) \
-
-#define _riff_datatypes(_p_) \
-    _p_(datatype, WAVE) \
-
-#define _enum_defs(_l_, _d_) riff_##_l_##_##_d_,
-typedef enum riff_basictype {
-	riff_basictype_unrecognized = 0,
-	_riff_basictypes(_enum_defs)
-	riff_basictype_count,
-} riff_basictypeT;
+    _p_(listtype, LIST)
+/* Types with subchunks */
 typedef enum riff_listtype {
 	riff_listtype_unrecognized = 0,
 	_riff_listtypes(_enum_defs)
 	riff_listtype_count,
 } riff_listtypeT;
+extern const brru4 riff_listtypes[riff_listtype_count - 1];
+
+#define _riff_subtypes(_p_) \
+    _p_(subtype, adtl)
+/* LIST subtypes */
 typedef enum riff_subtype {
 	riff_subtype_unrecognized = 0,
 	_riff_subtypes(_enum_defs)
 	riff_subtype_count,
 } riff_subtypeT;
+extern const brru4 riff_subtypes[riff_subtype_count - 1];
+
+#define _riff_datatypes(_p_) \
+    _p_(datatype, WAVE)
+/* RIFF file data types */
 typedef enum riff_datatype {
 	riff_datatype_unrecognized = 0,
 	_riff_datatypes(_enum_defs)
 	riff_datatype_count,
 } riff_datatypeT;
 #undef _enum_defs
-extern const brru4 riff_basictypes[riff_basictype_count - 1];
-extern const brru4 riff_listtypes[riff_listtype_count - 1];
-extern const brru4 riff_subtypes[riff_subtype_count - 1];
 extern const brru4 riff_datatypes[riff_datatype_count - 1];
 
 #define _int_defs(_l_, _d_) extern const brru4 riff_##_l_##_int_##_d_;
@@ -132,7 +137,7 @@ typedef struct riff {
 	riff_datatypeT datatype;
 } riffT;
 typedef struct riff_chunkinfo {
-	int chunk_type;
+	int chunk_type;    /* Which type of basic/list chunk is this? What it means depends on is_basic and is_list */
 	int chunkinfo_index;
 	int is_basic;
 	int is_list;

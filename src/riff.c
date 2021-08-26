@@ -29,7 +29,7 @@ limitations under the License.
 #define RIFF_BUFF_EXTRA 4096
 #define RIFF_BUFF_MAX INT_MAX
 
-#define _int_defs(_l_, _d_) const brru4 riff_##_l_##_int_##_d_ = FCC_INT(#_d_"    ");
+#define _int_defs(_l_, _d_) const brru4 riff_##_l_##_int_##_d_ = FCC_CODE_INT(#_d_"    ");
 #define _fcc_defs(_l_, _d_) const fourccT riff_##_l_##_fcc_##_d_ = FCC_INIT(#_d_"    ");
 _riff_basictypes(_int_defs)
 _riff_basictypes(_fcc_defs)
@@ -87,7 +87,7 @@ static riff_basictypeT BRRCALL
 i_get_basictype(brru4 fcc)
 {
 	for (riff_basictypeT i = 1; i < riff_basictype_count; ++i) {
-		if (fcc == riff_basictypes[i])
+		if (fcc == riff_basictypes[i - 1])
 			return i;
 	}
 	return riff_basictype_unrecognized;
@@ -96,7 +96,7 @@ static riff_listtypeT BRRCALL
 i_get_listtype(brru4 fcc)
 {
 	for (riff_listtypeT i = 1; i < riff_listtype_count; ++i) {
-		if (fcc == riff_listtypes[i])
+		if (fcc == riff_listtypes[i - 1])
 			return i;
 	}
 	return riff_listtype_unrecognized;
@@ -105,7 +105,7 @@ static riff_subtypeT BRRCALL
 i_get_subtype(brru4 fcc)
 {
 	for (riff_subtypeT i = 1; i < riff_subtype_count; ++i) {
-		if (fcc == riff_subtypes[i])
+		if (fcc == riff_subtypes[i - 1])
 			return i;
 	}
 	return riff_subtype_unrecognized;
@@ -114,7 +114,7 @@ static riff_datatypeT BRRCALL
 i_get_datatype(brru4 fcc)
 {
 	for (riff_datatypeT i = 1; i < riff_datatype_count; ++i) {
-		if (fcc == riff_datatypes[i])
+		if (fcc == riff_datatypes[i - 1])
 			return i;
 	}
 	return riff_datatype_unrecognized;
@@ -248,12 +248,12 @@ i_add_basictype(riffT *const rf, riff_basictypeT cktype, brru4 cksize)
 		return RIFF_ERROR;
 	}
 	rf->basics[rf->n_basics++] = basic;
-	if (rf->list_end > 0) {
+	if (rf->list_end > 0) { /* Again, assuming lists can't have lists as subelements */
 		riff_list_chunkinfoT *list = &rf->lists[rf->n_lists - 1];
 		if (list->n_basics == 0)
 			list->first_basic_index = rf->n_basics - 1;
 		list->n_basics++;
-		rf->list_end -= basic.size;
+		rf->list_end -= basic.size + 8;
 	} else if (rf->list_end < 0) {
 		/* List was corrupted, stream is too */
 		riff_clear(rf);
@@ -274,7 +274,7 @@ i_add_listtype(riffT *const rf, riff_listtypeT cktype, brru4 cksize)
 	list.subtype = i_get_subtype(subcc);
 	list.first_basic_index = rf->n_basics;
 	list.n_basics = 0;
-	rf->list_end = list.size;
+	rf->list_end = list.size - 4; /* list size includes subtype */
 	if (brrlib_alloc((void **)&rf->lists, (rf->n_lists + 1) * sizeof(*rf->lists), 0)) {
 		riff_clear(rf);
 		return RIFF_ERROR;
@@ -318,6 +318,7 @@ riff_consume_chunk(riffT *const rf, riff_chunkinfoT *const fo)
 		if (RIFF_CHUNK_CONSUMED != (err = i_add_listtype(rf, fo->chunk_type, fo->chunksize)))
 			return err;
 		fo->chunkinfo_index = rf->n_lists - 1;
+		return RIFF_CHUNK_CONSUMED;
 	} else { /* We don't know yet. */
 		int cktype = 0;
 		if (stor < 8) /* Not enough for fourcc and size */
@@ -334,11 +335,9 @@ riff_consume_chunk(riffT *const rf, riff_chunkinfoT *const fo)
 			fo->is_list = 1;
 			fo->chunk_type = cktype;
 		} else { /* desync/unrecognized chunk */
-			rf->consumed -= 8; /* Forget we read anything */
+			rf->consumed += fo->chunksize; /* skip it for now */
 			return RIFF_CHUNK_UNRECOGNIZED;
 		}
 		return RIFF_CONSUME_MORE;
 	}
-
-	return RIFF_CHUNK_INCOMPLETE;
 }

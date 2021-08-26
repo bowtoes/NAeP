@@ -47,6 +47,7 @@ i_consume_next_chunk(FILE *const file, riffT *const rf, riff_chunkinfoT *const f
 		if (err == RIFF_CONSUME_MORE) {
 			continue;
 		} else if (err == RIFF_CHUNK_UNRECOGNIZED) {
+			BRRLOG_WAR("Skipping unrecognized chunk '%s' (%zu)", FCC_INT_CODE(fo->chunkcc), fo->chunksize);
 			fseek(file, fo->chunksize, SEEK_CUR);
 		} else if (err != RIFF_CHUNK_INCOMPLETE) {
 			if (err == RIFF_ERROR)
@@ -68,9 +69,6 @@ i_consume_next_chunk(FILE *const file, riffT *const rf, riff_chunkinfoT *const f
 			return I_BUFFER_ERROR;
 		}
 	}
-	if (feof(file) && bytes_read != 0 && err != RIFF_CHUNK_CONSUMED) {
-		return I_FILE_TRUNCATED;
-	}
 	return I_SUCCESS;
 }
 static int BRRCALL
@@ -90,16 +88,17 @@ int_convert_wem(const char *const input, const char *const output)
 	while (I_SUCCESS == (err = i_consume_next_chunk(in, &rf, &sync_info))) {
 		if (sync_info.is_basic) {
 			riff_basic_chunkinfoT *basic = &rf.basics[sync_info.chunkinfo_index];
-			BRRLOG_NOR("Got chunk : (%zu) '%s'", basic->type, FCC_AS_STR((fourccT){.integer = riff_basictypes[basic->type]}));
-			BRRLOG_NOR("    Size  : %zu", basic->size);
+			BRRLOG_NOR("Got basic chunk : (%zu) '%s'", basic->type, FCC_INT_CODE(riff_basictypes[basic->type - 1]));
+			BRRLOG_NOR("    Size : %zu", basic->size);
 		} else if (sync_info.is_list) {
 			riff_list_chunkinfoT *list = &rf.lists[sync_info.chunkinfo_index];
-			BRRLOG_NOR("Help");
+			BRRLOG_NOR("Got list chunk : (%zu) '%s'", list->type, FCC_INT_CODE(riff_listtypes[list->type - 1]));
+			BRRLOG_NOR("    Type : '%s'", FCC_INT_CODE(riff_subtypes[list->subtype - 1]));
+			BRRLOG_NOR("    Size : %zu", list->size);
 			/* etc ... */
 		} else {
 			BRRLOG_NOR("WAH");
 		}
-		brrlib_pause();
 		riff_chunkinfo_clear(&sync_info);
 	}
 	if (err != I_SUCCESS) {
