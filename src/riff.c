@@ -290,39 +290,36 @@ riff_consume_chunk(riffT *const rf, riff_chunkinfoT *const fo)
 	if (riff_check(rf) || !fo)
 		return RIFF_ERROR;
 
-	if (!rf->byteorder) { /* Initialize riff info from header chunk fcc and size */
-		int err = 0;
-		if (RIFF_CONSUME_MORE != (err = i_setup_riff(rf, stor)))
-			return err;
-		return RIFF_CONSUME_MORE;
-	}
+	if (!rf->byteorder) /* Initialize riff info from header chunk fcc and size */
+		return i_setup_riff(rf, stor);
+
 	if (fo->is_basic) {
 		int err = 0;
 		if (stor < fo->chunksize) /* Not enough to fill out chunk */
 			return RIFF_CHUNK_INCOMPLETE;
-		if (RIFF_CHUNK_CONSUMED != (err = i_add_basictype(rf, fo->chunk_type, fo->chunksize)))
+		else if (RIFF_CHUNK_CONSUMED != (err = i_add_basictype(rf, fo->chunk_type, fo->chunksize)))
 			return err;
 		fo->chunkinfo_index = rf->n_basics - 1;
 		return RIFF_CHUNK_CONSUMED;
 	} else if (fo->is_list) {
 		int err = 0;
 		if (rf->list_end > 0) {
-			/* I don't think lists can be subchunks of other lists
-			 * If that's wrong, then it is WOEFULLY wrong, but I'll cross that
-			 * bridge when I get there */
+			/* I don't think lists can be subchunks of other lists */
 			riff_clear(rf);
 			return RIFF_NOT_RIFF;
 		}
 		if (stor < 4) /* Not enough to get subtype */
 			return RIFF_CHUNK_INCOMPLETE;
-		if (RIFF_CHUNK_CONSUMED != (err = i_add_listtype(rf, fo->chunk_type, fo->chunksize)))
+		else if (RIFF_CHUNK_CONSUMED != (err = i_add_listtype(rf, fo->chunk_type, fo->chunksize)))
 			return err;
 		fo->chunkinfo_index = rf->n_lists - 1;
 		return RIFF_CHUNK_CONSUMED;
 	} else { /* We don't know yet. */
 		int cktype = 0;
-		if (stor < 8) /* Not enough for fourcc and size */
+		if (stor < 8) { /* Not enough for fcc + size */
+			/* Size can be 0, I'm not sure about fcc though */
 			return RIFF_CHUNK_INCOMPLETE;
+		}
 		rf->cpy_cc(&fo->chunkcc, ckdata, 4);
 		rf->cpy_data(&fo->chunksize, ckdata + 4, 4);
 		rf->consumed += 8;

@@ -139,8 +139,8 @@ typedef struct riff {
 typedef struct riff_chunkinfo {
 	int chunk_type;    /* Which type of basic/list chunk is this? What it means depends on is_basic and is_list */
 	int chunkinfo_index;
-	int is_basic;
-	int is_list;
+	brru1 is_basic:1;
+	brru1 is_list:1;
 	brru4 chunkcc;
 	brru4 chunksize;
 } riff_chunkinfoT;

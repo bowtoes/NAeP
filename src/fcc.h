@@ -28,10 +28,10 @@ typedef union fourcc {
 	(brru4)((_l_)[3] << 24)   \
 )
 #define FCC_INT_CODE(_i_) ((char[5]){\
-	(char)(((brru1*)(&(_i_)))[0]), \
-	(char)(((brru1*)(&(_i_)))[1]), \
-	(char)(((brru1*)(&(_i_)))[2]), \
-	(char)(((brru1*)(&(_i_)))[3]), \
+	((char*)(&(_i_)))[0], \
+	((char*)(&(_i_)))[1], \
+	((char*)(&(_i_)))[2], \
+	((char*)(&(_i_)))[3], \
 	0, \
 })
 #define FCC_FROM_INT(_i_) _fcc_init( \
