@@ -103,19 +103,19 @@ typedef enum riff_byteorder {
 	riff_byteorder_XFIR,
 	riff_byteorder_FFIR,
 } riff_byteorderT;
-typedef struct riff_basic_chunkinfo {
+typedef struct riff_basic_chunk {
 	riff_basictypeT type;
 	brru4 size;
 	unsigned char *data;
-} riff_basic_chunkinfoT;
-typedef struct riff_list_chunkinfo {
+} riff_basic_chunkT;
+typedef struct riff_list_chunk {
 	riff_listtypeT type;
 	brru4 size;
 	riff_subtypeT subtype;
 	brru4 first_basic_index;
 	brru4 n_basics;
-} riff_list_chunkinfoT;
-typedef struct riff {
+} riff_list_chunkT;
+typedef struct riff_datasync {
 	unsigned char *data;
 	brrs8 storage;
 	brrs8 stored;
@@ -127,15 +127,8 @@ typedef struct riff {
 	void *(*BRRCALL cpy_data)(void *restrict const, const void *restrict const, size_t);
 	void *(*BRRCALL move_data)(void *const, const void *const, size_t);
 
-	riff_basic_chunkinfoT *basics;
-	riff_list_chunkinfoT *lists;
-	brru4 n_basics;
-	brru4 n_lists;
-
-	brru4 total_size;
 	riff_byteorderT byteorder;
-	riff_datatypeT datatype;
-} riffT;
+} riff_datasyncT;
 typedef struct riff_chunkinfo {
 	int chunk_type;    /* Which type of basic/list chunk is this? What it means depends on is_basic and is_list */
 	int chunkinfo_index;
@@ -144,7 +137,15 @@ typedef struct riff_chunkinfo {
 	brru4 chunkcc;
 	brru4 chunksize;
 } riff_chunkinfoT;
-void BRRCALL riff_chunkinfo_clear(riff_chunkinfoT *const fo);
+typedef struct riff {
+	riff_basic_chunkT *basics;
+	riff_list_chunkT *lists;
+	brru4 n_basics;
+	brru4 n_lists;
+
+	brru4 total_size;
+	riff_datatypeT datatype;
+} riffT;
 
 #define RIFF_CHUNK_UNRECOGNIZED 2
 #define RIFF_CHUNK_CONSUMED 1
@@ -154,27 +155,35 @@ void BRRCALL riff_chunkinfo_clear(riff_chunkinfoT *const fo);
 #define RIFF_CONSUME_MORE -3
 #define RIFF_CORRUPTED -4
 
+void BRRCALL riff_chunkinfo_clear(riff_chunkinfoT *const sc);
+
+/* -1 : invalid/broken datasync
+ *  0 : valid datasync
+ * */
+int BRRCALL riff_datasync_check(const riff_datasyncT *const ds);
+void BRRCALL riff_datasync_clear(riff_datasyncT *const ds);
+/* NULL : error
+ * */
+char *BRRCALL riff_datasync_buffer(riff_datasyncT *const ds, brru4 size);
+/* -1 : error
+ *  0 : success
+ * */
+int BRRCALL riff_datasync_apply(riff_datasyncT *const ds, brru4 size);
+
+void BRRCALL riff_clear(riffT *const rf);
 /* -1 : error
  *  0 : success
  * */
 int BRRCALL riff_init(riffT *const rf);
-void BRRCALL riff_clear(riffT *const rf);
 /* -1 : invalid/broken riff
  *  0 : valid riff
  * */
-int BRRCALL riff_check(riffT *const rf);
-/* NULL : error
- * */
-char *BRRCALL riff_buffer(riffT *const rf, brru4 size);
-/* -1 : error
- *  0 : success
- * */
-int BRRCALL riff_apply_buffer(riffT *const rf, brru4 size);
+int BRRCALL riff_check(const riffT *const rf);
 /* -1 : error
  *  0 : not enough data
  *  1 : chunk consumed successfully
  * */
-int BRRCALL riff_consume_chunk(riffT *const rf, riff_chunkinfoT *const fo);
+int BRRCALL riff_consume_chunk(riffT *const rf, riff_chunkinfoT *const sc, riff_datasyncT *const ds);
 
 #define FMT_BASIC_FIELDS    brru2 format_tag; brru2 n_channels; brru4 samples_per_sec; brru4 avg_bytes_per_sec; brru2 block_align
 #define FMT_PCM_FIELDS      FMT_BASIC_FIELDS; brru2 bits_per_sample

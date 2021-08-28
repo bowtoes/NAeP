@@ -121,19 +121,72 @@ i_get_datatype(brru4 fcc)
 }
 
 void BRRCALL
-riff_chunkinfo_clear(riff_chunkinfoT *const fo)
+riff_chunkinfo_clear(riff_chunkinfoT *const sc)
 {
-	if (fo) {
-		memset(fo, 0, sizeof(*fo));
+	if (sc) {
+		memset(sc, 0, sizeof(*sc));
 	}
+}
+
+int BRRCALL
+riff_datasync_check(const riff_datasyncT *const ds)
+{
+	if (!ds)
+		return -1;
+	return 0;
+}
+void BRRCALL
+riff_datasync_clear(riff_datasyncT *const ds)
+{
+	if (ds) {
+		if (ds->data)
+			free(ds->data);
+		memset(ds, 0, sizeof(*ds));
+	}
+}
+char *BRRCALL
+riff_datasync_buffer(riff_datasyncT *const ds, brru4 size)
+{
+	if (riff_datasync_check(ds))
+		return NULL;
+	if (ds->consumed) {
+		ds->stored -= ds->consumed;
+		if (ds->stored)
+			memmove(ds->data, ds->data + ds->consumed, ds->stored);
+		ds->consumed = 0;
+	}
+
+	if (size > ds->storage - ds->stored) {
+		brru4 new_size;
+		if (size > RIFF_BUFF_MAX - RIFF_BUFF_EXTRA - ds->stored) {
+			riff_datasync_clear(ds);
+			return NULL;
+		}
+		new_size = ds->stored + size + RIFF_BUFF_EXTRA;
+		if (brrlib_alloc((void **)&ds->data, new_size, 0)) {
+			riff_datasync_clear(ds);
+			return NULL;
+		}
+		ds->storage = new_size;
+	}
+	return (char *)ds->data + ds->stored;
+}
+int BRRCALL
+riff_datasync_apply(riff_datasyncT *const ds, brru4 size)
+{
+	if (riff_datasync_check(ds))
+		return RIFF_ERROR;
+	if (size + ds->stored > ds->storage)
+		return RIFF_ERROR;
+	ds->stored += size;
+	return 0;
 }
 
 int BRRCALL
 riff_init(riffT *const rf)
 {
-	if (rf) {
+	if (rf)
 		memset(rf, 0, sizeof(*rf));
-	}
 	return 0;
 }
 void BRRCALL
@@ -141,141 +194,106 @@ riff_clear(riffT *const rf)
 {
 	if (rf) {
 		if (rf->basics) {
-			for (brru4 i = 0; i < rf->n_basics; ++i) {
+			for (brru4 i = 0; i < rf->n_basics; ++i)
 				brrlib_alloc((void **)&rf->basics[i].data, 0, 0);
-			}
 			brrlib_alloc((void **)&rf->basics, 0, 0);
 		}
-		if (rf->lists) { /* Lists store pointers back into rf, no need to free them */
+		if (rf->lists)
 			brrlib_alloc((void **)&rf->lists, 0, 0);
-		}
 		memset(rf, 0, sizeof(*rf));
 	}
 }
 int BRRCALL
-riff_check(riffT *const rf)
+riff_check(const riffT *const rf)
 {
 	if (!rf)
 		return RIFF_ERROR;
 	return 0;
 }
-char *BRRCALL
-riff_buffer(riffT *const rf, brru4 size)
-{
-	if (riff_check(rf))
-		return NULL;
-
-	if (rf->consumed) {
-		rf->stored -= rf->consumed;
-		if (rf->stored)
-			memmove(rf->data, rf->data + rf->consumed, rf->stored);
-		rf->consumed = 0;
-	}
-
-	if (size > rf->storage - rf->stored) {
-		brru4 new_size;
-		if (size > RIFF_BUFF_MAX - RIFF_BUFF_EXTRA - rf->stored) {
-			riff_clear(rf);
-			return NULL;
-		}
-		new_size = rf->stored + size + RIFF_BUFF_EXTRA;
-		if (brrlib_alloc((void **)&rf->data, new_size, 0)) {
-			riff_clear(rf);
-			return NULL;
-		}
-		rf->storage = new_size;
-	}
-	return (char *)rf->data + rf->stored;
-}
-int BRRCALL
-riff_apply_buffer(riffT *const rf, brru4 size)
-{
-	if (riff_check(rf))
-		return RIFF_ERROR;
-	if (size + rf->stored > rf->storage)
-		return RIFF_ERROR;
-
-	rf->stored += size;
-	return 0;
-}
 
 static int BRRCALL
-i_setup_riff(riffT *const rf, brru4 stor)
+i_setup_riff(riffT *const rf, riff_datasyncT *const ds)
 {
-	unsigned char *ckdata = rf->data + rf->consumed;
+	unsigned char *ckdata = ds->data + ds->consumed;
+	brrs8 stor = ds->stored - ds->consumed;
 	brru4 datacc, typecc;
 	int idx = 0;
 	if (stor < 4) { /* Not enough DATA */
 		return RIFF_CHUNK_INCOMPLETE;
 	}
 	memcpy(&typecc, ckdata, 4);
-	if (!(rf->byteorder = i_determine_byteorder(typecc))) {
+	if (!(ds->byteorder = i_determine_byteorder(typecc))) {
+		riff_datasync_clear(ds);
 		riff_clear(rf);
 		return RIFF_NOT_RIFF;
 	}
 #if BRRENDIAN_SYSTE == BRRENDIAN_BIG
 	idx = 3 - (rf->byteorder - 1);
 #else
-	idx = rf->byteorder - 1;
+	idx = ds->byteorder - 1;
 #endif
 	/* Function pointers for interpreting data from the given riff. */
-	rf->cpy_cc    = memfuntable[ 0 + idx];
-	rf->move_cc   = memfuntable[ 4 + idx];
-	rf->cpy_data  = memfuntable[ 8 + idx];
-	rf->move_data = memfuntable[12 + idx];
+	ds->cpy_cc    = memfuntable[ 0 + idx];
+	ds->move_cc   = memfuntable[ 4 + idx];
+	ds->cpy_data  = memfuntable[ 8 + idx];
+	ds->move_data = memfuntable[12 + idx];
 
-	rf->cpy_data(&rf->total_size, ckdata + 4, 4);
-	rf->cpy_cc(&datacc, ckdata + 8, 4);
+	ds->cpy_data(&rf->total_size, ckdata + 4, 4);
+	ds->cpy_cc(&datacc, ckdata + 8, 4);
+	ds->consumed += 12;
 	rf->datatype = i_get_datatype(datacc);
-	rf->consumed += 12;
 	return RIFF_CONSUME_MORE;
 }
 static int BRRCALL
-i_add_basictype(riffT *const rf, riff_basictypeT cktype, brru4 cksize)
+i_add_basictype(riffT *const rf, riff_datasyncT *const ds, riff_basictypeT cktype, brru4 cksize)
 {
-	unsigned char *ckdata = rf->data + rf->consumed;
-	riff_basic_chunkinfoT basic = {0};
+	unsigned char *ckdata = ds->data + ds->consumed;
+	riff_basic_chunkT basic = {0};
 	basic.type = cktype;
 	basic.size = cksize;
 	if (brrlib_alloc((void **)&basic.data, basic.size, 1)) {
+		riff_datasync_clear(ds);
 		riff_clear(rf);
 		return RIFF_ERROR;
 	}
-	rf->cpy_data(basic.data, ckdata, basic.size);
-	rf->consumed += basic.size;
+	ds->cpy_data(basic.data, ckdata, basic.size);
+	ds->consumed += basic.size;
 	if (brrlib_alloc((void **)&rf->basics, (rf->n_basics + 1) * sizeof(*rf->basics), 0)) {
+		riff_datasync_clear(ds);
 		riff_clear(rf);
 		return RIFF_ERROR;
 	}
 	rf->basics[rf->n_basics++] = basic;
-	if (rf->list_end > 0) { /* Again, assuming lists can't have lists as subelements */
-		riff_list_chunkinfoT *list = &rf->lists[rf->n_lists - 1];
+	if (ds->list_end > 0) { /* Again, assuming lists can't have lists as subelements */
+		riff_list_chunkT *list = &rf->lists[rf->n_lists - 1];
 		if (list->n_basics == 0)
 			list->first_basic_index = rf->n_basics - 1;
 		list->n_basics++;
-		rf->list_end -= basic.size + 8;
-	} else if (rf->list_end < 0) {
+		ds->list_end -= basic.size + 8;
+	} else if (ds->list_end < 0) {
 		/* List was corrupted, stream is too */
+		riff_datasync_clear(ds);
 		riff_clear(rf);
 		return RIFF_CORRUPTED;
 	}
 	return RIFF_CHUNK_CONSUMED;
 }
 static int BRRCALL
-i_add_listtype(riffT *const rf, riff_listtypeT cktype, brru4 cksize)
+i_add_listtype(riffT *const rf, riff_datasyncT *const ds, riff_listtypeT cktype, brru4 cksize)
 {
-	unsigned char *ckdata = rf->data + rf->consumed;
-	riff_list_chunkinfoT list = {0};
+	unsigned char *ckdata = ds->data + ds->consumed;
+	riff_list_chunkT list = {0};
 	brru4 subcc;
-	rf->cpy_cc(&subcc, ckdata, 4);
-	rf->consumed += 4;
+	ds->cpy_cc(&subcc, ckdata, 4);
+	ds->consumed += 4;
 	list.size = cksize;
 	list.type = cktype;
 	list.subtype = i_get_subtype(subcc);
 	list.first_basic_index = rf->n_basics;
 	list.n_basics = 0;
-	rf->list_end = list.size - 4; /* list size includes subtype */
+	ds->list_end = list.size - 4; /* list size includes subtype */
 	if (brrlib_alloc((void **)&rf->lists, (rf->n_lists + 1) * sizeof(*rf->lists), 0)) {
+		riff_datasync_clear(ds);
 		riff_clear(rf);
 		return RIFF_ERROR;
 	}
@@ -283,36 +301,37 @@ i_add_listtype(riffT *const rf, riff_listtypeT cktype, brru4 cksize)
 	return RIFF_CHUNK_CONSUMED;
 }
 int BRRCALL
-riff_consume_chunk(riffT *const rf, riff_chunkinfoT *const fo)
+riff_consume_chunk(riffT *const rf, riff_chunkinfoT *const sc, riff_datasyncT *const ds)
 {
-	unsigned char *ckdata = rf->data + rf->consumed;
-	brrs8 stor = rf->stored - rf->consumed;
-	if (riff_check(rf) || !fo)
+	unsigned char *ckdata = ds->data + ds->consumed;
+	brrs8 stor = ds->stored - ds->consumed;
+	if (riff_check(rf) || riff_datasync_check(ds) || !sc)
 		return RIFF_ERROR;
 
-	if (!rf->byteorder) /* Initialize riff info from header chunk fcc and size */
-		return i_setup_riff(rf, stor);
+	if (!ds->byteorder) /* Initialize riff info from header chunk fcc and size */
+		return i_setup_riff(rf, ds);
 
-	if (fo->is_basic) {
+	if (sc->is_basic) {
 		int err = 0;
-		if (stor < fo->chunksize) /* Not enough to fill out chunk */
+		if (stor < sc->chunksize) /* Not enough to fill out chunk */
 			return RIFF_CHUNK_INCOMPLETE;
-		else if (RIFF_CHUNK_CONSUMED != (err = i_add_basictype(rf, fo->chunk_type, fo->chunksize)))
+		else if (RIFF_CHUNK_CONSUMED != (err = i_add_basictype(rf, ds, sc->chunk_type, sc->chunksize)))
 			return err;
-		fo->chunkinfo_index = rf->n_basics - 1;
+		sc->chunkinfo_index = rf->n_basics - 1;
 		return RIFF_CHUNK_CONSUMED;
-	} else if (fo->is_list) {
+	} else if (sc->is_list) {
 		int err = 0;
-		if (rf->list_end > 0) {
+		if (ds->list_end > 0) {
 			/* I don't think lists can be subchunks of other lists */
+			riff_datasync_clear(ds);
 			riff_clear(rf);
 			return RIFF_NOT_RIFF;
 		}
 		if (stor < 4) /* Not enough to get subtype */
 			return RIFF_CHUNK_INCOMPLETE;
-		else if (RIFF_CHUNK_CONSUMED != (err = i_add_listtype(rf, fo->chunk_type, fo->chunksize)))
+		else if (RIFF_CHUNK_CONSUMED != (err = i_add_listtype(rf, ds, sc->chunk_type, sc->chunksize)))
 			return err;
-		fo->chunkinfo_index = rf->n_lists - 1;
+		sc->chunkinfo_index = rf->n_lists - 1;
 		return RIFF_CHUNK_CONSUMED;
 	} else { /* We don't know yet. */
 		int cktype = 0;
@@ -320,19 +339,19 @@ riff_consume_chunk(riffT *const rf, riff_chunkinfoT *const fo)
 			/* Size can be 0, I'm not sure about fcc though */
 			return RIFF_CHUNK_INCOMPLETE;
 		}
-		rf->cpy_cc(&fo->chunkcc, ckdata, 4);
-		rf->cpy_data(&fo->chunksize, ckdata + 4, 4);
-		rf->consumed += 8;
-		if ((cktype = i_get_basictype(fo->chunkcc))) {
-			fo->is_basic = 1;
-			fo->is_list = 0;
-			fo->chunk_type = cktype;
-		} else if ((cktype = i_get_listtype(fo->chunkcc))) {
-			fo->is_basic = 0;
-			fo->is_list = 1;
-			fo->chunk_type = cktype;
+		ds->cpy_cc(&sc->chunkcc, ckdata, 4);
+		ds->cpy_data(&sc->chunksize, ckdata + 4, 4);
+		ds->consumed += 8;
+		if ((cktype = i_get_basictype(sc->chunkcc))) {
+			sc->is_basic = 1;
+			sc->is_list = 0;
+			sc->chunk_type = cktype;
+		} else if ((cktype = i_get_listtype(sc->chunkcc))) {
+			sc->is_basic = 0;
+			sc->is_list = 1;
+			sc->chunk_type = cktype;
 		} else { /* desync/unrecognized chunk */
-			rf->consumed += fo->chunksize; /* skip it for now */
+			ds->consumed += sc->chunksize; /* skip it for now */
 			return RIFF_CHUNK_UNRECOGNIZED;
 		}
 		return RIFF_CONSUME_MORE;

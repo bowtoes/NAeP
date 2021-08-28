@@ -38,16 +38,16 @@ limitations under the License.
 #define RIFF_BUFFER_INCREMENT 4096
 
 static int BRRCALL
-i_consume_next_chunk(FILE *const file, riffT *const rf, riff_chunkinfoT *const fo)
+i_consume_next_chunk(FILE *const file, riffT *const rf, riff_chunkinfoT *const sc, riff_datasyncT *const ds)
 {
 	int err = 0;
 	brrsz bytes_read = 0;
 	char *buffer = NULL;
-	while (RIFF_CHUNK_CONSUMED != (err = riff_consume_chunk(rf, fo))) {
+	while (RIFF_CHUNK_CONSUMED != (err = riff_consume_chunk(rf, sc, ds))) {
 		if (err == RIFF_CONSUME_MORE) {
 			continue;
 		} else if (err == RIFF_CHUNK_UNRECOGNIZED) {
-			BRRLOG_WAR("Skipping unrecognized chunk '%s' (%zu)", FCC_INT_CODE(fo->chunkcc), fo->chunksize);
+			BRRLOG_WAR("Skipping unrecognized chunk '%s' (%zu)", FCC_INT_CODE(sc->chunkcc), sc->chunksize);
 			continue;
 		} else if (err != RIFF_CHUNK_INCOMPLETE) {
 			if (err == RIFF_ERROR)
@@ -60,13 +60,13 @@ i_consume_next_chunk(FILE *const file, riffT *const rf, riff_chunkinfoT *const f
 				return I_BAD_ERROR - err;
 		} else if (feof(file)) {
 			break;
-		} else if (!(buffer = riff_buffer(rf, RIFF_BUFFER_INCREMENT))) {
+		} else if (!(buffer = riff_datasync_buffer(ds, RIFF_BUFFER_INCREMENT))) {
 			return I_BUFFER_ERROR;
 		}
 		bytes_read = fread(buffer, 1, RIFF_BUFFER_INCREMENT, file);
 		if (ferror(file)) {
 			return I_IO_ERROR;
-		} else if (RIFF_BUFFER_APPLY_SUCCESS != riff_apply_buffer(rf, bytes_read)) {
+		} else if (RIFF_BUFFER_APPLY_SUCCESS != riff_datasync_apply(ds, bytes_read)) {
 			return I_BUFFER_ERROR;
 		}
 	}
@@ -77,7 +77,8 @@ int_convert_wem(const char *const input, const char *const output)
 {
 	int err = 0;
 	FILE *in, *out;
-	riff_chunkinfoT sync_info = {0};
+	riff_chunkinfoT sync_chunk = {0};
+	riff_datasyncT sync_data = {0};
 	riffT rf;
 
 	if (!(in = fopen(input, "rb"))) {
@@ -86,19 +87,19 @@ int_convert_wem(const char *const input, const char *const output)
 	}
 
 	riff_init(&rf);
-	while (I_SUCCESS == (err = i_consume_next_chunk(in, &rf, &sync_info)) && (sync_info.is_basic || sync_info.is_list)) {
-		if (sync_info.is_basic) {
-			riff_basic_chunkinfoT *basic = &rf.basics[sync_info.chunkinfo_index];
+	while (I_SUCCESS == (err = i_consume_next_chunk(in, &rf, &sync_chunk, &sync_data)) && (sync_chunk.is_basic || sync_chunk.is_list)) {
+		if (sync_chunk.is_basic) {
+			riff_basic_chunkT *basic = &rf.basics[sync_chunk.chunkinfo_index];
 			BRRLOG_NOR("Got basic chunk : (%zu) '%s'", basic->type, FCC_INT_CODE(riff_basictypes[basic->type - 1]));
 			BRRLOG_NOR("    Size : %zu", basic->size);
 		} else {
-			riff_list_chunkinfoT *list = &rf.lists[sync_info.chunkinfo_index];
+			riff_list_chunkT *list = &rf.lists[sync_chunk.chunkinfo_index];
 			BRRLOG_NOR("Got list chunk : (%zu) '%s'", list->type, FCC_INT_CODE(riff_listtypes[list->type - 1]));
 			BRRLOG_NOR("    Type : '%s'", FCC_INT_CODE(riff_subtypes[list->subtype - 1]));
 			BRRLOG_NOR("    Size : %zu", list->size);
 			/* etc ... */
 		}
-		riff_chunkinfo_clear(&sync_info);
+		riff_chunkinfo_clear(&sync_chunk);
 	}
 	if (err != I_SUCCESS) {
 		BRRLOG_ERRN("Failed to consume RIFF chunk from '%s' : %s", input, i_strerr(err));
