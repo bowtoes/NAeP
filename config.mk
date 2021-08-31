@@ -284,6 +284,7 @@ $(PROJECT)_LDFLAGS=$(LNK) $(PRF) $(LDFLAGS)
 # should be specified relative to CURDIR
 SRC:=\
 	src/main.c\
+	src/bitstream.c\
 	src/common.c\
 	src/riff.c\
 	src/process.c\
@@ -293,6 +294,7 @@ SRC:=\
 	src/process_bnk.c\
 
 HDR:=\
+	src/bitstream.h\
 	src/common.h\
 	src/riff.h\
 	src/process.h\
