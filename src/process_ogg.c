@@ -91,7 +91,6 @@ i_get_next_packet(FILE *const file, ogg_sync_state *const syncer,
 				return err;
 			}
 		} else {
-			BRRLOG_NOR("PACKET %zu", sync_packet->packetno);
 			return I_DESYNC; /* Again, should desync be fatal? In headers, probably */
 		}
 	}
@@ -242,26 +241,24 @@ i_regrain(const char *const input, const char *const output)
 		BRRLOG_ERRN("Failed to recompute granules of '%s' : %s", input, i_strerr(err));
 		return err;
 	}
-
-	fclose(in);
+	i_clear(&in, NULL, &syncer, &istream, NULL, &info, &comment);
 	if (!(out = fopen(output, "wb"))) {
-		i_clear(NULL, NULL, &syncer, &istream, &ostream, &info, &comment);
+		i_clear(NULL, NULL, NULL, NULL, &ostream, NULL, NULL);
 		BRRLOG_ERRN("Failed to open file for regrain output '%s' : %s", output, strerror(errno));
 		return I_IO_ERROR;
 	}
-
 	while (ogg_stream_pageout(&ostream, &sync_page) || ogg_stream_flush(&ostream, &sync_page)) {
 		if (sync_page.header_len != fwrite(sync_page.header, 1, sync_page.header_len, out)) {
-			i_clear(NULL, &out, &syncer, &istream, &ostream, &info, &comment);
+			i_clear(NULL, &out, NULL, NULL, &ostream, NULL, NULL);
 			BRRLOG_ERRN("Failed to write page header to output '%s' : %s", output, strerror(errno));
 			return I_IO_ERROR;
 		} else if (sync_page.body_len != fwrite(sync_page.body, 1, sync_page.body_len, out)) {
-			i_clear(NULL, &out, &syncer, &istream, &ostream, &info, &comment);
+			i_clear(NULL, &out, NULL, NULL, &ostream, NULL, NULL);
 			BRRLOG_ERRN("Failed to write page body to output '%s' : %s", output, strerror(errno));
 			return I_IO_ERROR;
 		}
 	}
-	i_clear(NULL, &out, &syncer, &istream, &ostream, &info, &comment);
+	i_clear(NULL, &out, NULL, NULL, &ostream, NULL, NULL);
 	return I_SUCCESS;
 }
 

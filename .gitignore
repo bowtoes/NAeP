@@ -3,6 +3,8 @@
 
 tags
 *.types
+*.xcf
+*.tmp
 
 *.o
 *.e
