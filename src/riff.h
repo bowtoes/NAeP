@@ -27,73 +27,75 @@ limitations under the License.
 BRRCPPSTART
 
 #define _enum_defs(_l_, _d_) riff_##_l_##_##_d_,
-#define _riff_basictypes(_p_) \
-    _p_(basictype, data) \
-    _p_(basictype, cue) \
-    _p_(basictype, fmt) \
-    _p_(basictype, akd) \
-    _p_(basictype, labl)
+#define _riff_basic_types(_p_) \
+    _p_(basic_type, data) \
+    _p_(basic_type, cue) \
+    _p_(basic_type, fmt) \
+    _p_(basic_type, akd) \
+    _p_(basic_type, vorb) \
+    _p_(basic_type, JUNK) \
+    _p_(basic_type, labl)
 /* Simple data chunks */
-typedef enum riff_basictype {
-	riff_basictype_unrecognized = 0,
-	_riff_basictypes(_enum_defs)
-	riff_basictype_count,
-} riff_basictypeT;
-extern const brru4 riff_basictypes[riff_basictype_count - 1];
+typedef enum riff_basic_type {
+	riff_basic_type_unrecognized = 0,
+	_riff_basic_types(_enum_defs)
+	riff_basic_type_count,
+} riff_basic_typeT;
+extern const brru4 riff_basic_types[riff_basic_type_count - 1];
 
-#define _riff_listtypes(_p_) \
-    _p_(listtype, RIFF) \
-    _p_(listtype, RIFX) \
-    _p_(listtype, XFIR) \
-    _p_(listtype, FFIR) \
-    _p_(listtype, LIST)
+#define _riff_list_types(_p_) \
+    _p_(list_type, RIFF) \
+    _p_(list_type, RIFX) \
+    _p_(list_type, XFIR) \
+    _p_(list_type, FFIR) \
+    _p_(list_type, LIST)
 /* Types with subchunks */
-typedef enum riff_listtype {
-	riff_listtype_unrecognized = 0,
-	_riff_listtypes(_enum_defs)
-	riff_listtype_count,
-} riff_listtypeT;
-extern const brru4 riff_listtypes[riff_listtype_count - 1];
+typedef enum riff_list_type {
+	riff_list_type_unrecognized = 0,
+	_riff_list_types(_enum_defs)
+	riff_list_type_count,
+} riff_list_typeT;
+extern const brru4 riff_list_types[riff_list_type_count - 1];
 
-#define _riff_subtypes(_p_) \
-    _p_(subtype, adtl)
-/* LIST subtypes */
-typedef enum riff_subtype {
-	riff_subtype_unrecognized = 0,
-	_riff_subtypes(_enum_defs)
-	riff_subtype_count,
-} riff_subtypeT;
-extern const brru4 riff_subtypes[riff_subtype_count - 1];
+#define _riff_sub_types(_p_) \
+    _p_(sub_type, adtl)
+/* LIST sub_types */
+typedef enum riff_sub_type {
+	riff_sub_type_unrecognized = 0,
+	_riff_sub_types(_enum_defs)
+	riff_sub_type_count,
+} riff_sub_typeT;
+extern const brru4 riff_sub_types[riff_sub_type_count - 1];
 
-#define _riff_datatypes(_p_) \
-    _p_(datatype, WAVE)
+#define _riff_data_types(_p_) \
+    _p_(data_type, WAVE)
 /* RIFF file data types */
-typedef enum riff_datatype {
-	riff_datatype_unrecognized = 0,
-	_riff_datatypes(_enum_defs)
-	riff_datatype_count,
-} riff_datatypeT;
+typedef enum riff_data_type {
+	riff_data_type_unrecognized = 0,
+	_riff_data_types(_enum_defs)
+	riff_data_type_count,
+} riff_data_typeT;
 #undef _enum_defs
-extern const brru4 riff_datatypes[riff_datatype_count - 1];
+extern const brru4 riff_data_types[riff_data_type_count - 1];
 
 #define _int_defs(_l_, _d_) extern const brru4 riff_##_l_##_int_##_d_;
 #define _fcc_defs(_l_, _d_) extern const fourccT riff_##_l_##_fcc_##_d_;
-_riff_basictypes(_int_defs)
-_riff_basictypes(_fcc_defs)
-_riff_listtypes(_int_defs)
-_riff_listtypes(_fcc_defs)
-_riff_subtypes(_int_defs)
-_riff_subtypes(_fcc_defs)
-_riff_datatypes(_int_defs)
-_riff_datatypes(_fcc_defs)
+_riff_basic_types(_int_defs)
+_riff_basic_types(_fcc_defs)
+_riff_list_types(_int_defs)
+_riff_list_types(_fcc_defs)
+_riff_sub_types(_int_defs)
+_riff_sub_types(_fcc_defs)
+_riff_data_types(_int_defs)
+_riff_data_types(_fcc_defs)
 #undef _fcc_defs
 #undef _int_defs
 
 #if !defined(_riff_keep_types_defines)
-# undef _riff_basictypes
-# undef _riff_listtypes
-# undef _riff_subtypes
-# undef _riff_datatypes
+# undef _riff_basic_types
+# undef _riff_list_types
+# undef _riff_sub_types
+# undef _riff_data_types
 #endif
 
 typedef enum riff_byteorder {
@@ -104,18 +106,18 @@ typedef enum riff_byteorder {
 	riff_byteorder_FFIR,
 } riff_byteorderT;
 typedef struct riff_basic_chunk {
-	riff_basictypeT type;
-	brru4 size;
-	unsigned char *data;
+	riff_basic_typeT type; /* Type of chunk */
+	brru4 size;  /* Size of chunk data in bytes */
+	unsigned char *data; /* Chunk data, heap-allocated; freed through 'riff_clear' */
 } riff_basic_chunkT;
 typedef struct riff_list_chunk {
-	riff_listtypeT type;
-	brru4 size;
-	riff_subtypeT subtype;
-	brru4 first_basic_index;
-	brru4 n_basics;
+	riff_list_typeT type; /* Type of chunk */
+	brru4 size; /* Size of chunk data in bytes */
+	riff_sub_typeT sub_type; /* Subtype of the list */
+	brru4 first_basic_index; /* Index in the riff struct of the first child chunk */
+	brru4 n_basics; /* How many children the list has */
 } riff_list_chunkT;
-typedef struct riff_datasync {
+typedef struct riff_data_sync {
 	unsigned char *data;
 	brrs8 storage;
 	brrs8 stored;
@@ -128,15 +130,15 @@ typedef struct riff_datasync {
 	void *(*BRRCALL move_data)(void *const, const void *const, size_t);
 
 	riff_byteorderT byteorder;
-} riff_datasyncT;
-typedef struct riff_chunkinfo {
-	int chunk_type;    /* Which type of basic/list chunk is this? What it means depends on is_basic and is_list */
-	int chunkinfo_index;
-	brru1 is_basic:1;
-	brru1 is_list:1;
-	brru4 chunkcc;
-	brru4 chunksize;
-} riff_chunkinfoT;
+} riff_data_syncT;
+typedef struct riff_chunk_info {
+	int chunk_type; /* Which type of basic/list chunk is this? What it means depends on is_basic and is_list */
+	int chunk_info_index; /* Final index position of the chunk in the riff struct */
+	brru1 is_basic:1; /* Is the chunk basic? */
+	brru1 is_list:1; /* Is the chunk a list? */
+	brru4 chunkcc; /* Fourcc of the chunk */
+	brru4 chunksize; /* Size of the chunk's data */
+} riff_chunk_infoT;
 typedef struct riff {
 	riff_basic_chunkT *basics;
 	riff_list_chunkT *lists;
@@ -144,7 +146,7 @@ typedef struct riff {
 	brru4 n_lists;
 
 	brru4 total_size;
-	riff_datatypeT datatype;
+	riff_data_typeT data_type;
 } riffT;
 
 #define RIFF_CHUNK_UNRECOGNIZED 2
@@ -155,20 +157,20 @@ typedef struct riff {
 #define RIFF_CONSUME_MORE -3
 #define RIFF_CORRUPTED -4
 
-void BRRCALL riff_chunkinfo_clear(riff_chunkinfoT *const sc);
+void BRRCALL riff_chunk_info_clear(riff_chunk_infoT *const sc);
 
-/* -1 : invalid/broken datasync
- *  0 : valid datasync
+/* -1 : invalid/broken data_sync
+ *  0 : valid data_sync
  * */
-int BRRCALL riff_datasync_check(const riff_datasyncT *const ds);
-void BRRCALL riff_datasync_clear(riff_datasyncT *const ds);
+int BRRCALL riff_data_sync_check(const riff_data_syncT *const ds);
+void BRRCALL riff_data_sync_clear(riff_data_syncT *const ds);
 /* NULL : error
  * */
-char *BRRCALL riff_datasync_buffer(riff_datasyncT *const ds, brru4 size);
+char *BRRCALL riff_data_sync_buffer(riff_data_syncT *const ds, brru4 size);
 /* -1 : error
  *  0 : success
  * */
-int BRRCALL riff_datasync_apply(riff_datasyncT *const ds, brru4 size);
+int BRRCALL riff_data_sync_apply(riff_data_syncT *const ds, brru4 size);
 
 void BRRCALL riff_clear(riffT *const rf);
 /* -1 : error
@@ -183,11 +185,20 @@ int BRRCALL riff_check(const riffT *const rf);
  *  0 : not enough data
  *  1 : chunk consumed successfully
  * */
-int BRRCALL riff_consume_chunk(riffT *const rf, riff_chunkinfoT *const sc, riff_datasyncT *const ds);
+int BRRCALL riff_consume_chunk(riffT *const rf, riff_chunk_infoT *const sc, riff_data_syncT *const ds);
 
-#define FMT_BASIC_FIELDS    brru2 format_tag; brru2 n_channels; brru4 samples_per_sec; brru4 avg_bytes_per_sec; brru2 block_align
-#define FMT_PCM_FIELDS      FMT_BASIC_FIELDS; brru2 bits_per_sample
-#define FMT_EXTENDED_FIELDS FMT_PCM_FIELDS; brru2 cbSize
+#define FMT_BASIC_FIELDS \
+    brru2 format_tag; \
+    brru2 n_channels; \
+    brru4 samples_per_sec; \
+    brru4 avg_byte_rate; \
+    brru2 block_align
+#define FMT_PCM_FIELDS \
+    FMT_BASIC_FIELDS; \
+    brru2 bits_per_sample
+#define FMT_EXTENDED_FIELDS \
+    FMT_PCM_FIELDS; \
+    brru2 extra_size
 typedef struct riff_fmt_basic {
 	FMT_BASIC_FIELDS;
 	brru2 padding;

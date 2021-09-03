@@ -1,3 +1,5 @@
+[Up](.)
+
 # `fmt` Chunk
 `WAVE` files have a `fmt ` chunk, used to detail various aspects of the audio
 stored within. In Ogg/Vorbis, some of this information is stored in a different
@@ -40,14 +42,14 @@ These structure layouts are taken from the [Windows 10 SDK][win10 sdk] file `mmr
   |`nAvgBytesPerSec`|`DWORD`|4           |For buffer estimation (whatever that means)|
   |`nBlockAlign`    |`WORD` |2           |Block size of data (wdtm)                  |
 
-  **Total Size:** 14 `0x0E` bytes  
+  **Total Size:** `0x0E` 14 bytes  
 * #### PCM Extra format (tag `PCMWAVEFORMAT`)
   |Field           |Type        |Size (bytes)|Description                                  |
   |:----           |:----       |:---:       |:----                                        |
   |`wf`            |`WAVEFORMAT`|14          |Inherits all fields of standard `fmt ` chunk.|
   |`wBitsPerSample`|`WORD`      |2           |Bits used per PCM audio sample               |
 
-  **Total Size:** 16 `0x10` bytes  
+  **Total Size:** `0x10` 16 bytes  
 * #### Standard extended format structure (tag `tWAVEFORMATEX`, `WAVEFORMATEX`)
   |Field            |Type   |Size (bytes)|Description                                                    |
   |:----            |:----  |:---:       |:----                                                          |
@@ -59,7 +61,7 @@ These structure layouts are taken from the [Windows 10 SDK][win10 sdk] file `mmr
   |`wBitsPerSample` |`WORD` |2           |Bits-per-sample of mono data                                   |
   |`cbSize`         |`WORD` |2           |Size of the extra format information, starting after this field|
 
-  **Total Size:**  18 `0x12` bytes  
+  **Total Size:**  `0x12` 18 bytes  
 * #### New extended format structure (tag `WAVEFORMATEXTENSIBLE`)
   |Field                  |Type                          |Size (bytes)|Description                             |
   |:----                  |:----                         |:---:       |:----                                   |
@@ -69,15 +71,14 @@ These structure layouts are taken from the [Windows 10 SDK][win10 sdk] file `mmr
   |`->wSamplesPerBlock`   |`WORD`                        |_0_         |Valid if `Format.wBitsPerSample` is 0   |
   |`->wReserved`          |`WORD`                        |_0_         |Reserved                                |
   |`dwChannelMask`        |`DWORD`                       |4           |Which channels are present in the stream|
-  |`SubFormat`            |`GUID`                        |16          |TBW                                     |
+  |`SubFormat`            |[`GUID`][win10 guid]          |16          |TBW                                     |
 
-  **Total Size:** 40 `0x28` bytes  
-  **Size without `GUID`:** 24 `0x18` bytes  
+  **Total Size:** `0x28` 40 bytes  
+  **Size without `GUID`:** `0x18` 24 bytes  
 
 ## Wwise-specific format structure(s)
 These fields I took from reading the source code of [ww2ogg][ww2ogg gh] and
-piecing together how things were structured from there how they decoded the
-data.
+piecing things together from how they decoded the data.
 
 * #### Fields common to all formats
   |Field            |Type   |Size (bytes)|Description                                                                            |
@@ -90,26 +91,28 @@ data.
   |`wBitsPerSample` |`WORD` |2           |Bits-per-sample/second of mono, same as standard formats (expected 0)                  |
   |`cbSize`         |`WORD` |2           |Size of extra format information, same as standard formats (expected to be `size - 18`)|
 
+  **Total Size:** `0x12` 18 bytes  
+
 * #### Format A
-  **Total Size:** 18 `0x12` bytes  
-  **Expected `cbSize`:** 0 `0x00` bytes  
+  **Total Size:** `0x12` 18 bytes  
+  **Expected `cbSize`:** `0x00` 0 bytes  
 * #### Format B
   |Field|Type |Size (bytes)|Description|
   |:----|:----|:---:       |:----      |
   |`Samples`      |<code><b>union</b> WORD</code>|2 |Same as in the extended format structure|
   |`dwChannelMask`|`DWORD`                       |4 |Same as in the extended format structure|
 
-  **Total Size:** 24 `0x18` bytes  
-  **Expected `cbSize`:** 6 `0x06` bytes  
+  **Total Size:** `0x18` 24 bytes  
+  **Expected `cbSize`:** `0x06` 6 bytes  
 * #### Format C
   |Field|Type |Size (bytes)|Description|
   |:----|:----|:---:       |:----      |
   |`Samples`      |<code><b>union</b> WORD</code>|2 |Same as in the extended format structure|
   |`dwChannelMask`|`DWORD`                       |4 |Same as in the extended format structure|
-  |`SubFormat`    |`GUID`                        |16|Same as in the extended format structure|
+  |`SubFormat`    |[`GUID`][win10 guid]          |16|Same as in the extended format structure|
 
-  **Total Size:** 40 `0x28` bytes  
-  **Expected `cbSize`:** 22 `0x16` bytes  
+  **Total Size:** `0x28` 40 bytes  
+  **Expected `cbSize`:** `0x16` 22 bytes  
 * #### Format D
   |Field          |Type                          |Size (bytes)|Description                                              |
   |:----          |:----                         |:---:       |:----                                                    |
@@ -117,8 +120,8 @@ data.
   |`dwChannelMask`|`DWORD`                       |4           |Same as in the extended format structure                 |
   |`Vorbis`       |`vorb`                        |42          |Vorbis specific information; normally in a separate chunk|
 
-  **Total Size:** 66 `0x42` bytes  
-  **Expected `cbSize`:** 48 `0x30` bytes  
+  **Total Size:** `0x42` 66 bytes  
+  **Expected `cbSize`:** `0x30` 48 bytes  
 
 ## Format Tags
 The format type for a given WAVE file is stored in the `wFormatTag` field of
@@ -136,6 +139,8 @@ Notable format types:
 * [MGSV Soundswap guide][mgsv soundswap]
 * [Wem Format Blueprints][wem format blueprints]
 * [Topher Lee's guide on PCM WAVE][topher lee pcm]
+
+[win10 guid]:../misc/windefs.md#guid---shared-guiddef.h
 
 [ww2ogg gh]:https://github.com/hcs64/ww2ogg
 [win10 sdk]:https://developer.microsoft.com/en-US/windows/downloads/windows-10-sdk/

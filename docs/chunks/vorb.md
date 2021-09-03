@@ -11,8 +11,7 @@ of the `fmt ` chunk.
 
 ## `vorb` Chunk Data Structure(s)
 These fields I took from reading the source code of [ww2ogg][ww2ogg gh] and
-piecing together how things were structured from how they decoded the
-data.
+piecing things together from how they decoded the data.
 
 ![A](vorbchunk.png)
 
