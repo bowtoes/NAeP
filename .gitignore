@@ -21,5 +21,6 @@ test/
 codebooks/
 src/bnkextr/
 src/revorbc/
+swp.sh
 
 compile_commands.json

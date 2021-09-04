@@ -287,6 +287,7 @@ SRC:=\
 	src/bitstream.c\
 	src/common.c\
 	src/riff.c\
+	src/wwise.c\
 	src/process.c\
 	src/process_ogg.c\
 	src/process_wem.c\
@@ -297,5 +298,6 @@ HDR:=\
 	src/bitstream.h\
 	src/common.h\
 	src/riff.h\
+	src/wwise.h\
 	src/process.h\
 	src/process_files.h\

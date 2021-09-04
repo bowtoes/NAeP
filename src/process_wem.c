@@ -27,81 +27,14 @@ limitations under the License.
 #include <brrtools/brrlib.h>
 #include <brrtools/brrlog.h>
 #include <brrtools/brrpath.h>
-#include <brrtools/brrplatform.h>
-#include <brrtools/brrmem.h>
 
 #include "riff.h"
+#include "wwise.h"
 
-typedef struct wwise_vorb_implicit {
-	brru4 sample_count;
-	brru4 mod_signal;
-	brru1 skipped_0[8];
-	brru4 setup_packet_offset;
-	brru4 audio_start_offset;
-	brru1 skipped_1[12];
-	brru4 uid;
-	brru1 blocksize_bits[2];
-	brru1 unknown[2];
-} wwise_vorb_implicitT;
-typedef struct wwise_vorb_basic {
-	brru4 sample_count;
-	brru1 skipped_0[20];
-	brru4 setup_packet_offset;
-	brru4 audio_start_offset;
-	brru1 unknown[12];
-} wwise_vorb_basicT;
-typedef struct wwise_vorb_extra {
-	brru4 sample_count;
-	brru1 skipped_0[20];
-	brru4 setup_packet_offset;
-	brru4 audio_start_offset;
-	brru1 skipped_1[12];
-	brru4 uid;
-	brru1 blocksize_bits[2];
-	brru1 unknown[2];
-} wwise_vorb_extraT;
-typedef union wwise_vorb {
-	brru4 sample_count;
-	wwise_vorb_implicitT implicit;
-	wwise_vorb_basicT basic;
-	wwise_vorb_extraT extra;
-} wwise_vorbT;
+#define RIFF_BUFFER_APPLY_SUCCESS 0
+#define RIFF_BUFFER_APPLY_FAILURE -1
 
-typedef struct wwise_fmt {
-	brru2 format_tag;
-	brru2 n_channels;
-	brru4 samples_per_sec;
-	brru4 avg_byte_rate;
-	brru2 block_align;
-	brru2 bits_per_sample;
-	brru2 extra_size;
-	union {
-		brru2 valid_bits_per_sample;
-		brru2 samples_per_block;
-		brru2 reserved;
-	};
-	brru4 channel_mask;
-	union {
-		struct {
-			brru4 data1;
-			brru2 data2;
-			brru2 data3;
-			brru1 data4[8];
-		} guid;
-		wwise_vorbT vorb;
-	};
-} wwise_fmtT;
-
-typedef enum wwise_vorb_type {
-	wwise_vorb_type_basic = 0,
-	wwise_vorb_type_extra,
-	wwise_vorb_type_implicit,
-} wwise_vorb_typeT;
-typedef struct wwise_wem {
-	wwise_fmtT fmt;
-	wwise_vorb_typeT vorb_type;
-	wwise_vorbT vorb;
-} wwise_wemT;
+#define RIFF_BUFFER_INCREMENT 4096
 
 static void BRRCALL
 i_print_wem(const wwise_wemT *const wem)
@@ -133,7 +66,7 @@ i_print_wem(const wwise_wemT *const wem)
 	BRRLOG_NOR("vorb data:");
 	BRRLOG_NOR("vorb>       sample_count : %lu", wem->vorb.sample_count);
 	if (wem->vorb_type == wwise_vorb_type_implicit) {
-	BRRLOG_NOR("vorb>         mod_signal : %lu", wem->vorb.implicit.mod_signal);
+	BRRLOG_NOR("vorb>         mod_signal : %lu 0x%08X", wem->vorb.implicit.mod_signal, wem->vorb.implicit.mod_signal);
 	}
 	if (wem->vorb_type == wwise_vorb_type_implicit) {
 	BRRLOG_NOR("vorb>setup_packet_offset : 0x%08X", wem->vorb.implicit.setup_packet_offset);
@@ -144,23 +77,16 @@ i_print_wem(const wwise_wemT *const wem)
 	}
 	if (wem->vorb_type == wwise_vorb_type_implicit) {
 	BRRLOG_NOR("vorb>                uid : 0x%08X", wem->vorb.implicit.uid);
-	BRRLOG_NOR("vorb>   blocksize_0_bits : %u", wem->vorb.implicit.blocksize_bits[0]);
-	BRRLOG_NOR("vorb>   blocksize_1_bits : %u", wem->vorb.implicit.blocksize_bits[1]);
+	BRRLOG_NOR("vorb>        blocksize_0 : %u", wem->vorb.implicit.blocksize[0]);
+	BRRLOG_NOR("vorb>        blocksize_1 : %u", wem->vorb.implicit.blocksize[1]);
 	} else if (wem->vorb_type == wwise_vorb_type_extra) {
 	BRRLOG_NOR("vorb>                uid : 0x%08X", wem->vorb.extra.uid);
-	BRRLOG_NOR("vorb>   blocksize_0_bits : %u", wem->vorb.extra.blocksize_bits[0]);
-	BRRLOG_NOR("vorb>   blocksize_1_bits : %u", wem->vorb.extra.blocksize_bits[1]);
+	BRRLOG_NOR("vorb>        blocksize_0 : %u", wem->vorb.extra.blocksize[0]);
+	BRRLOG_NOR("vorb>        blocksize_1 : %u", wem->vorb.extra.blocksize[1]);
 	}
 }
-
-#define RIFF_BUFFER_APPLY_SUCCESS 0
-#define RIFF_BUFFER_APPLY_FAILURE -1
-
-#define RIFF_BUFFER_INCREMENT 4096
-
 static void BRRCALL
-i_clear(FILE **restrict const in, FILE **restrict const out, riff_data_syncT *const sync_data,
-    riffT *const rf)
+i_clear(FILE **restrict const in, FILE **restrict const out, riffT *const rf)
 {
 	if (in) {
 		if (*in)
@@ -172,8 +98,6 @@ i_clear(FILE **restrict const in, FILE **restrict const out, riff_data_syncT *co
 			fclose(*out);
 		*out = NULL;
 	}
-	if (sync_data)
-		riff_data_sync_clear(sync_data);
 	if (rf)
 		riff_clear(rf);
 }
@@ -215,45 +139,91 @@ i_consume_next_chunk(FILE *const file, riffT *const rf, riff_chunk_infoT *const 
 	return I_SUCCESS;
 }
 static int BRRCALL
+i_read_riff_chunks(FILE *const file, riffT *const rf)
+{
+	riff_chunk_infoT sync_chunk = {0};
+	riff_data_syncT sync_data = {0};
+	int err = I_SUCCESS;
+	while (I_SUCCESS == (err = i_consume_next_chunk(file, rf, &sync_chunk, &sync_data)) && (sync_chunk.is_basic || sync_chunk.is_list)) {
+		riff_chunk_info_clear(&sync_chunk);
+	}
+	if (err != I_SUCCESS) {
+		riff_data_sync_clear(&sync_data);
+		return err;
+	}
+	return err;
+}
+static int BRRCALL
+i_init_wem(wwise_wemT *const wem, const riffT *const rf)
+{
+	brru1 init_fmt = 0, init_vorb = 0, init_data = 0;
+	for (brru8 i = 0; i < rf->n_basics; ++i) {
+		riff_basic_chunkT *basic = &rf->basics[i];
+		if (basic->type == riff_basic_type_fmt) {
+			if (!init_fmt) {
+				brru8 to_copy = brrlib_umin(basic->size, sizeof(wem->fmt));
+				memcpy(&wem->fmt, basic->data, to_copy);
+				if (basic->size >= 66) {
+					wem->vorb = wem->fmt.vorb;
+					wem->vorb_type = wwise_vorb_type_implicit;
+					init_vorb = 1;
+				}
+				init_fmt = 1;
+			} else {
+				BRRLOG_WAR("Found second fmt chunk in input");
+			}
+		} else if (basic->type == riff_basic_type_vorb) {
+			if (!init_vorb) {
+				brru8 to_copy = brrlib_umin(basic->size, sizeof(wem->vorb));
+				memcpy(&wem->vorb, basic->data, to_copy);
+				if (basic->size == 42)
+					wem->vorb_type = wwise_vorb_type_implicit;
+				else if (basic->size < 50)
+					wem->vorb_type = wwise_vorb_type_basic;
+				else
+					wem->vorb_type = wwise_vorb_type_extra;
+				init_vorb = 1;
+			} else {
+				if (wem->vorb_type == wwise_vorb_type_implicit) {
+					BRRLOG_WAR("Found vorb chunk in input with implicit vorb");
+				} else {
+					BRRLOG_WAR("Found second vorb chunk in input");
+				}
+			}
+		} else if (basic->type == riff_basic_type_data) {
+			if (!init_data) {
+				wem->data = basic->data;
+				init_data = 1;
+			} else {
+				BRRLOG_WAR("Found second data chunk in input");
+			}
+		}
+	}
+	return I_SUCCESS;
+}
+static int BRRCALL
 int_convert_wem(const char *const input, const char *const output)
 {
 	int err = 0;
 	FILE *in, *out;
-	riff_chunk_infoT sync_chunk = {0};
-	riff_data_syncT sync_data = {0};
 	riffT rf;
 	wwise_wemT wem;
 
 	if (!(in = fopen(input, "rb"))) {
-		BRRLOG_ERRN("Failed to open wem for conversion input '%s' : %s", input, strerror(errno));
+		BRRLOG_ERRN("Failed to open wem for conversion input '%s' : %s ", input, strerror(errno));
 		return I_IO_ERROR;
 	}
 
 	riff_init(&rf);
-	while (I_SUCCESS == (err = i_consume_next_chunk(in, &rf, &sync_chunk, &sync_data)) && (sync_chunk.is_basic || sync_chunk.is_list)) {
-		riff_chunk_info_clear(&sync_chunk);
-	}
-	if (err != I_SUCCESS) {
+	if (I_SUCCESS != (err = i_read_riff_chunks(in, &rf))) {
 		BRRLOG_ERRN("Failed to consume RIFF chunk : %s ", i_strerr(err));
-		i_clear(&in, NULL, &sync_data, &rf);
+		i_clear(&in, NULL, &rf);
 		return err;
 	}
-	i_clear(&in, NULL, &sync_data, NULL);
-	for (brru8 i = 0; i < rf.n_basics; ++i) {
-		riff_basic_chunkT *basic = &rf.basics[i];
-		if (basic->type == riff_basic_type_fmt) {
-			wem.fmt = *(wwise_fmtT *)basic->data;
-			if (basic->size >= 66) {
-				wem.vorb = wem.fmt.vorb;
-				wem.vorb_type = wwise_vorb_type_implicit;
-			}
-		} else if (basic->type == riff_basic_type_vorb) {
-			wem.vorb = *(wwise_vorbT *)basic->data;
-			if (basic->size < 50)
-				wem.vorb_type = wwise_vorb_type_basic;
-			else
-				wem.vorb_type = wwise_vorb_type_extra;
-		}
+	i_clear(&in, NULL, NULL);
+	if (I_SUCCESS != (err = i_init_wem(&wem, &rf))) {
+		i_clear(NULL, NULL, &rf);
+		return err;
 	}
 
 	i_print_wem(&wem);

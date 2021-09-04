@@ -200,6 +200,7 @@ bitstream_resize(bitstream_stateT *const bs, brru8 bits)
 	if (!bs)
 		return -1;
 	bs->length = bitplot_new(bits);
+	return 0;
 }
 int BRRCALL
 bitstream_grow(bitstream_stateT *const bs, brru8 bits)

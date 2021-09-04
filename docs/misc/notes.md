@@ -8,16 +8,8 @@ Audiokinetic engine a simpler implementation.
 [countwsp][]
 
 ## Weird WEMS
-Some WEMs seem to be formatted (chunk `fmt `) using a specific kind of wav format, or something
-very like it. They have the extensible format code (`0xFFFE`), and the 'extra data'
-section is 6 bytes long which seems invalid. After that, a `JUNK` chunk with
-exactly four bytes of 0. Then it's that data chunk, and
-the data chunk is very very strange; all of the files have what looks like `almost`
-the same data repeating over and over again, evenly spaced. And between the files,
-some of the data seems to be identical to, or a conjunction/modification of, other files'
-data. Ww2ogg can't handle them, giving `Parse error: expected 0x42 fmt if vorb missing`. Maybe they're a single/multiple sounds encoded
-across multiple files? I have no idea, more research is necessary.  
-These are the WEMs in question:  
+Some WEMs are unlike most others in NieR's files, being 16-bit PCM data. These
+are the files:
 `BGM_0_000_04.wem`  
 `BGM_0_000_05.wem`  
 `BGM_0_000_06.wem`  
@@ -26,7 +18,8 @@ These are the WEMs in question:
 `BGM_0_000_10.wem`  
 `BGM_0_000_11.wem`  
 `BGM_0_000_12.wem`  
-They all have the same `data` chunk size of `00 CA 08 00` (576,000)
+They are all the same audio; a simple sine wave (but in a full 6 channels!); I
+have no idea why they're here.
 
 There's also this one:  
 `BGM_0_001_10.wem`  
