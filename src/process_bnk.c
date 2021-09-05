@@ -19,13 +19,12 @@ limitations under the License.
 #include <brrtools/brrlog.h>
 
 int BRRCALL
-extract_bnk(numbersT *const numbers, int dry_run, const char *const path,
-    int inplace_ogg, int auto_ogg, int bnk_recurse, input_libraryT *const library)
+extract_bnk(numbersT *const numbers, const processed_inputT *const input, input_libraryT *const libraries)
 {
 	int err = 0;
 	numbers->bnks_to_process++;
-	if (dry_run) {
-		BRRLOG_FOREP(DRY_COLOR, " Extract BNK");
+	if (input->options.dry_run) {
+		BRRLOG_FOREP(DRY_COLOR, " Extract BNK (dry)");
 	} else {
 		NeTODO("Implement 'extract_bnk' priority ZZZ (sleeping) ");
 		BRRLOG_FOREP(WET_COLOR, " Extracting BNK...");

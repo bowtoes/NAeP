@@ -88,6 +88,92 @@ print_help()
 	fprintf(stdout, "%s\n", help);
 	exit(0);
 }
+static int BRRCALL
+i_parse_argument(const char *const arg, global_optionsT *const global, input_optionsT *const options)
+{
+#define IF_CHECK_ARG(_cse_, ...) if (-1 != brrstg_cstr_compare(arg, _cse_, __VA_ARGS__, NULL))
+	if (arg[0] == 0) { /* Argument is of 0 length, very bad! */
+		return 1;
+	} else if (global->always_file) {
+		return 0;
+	} else if (global->next_is_file) {
+		global->next_is_file = 0;
+		return 0;
+	} else if (global->next_is_cbl) {
+		return 0;
+	} else IF_CHECK_ARG(0, "-h", "-help", "--help", "-v", "-version", "--version") {
+		print_help();
+	} else IF_CHECK_ARG(1, "-a", "-auto", "-detect") {
+		options->type = INPUT_TYPE_UNK;
+		return 1;
+	} else IF_CHECK_ARG(1, "-o", "-ogg") {
+		options->type = INPUT_TYPE_OGG;
+		return 1;
+	} else IF_CHECK_ARG(1, "-w", "-wem", "-weem") {
+		options->type = INPUT_TYPE_WEM;
+		return 1;
+	} else IF_CHECK_ARG(1, "-W", "-wsp", "-wisp") {
+		options->type = INPUT_TYPE_WSP;
+		return 1;
+	} else IF_CHECK_ARG(1, "-b", "-bnk", "-bank") {
+		options->type = INPUT_TYPE_BNK;
+		return 1;
+	} else IF_CHECK_ARG(1, "-R", "-recurse-bank") {
+		BRRTIL_TOGGLE(options->bank_recurse);
+		return 1;
+	} else IF_CHECK_ARG(1, "-O", "-wem2ogg") {
+		BRRTIL_TOGGLE(options->auto_ogg);
+		return 1;
+	} else IF_CHECK_ARG(1, "-oi", "-ogg-inplace") {
+		BRRTIL_TOGGLE(options->inplace_ogg);
+		return 1;
+	} else IF_CHECK_ARG(1, "-ri", "-rgrn-inplace", "-rvb-inplace") {
+		BRRTIL_TOGGLE(options->inplace_regrain);
+		return 1;
+	} else IF_CHECK_ARG(1, "-Q", "-qq", "-too-quiet") {
+		BRRTIL_TOGGLE(options->log_enabled);
+		return 1;
+	} else IF_CHECK_ARG(1, "-c", "-color") {
+		BRRTIL_TOGGLE(options->log_color_enabled);
+		return 1;
+	} else IF_CHECK_ARG(1, "-C", "-global-color") {
+		BRRTIL_TOGGLE(global->log_style_enabled);
+		return 1;
+	} else IF_CHECK_ARG(1, "--") {
+		global->next_is_file = 1;
+		return 1;
+	} else IF_CHECK_ARG(1, "-!") {
+		global->always_file = 1;
+		return 1;
+	} else IF_CHECK_ARG(1, "-d", "-debug") {
+		BRRTIL_TOGGLE(options->log_debug);
+		if (options->log_debug)
+			options->log_enabled = 1;
+		return 1;
+	} else IF_CHECK_ARG(1, "-q", "-quiet") {
+		if (options->log_priority > 0)
+			options->log_priority--;
+		if (options->log_priority == 0 && !options->log_debug)
+			options->log_enabled = 0;
+		return 1;
+	} else IF_CHECK_ARG(1, "+q", "+quiet") {
+		if (options->log_priority < brrlog_priority_count - 1)
+			options->log_priority++;
+		options->log_enabled = 1;
+		return 1;
+	} else IF_CHECK_ARG(1, "-n", "-dry", "-dry-run") {
+		BRRTIL_TOGGLE(options->dry_run);
+		return 1;
+	} else IF_CHECK_ARG(1, "-reset") {
+		BRRTIL_TOGGLE(global->should_reset);
+		return 1;
+	} else IF_CHECK_ARG(1, "-cbl", "-codebook-library") {
+		global->next_is_cbl = 1;
+		return 1;
+	}
+	return 0;
+#undef IF_CHECK_ARG
+}
 
 static int BRRCALL
 i_init_brrlog(void)
@@ -165,93 +251,6 @@ i_determine_input_type(processed_inputT *const input, const char *const extensio
 	}
 	return err;
 }
-static int BRRCALL
-i_parse_argument(void (*const print_help)(void),
-    const char *const arg, global_optionsT *const global, input_optionsT *const options)
-{
-#define IF_CHECK_ARG(_cse_, ...) if (-1 != brrstg_cstr_compare(arg, _cse_, __VA_ARGS__, NULL))
-	if (arg[0] == 0) { /* Argument is of 0 length, very bad! */
-		return 1;
-	} else if (global->always_file) {
-		return 0;
-	} else if (global->next_is_file) {
-		global->next_is_file = 0;
-		return 0;
-	} else if (global->next_is_cbl) {
-		return 0;
-	} else IF_CHECK_ARG(0, "-h", "-help", "--help", "-v", "-version", "--version") {
-		print_help();
-	} else IF_CHECK_ARG(1, "-a", "-auto", "-detect") {
-		options->type = INPUT_TYPE_UNK;
-		return 1;
-	} else IF_CHECK_ARG(1, "-o", "-ogg") {
-		options->type = INPUT_TYPE_OGG;
-		return 1;
-	} else IF_CHECK_ARG(1, "-w", "-wem", "-weem") {
-		options->type = INPUT_TYPE_WEM;
-		return 1;
-	} else IF_CHECK_ARG(1, "-W", "-wsp", "-wisp") {
-		options->type = INPUT_TYPE_WSP;
-		return 1;
-	} else IF_CHECK_ARG(1, "-b", "-bnk", "-bank") {
-		options->type = INPUT_TYPE_BNK;
-		return 1;
-	} else IF_CHECK_ARG(1, "-R", "-recurse-bank") {
-		BRRTIL_TOGGLE(options->bank_recurse);
-		return 1;
-	} else IF_CHECK_ARG(1, "-O", "-wem2ogg") {
-		BRRTIL_TOGGLE(options->auto_ogg);
-		return 1;
-	} else IF_CHECK_ARG(1, "-oi", "-ogg-inplace") {
-		BRRTIL_TOGGLE(options->inplace_ogg);
-		return 1;
-	} else IF_CHECK_ARG(1, "-ri", "-rgrn-inplace", "-rvb-inplace") {
-		BRRTIL_TOGGLE(options->inplace_regranularize);
-		return 1;
-	} else IF_CHECK_ARG(1, "-Q", "-qq", "-too-quiet") {
-		BRRTIL_TOGGLE(options->log_enabled);
-		return 1;
-	} else IF_CHECK_ARG(1, "-c", "-color") {
-		BRRTIL_TOGGLE(options->log_color_enabled);
-		return 1;
-	} else IF_CHECK_ARG(1, "-C", "-global-color") {
-		BRRTIL_TOGGLE(global->log_style_enabled);
-		return 1;
-	} else IF_CHECK_ARG(1, "--") {
-		global->next_is_file = 1;
-		return 1;
-	} else IF_CHECK_ARG(1, "-!") {
-		global->always_file = 1;
-		return 1;
-	} else IF_CHECK_ARG(1, "-d", "-debug") {
-		BRRTIL_TOGGLE(options->log_debug);
-		if (options->log_debug)
-			options->log_enabled = 1;
-		return 1;
-	} else IF_CHECK_ARG(1, "-q", "-quiet") {
-		if (options->log_priority > 0)
-			options->log_priority--;
-		if (options->log_priority == 0 && !options->log_debug)
-			options->log_enabled = 0;
-		return 1;
-	} else IF_CHECK_ARG(1, "+q", "+quiet") {
-		if (options->log_priority < brrlog_priority_count - 1)
-			options->log_priority++;
-		options->log_enabled = 1;
-		return 1;
-	} else IF_CHECK_ARG(1, "-n", "-dry", "-dry-run") {
-		BRRTIL_TOGGLE(options->dry_run);
-		return 1;
-	} else IF_CHECK_ARG(1, "-reset") {
-		BRRTIL_TOGGLE(global->should_reset);
-		return 1;
-	} else IF_CHECK_ARG(1, "-cbl", "-codebook-library") {
-		global->next_is_cbl = 1;
-		return 1;
-	}
-	return 0;
-#undef IF_CHECK_ARG
-}
 static brrsz BRRCALL
 i_find_library(const char *const test_path, const input_libraryT *const libraries, brrsz library_count)
 {
@@ -309,7 +308,7 @@ i_take_arguments(processed_inputT **const inputs, input_libraryT **const librari
 	for (brrsz i = 0; i < argc; ++i) {
 		char *arg = argv[i];
 		processed_inputT *tmp_arg = NULL;
-		if (i_parse_argument(print_help, arg, global, current)) {
+		if (i_parse_argument(arg, global, current)) {
 			continue;
 		} else if (global->next_is_cbl) {
 			current->library_index = i_find_library(arg, *libraries, nums->n_libraries);
@@ -376,7 +375,7 @@ i_process_input(processed_inputT *const input, input_libraryT *const libraries,
 #if !defined(NeDEBUG)
 	if (input->options.log_debug) {
 #endif
-		processed_input_print(input, brrlog_priority_debug, 0, numbers->input_path_max_length);
+		processed_input_print(input, numbers->input_path_max_length, brrlog_priority_debug, 0);
 #if !defined(NeDEBUG)
 	}
 #endif
@@ -394,26 +393,19 @@ i_process_input(processed_inputT *const input, input_libraryT *const libraries,
 		if (input->options.type == INPUT_TYPE_OGG) {
 			BRRLOG_MESSAGETNP(gbrrlog_level_last, OGG_FORMAT, "%-*s",
 			    numbers->input_path_max_length, BRRTIL_NULSTR((char *)input->path.opaque));
-			regranularize_ogg(numbers, input->options.dry_run, input->path.opaque,
-			    input->options.inplace_regranularize);
+			regrain_ogg(numbers, input);
 		} else if (input->options.type == INPUT_TYPE_WEM) {
 			BRRLOG_MESSAGETNP(gbrrlog_level_last, WEM_FORMAT, "%-*s",
 			    numbers->input_path_max_length, BRRTIL_NULSTR((char *)input->path.opaque));
-			convert_wem(numbers, input->options.dry_run, input->path.opaque,
-			    input->options.inplace_ogg,
-			    &libraries[input->options.library_index]);
+			convert_wem(numbers, input, libraries);
 		} else if (input->options.type == INPUT_TYPE_WSP) {
 			BRRLOG_MESSAGETNP(gbrrlog_level_last, WSP_FORMAT, "%-*s",
 			    numbers->input_path_max_length, BRRTIL_NULSTR((char *)input->path.opaque));
-			extract_wsp(numbers, input->options.dry_run, input->path.opaque,
-			    input->options.inplace_ogg, input->options.auto_ogg,
-			    &libraries[input->options.library_index]);
+			extract_wsp(numbers, input, libraries);
 		} else if (input->options.type == INPUT_TYPE_BNK) {
 			BRRLOG_MESSAGETNP(gbrrlog_level_last, BNK_FORMAT, "%-*s",
 			    numbers->input_path_max_length, BRRTIL_NULSTR((char *)input->path.opaque));
-			extract_bnk(numbers, input->options.dry_run, input->path.opaque,
-			    input->options.inplace_ogg, input->options.auto_ogg, input->options.bank_recurse,
-			    &libraries[input->options.library_index]);
+			extract_bnk(numbers, input, libraries);
 		}
 	}
 

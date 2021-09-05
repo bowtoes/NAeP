@@ -27,6 +27,9 @@ limitations under the License.
 #include <brrtools/brrlog.h>
 #include <brrtools/brrpath.h>
 
+static const char *ginput_name = NULL;
+static char goutput_name[BRRPATH_MAX_PATH + 1] = {0};
+
 #define SYNC_BUFFER_SIZE 4096
 static int BRRCALL
 i_get_first_page(FILE *const file, ogg_sync_state *const syncer, ogg_page *sync_page)
@@ -195,7 +198,7 @@ i_clear(FILE **const in, FILE **const out, ogg_sync_state *const syncer,
 		vorbis_comment_clear(comment);
 }
 static int BRRCALL
-i_regrain(const char *const input, const char *const output)
+i_regrain(void)
 {
 	int err = 0;
 	FILE *in, *out;
@@ -205,38 +208,38 @@ i_regrain(const char *const input, const char *const output)
 	ogg_stream_state istream, ostream;
 	vorbis_info info;
 	vorbis_comment comment;
-	if (!(in = fopen(input, "rb"))) {
-		BRRLOG_ERRN("Failed to open ogg for regrain input '%s' : %s", input, strerror(errno));
+	if (!(in = fopen(ginput_name, "rb"))) {
+		BRRLOG_ERRN("Failed to open ogg for regrain input '%s' : %s", ginput_name, strerror(errno));
 		return I_IO_ERROR;
 	}
 	ogg_sync_init(&syncer);
 	if ((err = i_init_streams(in, &syncer, &sync_page, &istream, &ostream))) {
 		i_clear(&in, NULL, &syncer, NULL, NULL, NULL, NULL);
-		BRRLOG_ERRN("Failed to initialize streams for regrain of '%s' : %s", input, i_strerr(err));
+		BRRLOG_ERRN("Failed to initialize streams for regrain of '%s' : %s", ginput_name, i_strerr(err));
 		return err;
 	} else if ((err = i_init_headers(in, &syncer, &sync_page, &sync_packet, &istream, &ostream, &info, &comment))) {
 		i_clear(&in, NULL, &syncer, &istream, &ostream, NULL, NULL);
-		BRRLOG_ERRN("Failed to initialize vorbis headers from '%s' : %s", input, i_strerr(err));
+		BRRLOG_ERRN("Failed to initialize vorbis headers from '%s' : %s", ginput_name, i_strerr(err));
 		return err;
 	} else if ((err = i_recompute_grains(in, &syncer, &sync_page, &sync_packet, &istream, &ostream, &info))) {
 		i_clear(&in, NULL, &syncer, &istream, &ostream, &info, &comment);
-		BRRLOG_ERRN("Failed to recompute granules of '%s' : %s", input, i_strerr(err));
+		BRRLOG_ERRN("Failed to recompute granules of '%s' : %s", ginput_name, i_strerr(err));
 		return err;
 	}
 	i_clear(&in, NULL, &syncer, &istream, NULL, &info, &comment);
-	if (!(out = fopen(output, "wb"))) {
+	if (!(out = fopen(goutput_name, "wb"))) {
 		i_clear(NULL, NULL, NULL, NULL, &ostream, NULL, NULL);
-		BRRLOG_ERRN("Failed to open file for regrain output '%s' : %s", output, strerror(errno));
+		BRRLOG_ERRN("Failed to open file for regrain output '%s' : %s", goutput_name, strerror(errno));
 		return I_IO_ERROR;
 	}
 	while (ogg_stream_pageout(&ostream, &sync_page) || ogg_stream_flush(&ostream, &sync_page)) {
 		if (sync_page.header_len != fwrite(sync_page.header, 1, sync_page.header_len, out)) {
 			i_clear(NULL, &out, NULL, NULL, &ostream, NULL, NULL);
-			BRRLOG_ERRN("Failed to write page header to output '%s' : %s", output, strerror(errno));
+			BRRLOG_ERRN("Failed to write page header to output '%s' : %s", goutput_name, strerror(errno));
 			return I_IO_ERROR;
 		} else if (sync_page.body_len != fwrite(sync_page.body, 1, sync_page.body_len, out)) {
 			i_clear(NULL, &out, NULL, NULL, &ostream, NULL, NULL);
-			BRRLOG_ERRN("Failed to write page body to output '%s' : %s", output, strerror(errno));
+			BRRLOG_ERRN("Failed to write page body to output '%s' : %s", goutput_name, strerror(errno));
 			return I_IO_ERROR;
 		}
 	}
@@ -245,21 +248,19 @@ i_regrain(const char *const input, const char *const output)
 }
 
 int BRRCALL
-regranularize_ogg(numbersT *const numbers, int dry_run, const char *const path,
-    int inplace_regranularize)
+regrain_ogg(numbersT *const numbers, const processed_inputT *const input)
 {
-	static char output[BRRPATH_MAX_PATH + 1] = {0};
 	int err = 0;
 	numbers->oggs_to_regranularize++;
-	if (dry_run) {
+	if (input->options.dry_run) {
 		BRRLOG_FOREP(DRY_COLOR, " Regranularize OGG ");
 	} else {
-		brrsz inlen = 0, outlen = 0;
 		BRRLOG_FORENP(WET_COLOR, " Regranularizing OGG... ");
-		replace_ext(path, &inlen, output, &outlen, "_rvb.ogg");
-		err = i_regrain(path, output);
+		replace_ext(input->path.opaque, input->path.length, goutput_name, NULL, "_rvb.ogg");
+		ginput_name = input->path.opaque;
+		err = i_regrain();
 		if (!err) {
-			if (inplace_regranularize) {
+			if (input->options.inplace_regrain) {
 				NeTODO("ANTIGRAIN IN-PLACE");
 				/* remove 'path' and rename 'output' to 'path' */
 			}

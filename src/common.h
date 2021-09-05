@@ -104,6 +104,7 @@ limitations under the License.
 #define I_CORRUPT -7
 #define I_NOT_RIFF -8
 #define I_UNRECOGNIZED_DATA -9
+#define I_OPTION_ERROR -10
 #define I_BAD_ERROR -99
 
 /* Ogg/Vorbis function return codes */
@@ -164,7 +165,7 @@ typedef struct input_options {
 
 	brru1 auto_ogg:1; /* Should output weems automatically be converted to ogg? */
 	brru1 inplace_ogg:1; /* Should weem-to-ogg conversion be done in-place (replace)? */
-	brru1 inplace_regranularize:1; /* Should regranularized oggs replace the original? */
+	brru1 inplace_regrain:1; /* Should regranularized oggs replace the original? */
 	brru1 bank_recurse:1; /* Should input bank files be recursed, searching for referenced bank files? */
 
 	brru1 log_enabled:1; /* Is output logging enabled? */
@@ -193,9 +194,9 @@ void BRRCALL processed_input_clear(processed_inputT *const input);
 void BRRCALL processed_input_print(const processed_inputT *const input, brrsz max_input_length,
     brrlog_priorityT priority, int newline);
 
-int BRRCALL replace_ext(const char *const input,
-    brrsz * const inlen, char *const output, brrsz *const outlen,
-    const char *const replacement);
+int BRRCALL replace_ext(const char *const input, brrsz inlen,
+    char *const output, brrsz *const outlen,
+	const char *const replacement);
 
 /* Compares 'a' and 'b' with case-(in)sensitive versions of 'strcmp' and
  * returns the result.

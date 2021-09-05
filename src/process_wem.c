@@ -37,8 +37,8 @@ limitations under the License.
 
 #define RIFF_BUFFER_INCREMENT 4096
 
-static const char *ginput_name;
-static const char *goutput_name;
+static const char *ginput_name = NULL;
+static char goutput_name[BRRPATH_MAX_PATH + 1] = {0};
 static codebook_libraryT *glibrary;
 
 static void BRRCALL
@@ -123,10 +123,7 @@ i_read_riff_chunks(FILE *const file, riffT *const rf)
 	while (I_SUCCESS == (err = i_consume_next_chunk(file, rf, &sync_chunk, &sync_data)) && (sync_chunk.is_basic || sync_chunk.is_list)) {
 		riff_chunk_info_clear(&sync_chunk);
 	}
-	if (err != I_SUCCESS) {
-		riff_data_sync_clear(&sync_data);
-		return err;
-	}
+	riff_data_sync_clear(&sync_data);
 	return err;
 }
 static void BRRCALL
@@ -310,44 +307,48 @@ int_convert_wem(void)
 	} else if (I_SUCCESS != (err = i_init_headers(&wem,
 	    &syncer, &sync_page, &sync_packet,
 	    &istreamer, &ostreamer, &ipacker, &opacker, &vi, &vc))) {
-		riff_clear(&rf);
 		i_clear_state(&syncer, &istreamer, &ostreamer, &ipacker, &opacker, &vi, &vc);
+		riff_clear(&rf);
 		return err;
 	}
 	/* Then, decode/copy packets from input data to output oggstream */
 
+	i_clear_state(&syncer, &istreamer, &ostreamer, &ipacker, &opacker, &vi, &vc);
 	riff_clear(&rf);
 	return err;
 }
 
 int BRRCALL
-convert_wem(numbersT *const numbers, int dry_run, const char *const path,
-    int inplace_ogg, input_libraryT *const library)
+convert_wem(numbersT *const numbers, const processed_inputT *const input, input_libraryT *const libraries)
 {
-	static char output[BRRPATH_MAX_PATH + 1] = {0};
 	int err = 0;
+	input_libraryT *library = NULL;
 	numbers->wems_to_convert++;
-	if (dry_run) {
+	if (input->options.dry_run) {
 		BRRLOG_FORENP(DRY_COLOR, " Convert WEM (dry)");
-	} else {
-		brrsz outlen = 0, inlen = 0;
+	} else do {
 		BRRLOG_FORENP(WET_COLOR, " Converting WEM...");
-		replace_ext(path, &inlen, output, &outlen, ".txt");
+		replace_ext(input->path.opaque, input->path.length, goutput_name, NULL, ".txt");
+		if (numbers->n_libraries <= input->options.library_index) {
+			BRRLOG_ERRN("WEM hasn't been assigned a codebook library, please specify one");
+			err = I_OPTION_ERROR;
+			break;
+		}
+		library = &libraries[input->options.library_index];
 		if ((err = input_library_load(library))) {
 			BRRLOG_ERRN(" Failed to load codebook library '%s' : %s", (char *)library->library_path.opaque, i_strerr(err));
-		} else {
-			ginput_name = path;
-			goutput_name = output;
-			glibrary = &library->library;
-			err = int_convert_wem();
-			if (!err) {
-				if (inplace_ogg) {
-					NeTODO("WEM CONVERT IN-PLACE");
-					/* remove 'path' and rename 'output' to 'path' */
-				}
+			break;
+		}
+		ginput_name = input->path.opaque;
+		glibrary = &library->library;
+		err = int_convert_wem();
+		if (!err) {
+			if (input->options.inplace_ogg) {
+				NeTODO("WEM CONVERT IN-PLACE");
+				/* remove 'path' and rename 'output' to 'path' */
 			}
 		}
-	}
+	} while (0);
 	if (!err) {
 		numbers->wems_converted++;
 		BRRLOG_MESSAGETP(gbrrlog_level_last, SUCCESS_FORMAT, " Success!");

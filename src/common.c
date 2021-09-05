@@ -89,12 +89,12 @@ i_try_read_lib(input_libraryT *const library, unsigned char **const buffer, brrs
 	} else if ((brrlib_alloc((void **)buffer, rs.size, 1))) {
 		return I_BUFFER_ERROR;
 	} else if (!(file = fopen(library->library_path.opaque, "rb"))) {
-		free(buffer);
+		free(*buffer);
 		*buffer = NULL;
 		return I_IO_ERROR;
-	} else if (rs.size > fread(buffer, 1, rs.size, file)) {
+	} else if (rs.size > fread(*buffer, 1, rs.size, file)) {
 		err = feof(file)?I_FILE_TRUNCATED:I_IO_ERROR;
-		free(buffer);
+		free(*buffer);
 		*buffer = NULL;
 	}
 	fclose(file);
@@ -186,21 +186,19 @@ processed_input_print(const processed_inputT *const input, brrsz max_input_lengt
 }
 
 int BRRCALL
-replace_ext(const char *const input, brrsz *const inlen,
-    char *const output, brrsz *const outlen, const char *const replacement)
+replace_ext(const char *const input, brrsz inlen,
+    char *const output, brrsz *const outlen,
+	const char *const replacement)
 {
 	brrsz dot = 0, sep = 0;
-	brrsz ilen, olen, nlen = 0;
+	brrsz olen, nlen = 0;
 	if (!input || !output)
 		return 0;
-	ilen = brrstg_strlen(input, BRRPATH_MAX_PATH);
-	for (sep = ilen; sep > 0 && input[sep] != BRRPATH_SEP_CHR; --sep);
-	for (dot = ilen; dot > sep && input[dot] != '.'; --dot);
+	for (sep = inlen; sep > 0 && input[sep] != BRRPATH_SEP_CHR; --sep);
+	for (dot = inlen; dot > sep && input[dot] != '.'; --dot);
 	if (dot > sep + 1)
 		nlen = dot;
-	olen = snprintf(output, BRRPATH_MAX_PATH + 1, "%*.*s%s", (int)nlen, (int)nlen, input, replacement);
-	if (inlen)
-		*inlen = ilen;
+	olen = snprintf(output, BRRPATH_MAX_PATH + 1, "%*.*s%s", nlen, nlen, input, replacement);
 	if (outlen)
 		*outlen = olen;
 	return 0;
