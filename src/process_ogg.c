@@ -27,23 +27,6 @@ limitations under the License.
 #include <brrtools/brrlog.h>
 #include <brrtools/brrpath.h>
 
-/* Ogg/Vorbis function return codes */
-#define SYNC_PAGEOUT_SUCCESS 1
-#define SYNC_PAGEOUT_INCOMPLETE 0
-#define SYNC_PAGEOUT_DESYNC -1
-#define SYNC_WROTE_SUCCESS 0
-#define SYNC_WROTE_FAILURE -1
-#define STREAM_INIT_SUCCESS 0
-#define STREAM_PAGEIN_SUCCESS 0
-#define STREAM_PACKETIN_SUCCESS 0
-#define STREAM_PACKETOUT_SUCCESS 1
-#define STREAM_PACKETOUT_INCOMPLETE 0
-#define STREAM_PACKETOUT_DESYNC -1
-#define VORBIS_SYNTHESIS_HEADERIN_SUCCESS 0
-#define VORBIS_SYNTHESIS_HEADERIN_FAULT OV_EFAULT
-#define VORBIS_SYNTHESIS_HEADERIN_NOTVORBIS OV_ENOTVORBIS
-#define VORBIS_SYNTHESIS_HEADERIN_BADHEADER OV_EBADHEADER
-
 #define SYNC_BUFFER_SIZE 4096
 static int BRRCALL
 i_get_first_page(FILE *const file, ogg_sync_state *const syncer, ogg_page *sync_page)
@@ -166,15 +149,14 @@ static int BRRCALL
 i_recompute_grains(FILE *const file, ogg_sync_state *const syncer,
     ogg_page *const sync_page, ogg_packet *const sync_packet,
     ogg_stream_state *const istream, ogg_stream_state *const ostream,
-    vorbis_info *const info, vorbis_comment *const comment)
+    vorbis_info *const info)
 {
 	int err = I_SUCCESS;
 	long last_blocksize = 0;
 	brru8 total_grain = 0;
 	brru8 total_packets = 0;
 	while (I_SUCCESS == (err = i_get_next_packet(file, syncer, sync_page, sync_packet, istream))) {
-		long current_blocksize = 0;
-		current_blocksize = vorbis_packet_blocksize(info, sync_packet);
+		long current_blocksize = current_blocksize = vorbis_packet_blocksize(info, sync_packet);
 		if (last_blocksize)
 			total_grain += (last_blocksize + current_blocksize) / 4;
 		last_blocksize = current_blocksize;
@@ -236,7 +218,7 @@ i_regrain(const char *const input, const char *const output)
 		i_clear(&in, NULL, &syncer, &istream, &ostream, NULL, NULL);
 		BRRLOG_ERRN("Failed to initialize vorbis headers from '%s' : %s", input, i_strerr(err));
 		return err;
-	} else if ((err = i_recompute_grains(in, &syncer, &sync_page, &sync_packet, &istream, &ostream, &info, &comment))) {
+	} else if ((err = i_recompute_grains(in, &syncer, &sync_page, &sync_packet, &istream, &ostream, &info))) {
 		i_clear(&in, NULL, &syncer, &istream, &ostream, &info, &comment);
 		BRRLOG_ERRN("Failed to recompute granules of '%s' : %s", input, i_strerr(err));
 		return err;

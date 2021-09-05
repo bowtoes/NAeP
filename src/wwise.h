@@ -1,8 +1,26 @@
+/*
+Copyright 2021 BowToes (bow.toes@mailfence.com)
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 #ifndef WWISE_H
 #define WWISE_H
 
 #include <brrtools/brrapi.h>
 #include <brrtools/brrtypes.h>
+
+#include "riff.h"
 
 BRRCPPSTART
 
@@ -33,11 +51,13 @@ typedef struct wwise_vorb_extra {
 	brru1 blocksize[2];
 	brru1 unknown[2];
 } wwise_vorb_extraT;
-typedef union wwise_vorb {
+typedef struct wwise_vorb {
 	brru4 sample_count;
-	wwise_vorb_implicitT implicit;
-	wwise_vorb_basicT basic;
-	wwise_vorb_extraT extra;
+	brru4 mod_signal;
+	brru4 setup_packet_offset;
+	brru4 audio_start_offset;
+	brru4 uid;
+	brru1 blocksize[2];
 } wwise_vorbT;
 
 typedef struct wwise_fmt {
@@ -54,66 +74,34 @@ typedef struct wwise_fmt {
 		brru2 reserved;
 	};
 	brru4 channel_mask;
-	union {
-		struct {
-			brru4 data1;
-			brru2 data2;
-			brru2 data3;
-			brru1 data4[8];
-		} guid;
-		wwise_vorbT vorb;
-	};
+	struct {
+		brru4 data1;
+		brru2 data2;
+		brru2 data3;
+		brru1 data4[8];
+	} guid;
 } wwise_fmtT;
 
-typedef enum wwise_vorb_type {
-	wwise_vorb_type_basic = 0,
-	wwise_vorb_type_extra,
-	wwise_vorb_type_implicit,
-} wwise_vorb_typeT;
 typedef struct wwise_wem {
-	wwise_fmtT fmt;
-	wwise_vorb_typeT vorb_type;
-	wwise_vorbT vorb;
 	unsigned char *data;
+	brru4 data_size;
+	wwise_vorbT vorb;
+	wwise_fmtT fmt;
 } wwise_wemT;
 
-#define CODEBOOK_SUCCESS 0
-#define CODEBOOK_ERROR -1
-#define CODEBOOK_CORRUPT -2
+#define WEM_SUCCESS 1
+#define WEM_INCOMPLETE 0
+#define WEM_ERROR -1
+#define WEM_DUPLICATE -2
+#define WEM_NOT_VORBIS -3
 
-typedef struct packed_codebook {
-	unsigned char *codebook_data;
-	brru4 codebook_size;
-} packed_codebookT;
-typedef struct codebook_library {
-	packed_codebookT *codebooks;
-	brru4 codebook_count;
-} codebook_libraryT;
-
-/* -2 : corruption
- * -1 : error (allocation/argument)
- *  0 : success
+/* -2 : duplicate chunks
+ * -1 : error (input)
+ *  0 : insufficient data/missing chunks
+ *  1 : success
  * */
-int BRRCALL codebook_library_deserialize_deprecated(codebook_libraryT *const cb,
-    const void *const data, brru8 data_size);
-/* -2 : corruption
- * -1 : error (allocation/argument)
- *  0 : success
- * */
-int BRRCALL codebook_library_deserialize(codebook_libraryT *const cb,
-    const void *const data, brru8 data_size);
-/* -1 : error (allocation/argument)
- *  0 : success
- * */
-int BRRCALL codebook_library_serialize_deprecated(const codebook_libraryT *const cb,
-    void **const data, brru8 *const data_size);
-/* -1 : error (allocation/argument)
- *  0 : success
- * */
-int BRRCALL codebook_library_serialize(const codebook_libraryT *const cb,
-    void **const data, brru8 *const data_size);
-
-void BRRCALL codebook_library_clear(codebook_libraryT *const cb);
+int BRRCALL wwise_wem_init(wwise_wemT *const wem, const riffT *const rf);
+void BRRCALL wwise_wem_clear(wwise_wemT *const wem);
 
 BRRCPPEND
 

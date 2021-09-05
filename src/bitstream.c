@@ -195,6 +195,13 @@ bitstream_copy(bitstream_stateT *restrict const os, void *restrict const out,
 }
 
 int BRRCALL
+bitstream_write(bitstream_stateT *const bs,
+    void *const stream, brru8 value, brru8 bits, brru8 *const copied)
+{
+	return bitstream_copy_in(bs, stream, &value, bits < 8*sizeof(bits)?bits:8*sizeof(bits), copied);
+}
+
+int BRRCALL
 bitstream_resize(bitstream_stateT *const bs, brru8 bits)
 {
 	if (!bs)

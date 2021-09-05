@@ -32,7 +32,10 @@ What the program can/will be able to do:
 1. &#9744; WSP Extraction:  
    * &#9744; Extract all WEMs embedded in arguments to separate, individual
      files (`..._XX.wem`).  
-   * &#9744; Extract all WEMs and convert those WEMs to separate oggs.  
+   * &#9744; All extracted WEMs can be converted to oggs as if passed on the
+     command-line.  
+
+     And potentially:
    * &#9744; Convert all embedded WEMs to ogg files directly, without
      extracting them to separate files.  
 2. &#9744; BNK Extraction:  
@@ -46,6 +49,7 @@ What the program can/will be able to do:
 4. &#9746; Ogg Regranularization:  
     * &#9746; All passed oggs are regranularized, either in-place or to
       separate files (`..._rvb.ogg`).  
+      _Actually,_ in-place revorb is yet to be implemented.
     * &#9746; ~All converted WEMs can be similarly revorbed automatically.~  
       Regranularization need-not be done separately from WEM conversion, it
       would be an error to have incorrect granule positions in the output oggs.
@@ -74,10 +78,12 @@ table):
 |Windows|\*NIX  |N/A|N/A|
 |Windows|Windows|Cygwin with above or mingw          |`make HOST=WINDOWS TARGET=WINDOWS ...`|
 
-**NOTE:** When building for the first time (or if building again,
-cross-platform), the environment variable `LIBRECONFIG` must be set to
-something, anything, or else the `libogg` and `libvorbis` submodules will be
-incorrectly configured and almost certainly fail compilation.
+**NOTE:** When building for the first time (or if building again for a
+different platform than previously), the environment variable `LIBRECONFIG`
+must be set to something, anything, or else the `libogg` and `libvorbis`
+submodules will be incorrectly configured and almost certainly fail
+compilation.  
+Be aware that library reconfiguring will take some time.
 
 32/64-bit compilation can be specified by setting the environment variable
 `BITS` to either `32` or `64`; defaults to `64`.  
@@ -87,8 +93,8 @@ their defaults are listed in `config.mk`.
 **Note:** `libogg` and `libvorbis` are provided and built as submodules; they
 need-not be installed on the host/target system to compile/run.  
 
-**DISCLAIMER:** I only have a linux distribution, so I can't/am to lazy to test
-building on Windows.  
+**DISCLAIMER:** I only have a linux distribution, so I can't/am too lazy to
+test building on Windows.  
 
 ## Todo  
 Eventually, some (hopefully) neat and understandable documentation on the
@@ -96,9 +102,9 @@ different formats of data storage (WSP, WEM, BNK, ...) used in NieR: Automata.
 
 ## References  
 * Ogg regranularization is done as a custom re-implementation of
-  [revorb][revorb]; previously, revorb directly was used.
-* WEM-to-ogg conversion is not yet implemented; [ww2ogg][ww2ogg] will be used
-  for reference when implementing.
+  [revorb][revorb]; previously revorb was used directly.
+* WEM-to-ogg conversion is currently being implemented, with heavy reference
+  (though not duplication) from [ww2ogg][ww2ogg].
 
 [NME2]:https://github.com/TypeA2/NME2
 [ww2ogg]:https://github.com/hcs64/ww2ogg

@@ -132,8 +132,8 @@ endif
 libs: brrtools ogg vorbis
 
 clean-brrtools: ; make -C vendor/brrtools clean
-clean-ogg: ; make -C vendor/ogg clean
-clean-vorbis: ; make -C vendor/vorbis clean
+clean-ogg: ; make -C vendor/ogg distclean
+clean-vorbis: ; make -C vendor/vorbis distclean
 clean-libs: clean-brrtools clean-ogg clean-vorbis
 clean-all: clean-libs clean
 clean:

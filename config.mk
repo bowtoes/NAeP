@@ -237,7 +237,7 @@ INCS:=-I$(SRCDIR) -I./vendor/brrtools/src -I./vendor/ogg/include -I./vendor/vorb
 # Warnings/errors
 WRNS:=-Wall -Wextra -Wpedantic -pedantic -Werror=pedantic -pedantic-errors\
       -Werror=implicit-function-declaration -Werror=missing-declarations\
-      -Wno-unused-function -Wno-sign-compare -Wno-unused-parameter
+      -Wno-sign-compare
 # Defines
 DEFS:=-D$(UPROJECT)MAJOR=$($(PROJECT)_MAJOR)\
       -D$(UPROJECT)MINOR=$($(PROJECT)_MINOR)\
@@ -285,19 +285,19 @@ $(PROJECT)_LDFLAGS=$(LNK) $(PRF) $(LDFLAGS)
 SRC:=\
 	src/main.c\
 	src/bitstream.c\
+	src/codebook_library.c\
 	src/common.c\
 	src/riff.c\
-	src/wwise.c\
-	src/process.c\
 	src/process_ogg.c\
 	src/process_wem.c\
 	src/process_wsp.c\
 	src/process_bnk.c\
+	src/wwise.c\
 
 HDR:=\
 	src/bitstream.h\
+	src/codebook_library.h\
 	src/common.h\
 	src/riff.h\
-	src/wwise.h\
-	src/process.h\
 	src/process_files.h\
+	src/wwise.h\

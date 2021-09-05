@@ -20,7 +20,7 @@ limitations under the License.
 
 int BRRCALL
 extract_wsp(numbersT *const numbers, int dry_run, const char *const path,
-    int inplace_regranularize, int inplace_ogg, int auto_ogg)
+    int inplace_ogg, int auto_ogg, input_libraryT *const library)
 {
 	int err = 0;
 	numbers->wsps_to_process++;

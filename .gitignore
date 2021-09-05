@@ -24,3 +24,5 @@ src/revorbc/
 swp.sh
 
 compile_commands.json
+compile_commands_win.json
+compile_commands_uni.json

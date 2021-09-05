@@ -20,7 +20,7 @@ limitations under the License.
 
 int BRRCALL
 extract_bnk(numbersT *const numbers, int dry_run, const char *const path,
-    int inplace_regranularize, int inplace_ogg, int auto_ogg, int bnk_recurse)
+    int inplace_ogg, int auto_ogg, int bnk_recurse, input_libraryT *const library)
 {
 	int err = 0;
 	numbers->bnks_to_process++;

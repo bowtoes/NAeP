@@ -80,6 +80,9 @@ int BRRCALL bitstream_copy(bitstream_stateT *restrict const os, void *restrict c
     bitstream_stateT *restrict const is, const void *restrict const in,
     brru8 bits, brru8 *const copied);
 
+int BRRCALL bitstream_write(bitstream_stateT *const bs,
+    void *const stream, brru8 value, brru8 bits, brru8 *const copied);
+
 /* -1 : Invalid stream
  *  0 : Success
  * Position unaffected.
