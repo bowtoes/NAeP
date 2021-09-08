@@ -23,10 +23,14 @@ limitations under the License.
 
 BRRCPPSTART
 
-int BRRCALL regrain_ogg(numbersT *const numbers, const processed_inputT *const input);
-int BRRCALL convert_wem(numbersT *const numbers, const processed_inputT *const input, input_libraryT *const libraries);
-int BRRCALL extract_wsp(numbersT *const numbers, const processed_inputT *const input, input_libraryT *const libraries);
-int BRRCALL extract_bnk(numbersT *const numbers, const processed_inputT *const input, input_libraryT *const libraries);
+int BRRCALL regrain_ogg(numbersT *const numbers, const char *const input, brrsz input_length,
+    const input_optionsT *const options);
+int BRRCALL convert_wem(numbersT *const numbers, const char *const input, brrsz input_length,
+    const input_optionsT *const options, input_libraryT *const library);
+int BRRCALL extract_wsp(numbersT *const numbers, const char *const input, brrsz input_length,
+    const input_optionsT *const options, input_libraryT *const library);
+int BRRCALL extract_bnk(numbersT *const numbers, const char *const input, brrsz input_length,
+    const input_optionsT *const options, input_libraryT *const library);
 
 BRRCPPEND
 

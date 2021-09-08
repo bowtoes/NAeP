@@ -235,11 +235,11 @@ i_regrain(void)
 	while (ogg_stream_pageout(&ostream, &sync_page) || ogg_stream_flush(&ostream, &sync_page)) {
 		if (sync_page.header_len != fwrite(sync_page.header, 1, sync_page.header_len, out)) {
 			i_clear(NULL, &out, NULL, NULL, &ostream, NULL, NULL);
-			BRRLOG_ERRN("Failed to write page header to output '%s' : %s", goutput_name, strerror(errno));
+			BRRLOG_ERRN("Failed to write ogg page header to output '%s' : %s", goutput_name, strerror(errno));
 			return I_IO_ERROR;
 		} else if (sync_page.body_len != fwrite(sync_page.body, 1, sync_page.body_len, out)) {
 			i_clear(NULL, &out, NULL, NULL, &ostream, NULL, NULL);
-			BRRLOG_ERRN("Failed to write page body to output '%s' : %s", goutput_name, strerror(errno));
+			BRRLOG_ERRN("Failed to write ogg page body to output '%s' : %s", goutput_name, strerror(errno));
 			return I_IO_ERROR;
 		}
 	}
@@ -248,19 +248,19 @@ i_regrain(void)
 }
 
 int BRRCALL
-regrain_ogg(numbersT *const numbers, const processed_inputT *const input)
+regrain_ogg(numbersT *const numbers, const char *const input, brrsz input_length,
+    const input_optionsT *const options)
 {
 	int err = 0;
 	numbers->oggs_to_regranularize++;
-	if (input->options.dry_run) {
+	if (options->dry_run) {
 		BRRLOG_FOREP(DRY_COLOR, " Regranularize OGG ");
 	} else {
 		BRRLOG_FORENP(WET_COLOR, " Regranularizing OGG... ");
-		replace_ext(input->path.opaque, input->path.length, goutput_name, NULL, "_rvb.ogg");
-		ginput_name = input->path.opaque;
-		err = i_regrain();
-		if (!err) {
-			if (input->options.inplace_regrain) {
+		ginput_name = input;
+		replace_ext(ginput_name, input_length, goutput_name, NULL, "_rvb.ogg");
+		if (!(err = i_regrain())) {
+			if (options->inplace_regrain) {
 				NeTODO("ANTIGRAIN IN-PLACE");
 				/* remove 'path' and rename 'output' to 'path' */
 			}

@@ -9,22 +9,24 @@ Audiokinetic engine a simpler implementation.
 
 ## Weird WEMS
 Some WEMs are unlike most others in NieR's files, being 16-bit PCM data. These
-are the files:
-`BGM_0_000_04.wem`  
-`BGM_0_000_05.wem`  
-`BGM_0_000_06.wem`  
-`BGM_0_000_07.wem`  
-`BGM_0_000_09.wem`  
-`BGM_0_000_10.wem`  
-`BGM_0_000_11.wem`  
-`BGM_0_000_12.wem`  
+files are:  
+* `BGM_0_000_04.wem`
+* `BGM_0_000_05.wem`
+* `BGM_0_000_06.wem`
+* `BGM_0_000_07.wem`
+* `BGM_0_000_09.wem`
+* `BGM_0_000_10.wem`
+* `BGM_0_000_11.wem`
+* `BGM_0_000_12.wem`
+
 They are all the same audio; a simple sine wave (but in a full 6 channels!); I
 have no idea why they're here.
 
 There's also this one:  
 `BGM_0_001_10.wem`  
 It's data, along with a number of others, isn't formatted like the vast majority of WEMs, but
-ww2ogg handles them fine so it must just be a different encoding.  
+ww2ogg handles them fine; I mention this because in a hex editor, their `data`
+data has a surprisingly regular structure.  
 
 [McGill WAVE Specification][] for some reference.
 

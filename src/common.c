@@ -47,6 +47,7 @@ i_strerr(int err)
 		case I_CORRUPT: return "Corrupted headers/stream";
 		case I_NOT_RIFF: return "Data is not RIFF";
 		case I_UNRECOGNIZED_DATA: return "Data type is unrecognized";
+		case I_INSUFFICIENT_DATA: return "Insufficient data to decode";
 		case I_BAD_ERROR: return "I don't know what to do";
 		default: return "Unrecognized error code";
 	}
@@ -183,6 +184,54 @@ processed_input_print(const processed_inputT *const input, brrsz max_input_lengt
 	else { BRRLOG_FORENP(DISABLED_COLOR, "NON"); }
 	if (newline)
 		BRRLOG_LASTP("");
+}
+
+int BRRCALL
+icount(unsigned int v)
+{
+	int r = 0;
+	while (v) {
+		r += v&1;
+		v>>=1;
+	}
+	return r;
+}
+int BRRCALL
+ilog(long number)
+{
+	int res = 0;
+	while (number > 0) {
+		res++;
+		number >>= 1;
+	}
+	return res;
+}
+long BRRCALL
+lookup1_values(long entries, long dimensions)
+{
+  /* totally ripped from tremor */
+  /* get us a starting hint, we'll polish it below */
+  int bits=ilog(entries);
+  int vals=entries>>((bits-1)*(dimensions-1)/dimensions);
+
+  while(1){
+    long acc=1;
+    long acc1=1;
+    int i;
+    for(i=0;i<dimensions;i++){
+      acc*=vals;
+      acc1*=vals+1;
+    }
+    if(acc<=entries && acc1>entries){
+      return(vals);
+    }else{
+      if(acc>entries){
+        vals--;
+      }else{
+        vals++;
+      }
+    }
+  }
 }
 
 int BRRCALL

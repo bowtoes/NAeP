@@ -104,7 +104,7 @@ limitations under the License.
 #define I_CORRUPT -7
 #define I_NOT_RIFF -8
 #define I_UNRECOGNIZED_DATA -9
-#define I_OPTION_ERROR -10
+#define I_INSUFFICIENT_DATA -10
 #define I_BAD_ERROR -99
 
 /* Ogg/Vorbis function return codes */
@@ -123,6 +123,10 @@ limitations under the License.
 #define VORBIS_SYNTHESIS_HEADERIN_FAULT OV_EFAULT
 #define VORBIS_SYNTHESIS_HEADERIN_NOTVORBIS OV_ENOTVORBIS
 #define VORBIS_SYNTHESIS_HEADERIN_BADHEADER OV_EBADHEADER
+
+/* RIFF function returns */
+#define RIFF_BUFFER_APPLY_SUCCESS 0
+#define RIFF_BUFFER_APPLY_FAILURE -1
 
 BRRCPPSTART
 
@@ -162,14 +166,15 @@ typedef struct input_options {
 	#define INPUT_TYPE_WSP 0x03
 	#define INPUT_TYPE_BNK 0x04
 	brru1 type:3; /* Type of the input.  */
-
 	brru1 auto_ogg:1; /* Should output weems automatically be converted to ogg? */
 	brru1 inplace_ogg:1; /* Should weem-to-ogg conversion be done in-place (replace)? */
 	brru1 inplace_regrain:1; /* Should regranularized oggs replace the original? */
 	brru1 bank_recurse:1; /* Should input bank files be recursed, searching for referenced bank files? */
-
-	brru1 log_enabled:1; /* Is output logging enabled? */
+	brru1 stripped_headers:1; /* Whether the vorbis headers of a given wem are stripped or spec-compliant. */
+	/* TODO stripped_headers might be automatically
+	 * determinable from the given wem; no idea where that'd be */
 	/* < Byte boundary > */
+	brru1 log_enabled:1; /* Is output logging enabled? */
 	brru1 log_color_enabled:1; /* Is log coloring enabled? */
 	brru1 log_debug:1; /* Is debug logging enabled (implies log_enabled)? */
 	brru1 dry_run:1; /* Do not process any input or output, just print what would happen. */
@@ -193,6 +198,11 @@ void BRRCALL input_library_clear(input_libraryT *const library);
 void BRRCALL processed_input_clear(processed_inputT *const input);
 void BRRCALL processed_input_print(const processed_inputT *const input, brrsz max_input_length,
     brrlog_priorityT priority, int newline);
+
+int BRRCALL icount(unsigned int number);
+int BRRCALL ilog(long number);
+/* definitely not ripped from tremor */
+long BRRCALL lookup1_values(long entries, long dimensions);
 
 int BRRCALL replace_ext(const char *const input, brrsz inlen,
     char *const output, brrsz *const outlen,

@@ -4,7 +4,7 @@
 2. [The RIFF file format](#2-the-riff-file-format)
    1. [Generic Chunk Layout](#2i-generic-chunk-layout)
    2. [RIFF/LIST Chunk Layout](#2ii-rifflist-chunk-layout)
-3. [Structure of a NieR: Automata .wem file](#3-structure-of-a-nier-automata-wem-file)
+3. [Structure of a NieR:Automata .wem file](#3-structure-of-a-nier-automata-wem-file)
    1. [How the Tables are Layed Out](#3i-how-the-tables-are-layed-out)
    2. [.wem File Structure](#3ii-wem-file-structure)
 4. [Sources Referenced](#4-sources-referenced)
@@ -12,7 +12,7 @@
    1. [WEM References](#4ii-wem-references)
 
 # 1. WEM
-My attempt at documenting the .wem audio storage format used specifically for NieR: Automata.
+My attempt at documenting the .wem audio storage format used specifically for NieR:Automata.
 
 **Note**: The .wem format and it's containing types (.bnk, .wsp) do not have official, public
 specifications, so the understanding of their structure and layout is incomplete.
@@ -74,7 +74,7 @@ I'm just having a very hard time finding any examples where the chunk data does 
 things considered, `RIFF` chunks should universally have an even length, yet they don't always in these .wem files.
 Other places I've looked (standard .wav files, .ani cursor files) universally have an even length.
 
-# 3. Structure of a NieR: Automata .wem File
+# 3. Structure of a NieR:Automata .wem File
 Generally, a .wem file is a file 'conforming' to the [RIFF][mcgill riff] file format standard.
 
 ## 3i. How the Tables are Layed Out
@@ -104,7 +104,7 @@ the structure of the .wem format into one location.
 |`0x20`|`blkAlign`|`2`  |0                     |**-**|**0**|'Block align'; I have no idea what this means.
 |`0x20`|`blkAlign`|`2`  |0                     |**-**|**0**|Bits per sample, 0 in wem files?
 
-The samples in this table are taken from a specific file in the NieR: Automata game directory:  
+The samples in this table are taken from a specific file in the NieR:Automata game directory:  
 * `data/sound/stream/5731267.wem`
 
 # 4. Sources referenced 

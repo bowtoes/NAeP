@@ -47,12 +47,12 @@ codebook_library_deserialize_deprecated(codebook_libraryT *const cb,
 
 		if (end < start || end > data_size)
 			return CODEBOOK_CORRUPT;
-		pc->codebook_size = end - start;
-		if (brrlib_alloc((void **)&pc->codebook_data, pc->codebook_size, 1)) {
+		pc->size = end - start;
+		if (brrlib_alloc((void **)&pc->data, pc->size, 1)) {
 			codebook_library_clear(cb);
 			return CODEBOOK_ERROR;
 		}
-		memcpy(pc->codebook_data, dt + start, pc->codebook_size);
+		memcpy(pc->data, dt + start, pc->size);
 
 		start = end;
 	}
@@ -80,12 +80,12 @@ codebook_library_deserialize(codebook_libraryT *const cb,
 		packed_codebookT *pc = &cb->codebooks[i - 1];
 		if (end < start || start > data_size)
 			return CODEBOOK_CORRUPT;
-		pc->codebook_size = end - start;
-		if (brrlib_alloc((void **)&pc->codebook_data, pc->codebook_size, 1)) {
+		pc->size = end - start;
+		if (brrlib_alloc((void **)&pc->data, pc->size, 1)) {
 			codebook_library_clear(cb);
 			return CODEBOOK_ERROR;
 		}
-		memcpy(pc->codebook_data, dt + start, pc->codebook_size);
+		memcpy(pc->data, dt + start, pc->size);
 		end = start;
 	}
 	return CODEBOOK_SUCCESS;
@@ -100,15 +100,15 @@ codebook_library_serialize_deprecated(const codebook_libraryT *const cb,
 	if (!cb || !data)
 		return CODEBOOK_ERROR;
 	for (brru4 i = 0; i < cb->codebook_count; ++i)
-		ds += cb->codebooks[i].codebook_size;
+		ds += cb->codebooks[i].size;
 	ds += 4 * cb->codebook_count;
 	if (brrlib_alloc(data, ds, 1))
 		return CODEBOOK_ERROR;
 	offset_table = (brru4 *)((unsigned char *)(*data) + ds - 4 * cb->codebook_count);
 	for (brru4 i = 0; i < cb->codebook_count; ++i) {
 		packed_codebookT *pc = &cb->codebooks[i];
-		memcpy((unsigned char *)*data + ofs, pc->codebook_data, pc->codebook_size);
-		ofs += pc->codebook_size;
+		memcpy((unsigned char *)*data + ofs, pc->data, pc->size);
+		ofs += pc->size;
 		offset_table[i] = ofs;
 	}
 	if (data_size)
@@ -126,15 +126,15 @@ codebook_library_serialize(const codebook_libraryT *const cb,
 	ofs = 4 * cb->codebook_count;
 	ds += ofs;
 	for (brru4 i = 0; i < cb->codebook_count; ++i)
-		ds += cb->codebooks[i].codebook_size;
+		ds += cb->codebooks[i].size;
 	if (brrlib_alloc(data, ds, 1))
 		return CODEBOOK_ERROR;
 	offset_table = (brru4 *)*data;
 	for (brru4 i = 0; i < cb->codebook_count; ++i) {
 		packed_codebookT *pc = &cb->codebooks[i];
 		offset_table[i] = ofs;
-		memcpy((unsigned char *)*data + ofs, pc->codebook_data, pc->codebook_size);
-		ofs += pc->codebook_size;
+		memcpy((unsigned char *)*data + ofs, pc->data, pc->size);
+		ofs += pc->size;
 	}
 	if (data_size)
 		*data_size = ds;
@@ -147,8 +147,8 @@ codebook_library_clear(codebook_libraryT *const cb)
 		if (cb->codebooks) {
 			for (brru4 i = 0; i < cb->codebook_count; ++i) {
 				packed_codebookT *pc = &cb->codebooks[i];
-				if (pc->codebook_data)
-					free(pc->codebook_data);
+				if (pc->data)
+					free(pc->data);
 			}
 			free(cb->codebooks);
 		}

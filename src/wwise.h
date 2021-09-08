@@ -24,42 +24,14 @@ limitations under the License.
 
 BRRCPPSTART
 
-typedef struct wwise_vorb_implicit {
-	brru4 sample_count;
-	brru4 mod_signal;
-	brru1 skipped_0[8];
-	brru4 setup_packet_offset;
-	brru4 audio_start_offset;
-	brru1 skipped_1[12];
-	brru4 uid;
-	brru1 blocksize[2];
-} wwise_vorb_implicitT;
-typedef struct wwise_vorb_basic {
-	brru4 sample_count;
-	brru1 skipped_0[20];
-	brru4 setup_packet_offset;
-	brru4 audio_start_offset;
-	brru1 unknown[12];
-} wwise_vorb_basicT;
-typedef struct wwise_vorb_extra {
-	brru4 sample_count;
-	brru1 skipped_0[20];
-	brru4 setup_packet_offset;
-	brru4 audio_start_offset;
-	brru1 skipped_1[12];
-	brru4 uid;
-	brru1 blocksize[2];
-	brru1 unknown[2];
-} wwise_vorb_extraT;
 typedef struct wwise_vorb {
 	brru4 sample_count;
 	brru4 mod_signal;
-	brru4 setup_packet_offset;
+	brru4 header_packets_offset;
 	brru4 audio_start_offset;
 	brru4 uid;
 	brru1 blocksize[2];
 } wwise_vorbT;
-
 typedef struct wwise_fmt {
 	brru2 format_tag;
 	brru2 n_channels;
@@ -81,27 +53,49 @@ typedef struct wwise_fmt {
 		brru1 data4[8];
 	} guid;
 } wwise_fmtT;
-
+typedef struct wwise_packet {
+	brru8 payload_size:16;
+	brru8 granule:32;
+	brru8 unused:16;
+	unsigned char *payload;
+	int header_length;
+} wwise_packetT;
 typedef struct wwise_wem {
+	brru1 mod_packets:1; /* No idea what this means */
+	brru1 granule_present:1; /* Whether data packets have 4-bytes for granule */
+	brru1 all_headers_present:1; /* If all vorbis headers are present at
+									header_packets_offset or it's just the
+									setup header */
+	brru1 mode_blockflags[32]; /* Storage for audio packet decode */
+	int mode_count; /* Storage for audio packet decode */
 	unsigned char *data;
 	brru4 data_size;
 	wwise_vorbT vorb;
 	wwise_fmtT fmt;
 } wwise_wemT;
 
-#define WEM_SUCCESS 1
-#define WEM_INCOMPLETE 0
-#define WEM_ERROR -1
-#define WEM_DUPLICATE -2
-#define WEM_NOT_VORBIS -3
+#define WWISE_SUCCESS 1
+#define WWISE_INCOMPLETE 0
+#define WWISE_ERROR -1
+#define WWISE_DUPLICATE -2
+#define WWISE_CORRUPT -3
 
-/* -2 : duplicate chunks
+/* -3 : corrupted stream
+ * -2 : duplicate data
  * -1 : error (input)
  *  0 : insufficient data/missing chunks
  *  1 : success
  * */
 int BRRCALL wwise_wem_init(wwise_wemT *const wem, const riffT *const rf);
 void BRRCALL wwise_wem_clear(wwise_wemT *const wem);
+
+/* -1 : error (input)
+ *  0 : insufficient data
+ *  1 : success
+ * */
+int BRRCALL wwise_packet_init(wwise_packetT *const packet,
+    const wwise_wemT *const wem, const unsigned char *const data, brrsz data_size);
+void BRRCALL wwise_packet_clear(wwise_packetT *const packet);
 
 BRRCPPEND
 

@@ -1,4 +1,4 @@
-# NAeP - NieR: Automata extraction Project
+# NieR:Automata extraction Precept
 
 ## Table of Contents
 0. [Table of Contents](#table-of-contents)
@@ -11,9 +11,9 @@
 6. [References](#references)
 
 # Goal  
-Extract the media files stored within NieR: Automata's data archives into a
+Extract the media files stored within NieR:Automata's data archives into a
 useable/viewable format.  
-Originally, this was inspired by another project called [NME2][NME2], however I
+Originally, this was inspired by another precept called [NME2][NME2], however I
 thought it could be done better and more cross platform; this is an attempt at
 that.
 
@@ -98,7 +98,7 @@ test building on Windows.
 
 ## Todo  
 Eventually, some (hopefully) neat and understandable documentation on the
-different formats of data storage (WSP, WEM, BNK, ...) used in NieR: Automata.
+different formats of data storage (WSP, WEM, BNK, ...) used in NieR:Automata.
 
 ## References  
 * Ogg regranularization is done as a custom re-implementation of

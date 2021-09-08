@@ -19,11 +19,12 @@ limitations under the License.
 #include <brrtools/brrlog.h>
 
 int BRRCALL
-extract_wsp(numbersT *const numbers, const processed_inputT *const input, input_libraryT *const libraries)
+extract_wsp(numbersT *const numbers, const char *const input, brrsz input_length,
+    const input_optionsT *const options, input_libraryT *const library)
 {
 	int err = 0;
 	numbers->wsps_to_process++;
-	if (input->options.dry_run) {
+	if (options->dry_run) {
 		BRRLOG_FOREP(DRY_COLOR, " Extract WSP (dry)");
 	} else {
 		NeTODO("Implement 'extract_wsp' priority 2 ");

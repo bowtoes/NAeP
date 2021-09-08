@@ -49,43 +49,55 @@ limitations under the License.
  *
  * */
 
+#define USAGE "Usage: NAeP [[OPTION ...] FILE ...] ..."
+#define HELP \
+"Most options take affect on all files following and can be toggled." \
+"\nOptions:" \
+"\n        -h, -help, -v . . . . . . . . . . . .Print this help." \
+"\n    File Type Specification:" \
+"\n        -a, -auto, -detect  . . . . . . . .  Autodetect filetype from file header or extension." \
+"\n        -w, -wem, -weem . . . . . . . . . .  File(s) are WEMs to be converted to OGG." \
+"\n        -W, -wsp, -wisp . . . . . . . . . .  File(s) are wisps to have their WEMs extracted." \
+"\n        -b, -bnk, -bank . . . . . . . . . .  File(s) are banks to extract all referenced WEMs." \
+"\n        -o, -ogg  . . . . . . . . . . . . .  File(s) are OGG files to be regranularizeed." \
+"\n    OGG Processing Options:" \
+"\n        -ri, -rgrn-inplace, -rvb-inplace. .  Oggs are regranularized in-place." \
+"\n    WEM Processing Options:" \
+"\n        -oi, -ogg-inplace . . . . . . . . .  All WEM-to-OGG conversion is done in-place;" \
+"\n                                             WEMs are replaced with their converted OGGs." \
+"\n        -cbl, -codebook-library . . . . . .  The following is a codebook library to use for the following WEMs;" \
+"\n                                             if none are specified for a given WEM, then it is assumed the" \
+"\n                                             codebooks are inline." \
+"\n        -inline . . . . . . . . . . . . . .  The following WEMs have inline codebooks." \
+"\n        -stripped . . . . . . . . . . . . .  The vorbis headers of the WEM are stripped." \
+"\n    WSP/BNK Processing Options:" \
+"\n        -O, -wem2ogg. . . . . . . . . . . .  Convert extracted WEMs to OGGs." \
+"\n        -R, -recurse-bank . . . . . . . . .  Search passed bank files for all referenced WEMs." \
+"\n    Miscellaneous options:" \
+"\n        --  . . . . . . . . . . . . . . . .  The following argument is a file path, not an option." \
+"\n        -!  . . . . . . . . . . . . . . . .  All following arguments are file paths, not options." \
+"\n        -d, -debug  . . . . . . . . . . . .  Enable debug output, irrespective of quiet settings." \
+"\n        -c, -color  . . . . . . . . . . . .  Toggle color logging." \
+"\n        -q, -quiet  . . . . . . . . . . . .  Suppress one additional level of non-critical." \
+"\n        +q, +quiet  . . . . . . . . . . . .  Show one additional level non-critical output." \
+"\n        -Q, -qq, -too-quiet . . . . . . . .  Suppress all output, including anything critical." \
+"\n        -n, -dry, -dry-run  . . . . . . . .  Don't actually do anything, just log what would happen." \
+"\n        -reset  . . . . . . . . . . . . . .  Argument options reset to default after each file passed." \
+
+static void BRRCALL
+print_usage()
+{
+	fprintf(stdout, "NAeP - NieR:Automata extraction Precept\n");
+	fprintf(stdout, "Compiled on "__DATE__", " __TIME__"\n");
+	fprintf(stdout, USAGE"\n""    -h, -help, -v . . . . . . . . . . . .Print help.""\n");
+	exit(0);
+}
 static void BRRCALL
 print_help()
 {
-	static const char *const help =
-	"Usage: NAeP [[OPTION ...] FILE ...] ..."
-	"\nOptions take affect on all files following and can be toggled."
-	"\nOptions:"
-	"\n        -h, -help, -v . . . . . . . . . . . .Print this help."
-	"\n    File Type Specification:"
-	"\n        -a, -auto, -detect. . . . . . . . . .Autodetect filetype from file header or extension."
-	"\n        -w, -wem, -weem . . . . . . . . . . .File(s) are WEMs to be converted to OGG."
-	"\n        -W, -wsp, -wisp . . . . . . . . . . .File(s) are wisps to have their WEMs extracted."
-	"\n        -b, -bnk, -bank . . . . . . . . . . .File(s) are banks to extract all referenced WEMs."
-	"\n        -o, -ogg. . . . . . . . . . . . . . .File(s) are OGG files to be regranularizeed."
-	"\n    OGG Processing Options:"
-	"\n        -ri, -rgrn-inplace, -rvb-inplace. . .Oggs are regranularized in-place."
-	"\n    WSP Processing Options:"
-	"\n        -O, -wem2ogg. . . . . . . . . . . . .Convert extracted WEMs to OGGs."
-	"\n    WEM/BNK Processing Options:"
-	"\n        -R, -recurse-bank . . . . . . . . . .Search passed bank files for all referenced WEMs."
-	"\n        -oi, -ogg-inplace . . . . . . . . . .All WEM-to-OGG conversion is done in-place;"
-	"\n                                             WEMs are replaced with their converted OGGs."
-	"\n    Miscellaneous options:"
-	"\n        --. . . . . . . . . . . . . . . . . .The following argument is a file path, not an option."
-	"\n        -!. . . . . . . . . . . . . . . . . .All following arguments are file paths, not options."
-	"\n        -d, -debug. . . . . . . . . . . . . .Enable debug output, irrespective of quiet settings."
-	"\n        -c, -color. . . . . . . . . . . . . .Toggle color logging."
-	"\n        -q, -quiet. . . . . . . . . . . . . .Suppress one additional level of non-critical."
-	"\n        +q, +quiet. . . . . . . . . . . . . .Show one additional level non-critical output."
-	"\n        -Q, -qq, -too-quiet . . . . . . . . .Suppress all output, including anything critical."
-	"\n        -n, -dry, -dry-run. . . . . . . . . .Don't actually do anything, just log what would happen."
-	"\n        -reset. . . . . . . . . . . . . . . .Argument options reset to default after each file passed."
-	"\n        -cbl, -codebook-library . . . . . . .Which library binary to use for the following WEMs/BNKs."
-	;
-	fprintf(stdout, "NAeP - NieR: Automata extraction Protocol\n");
+	fprintf(stdout, "NAeP - NieR:Automata extraction Precept\n");
 	fprintf(stdout, "Compiled on "__DATE__", " __TIME__"\n");
-	fprintf(stdout, "%s\n", help);
+	fprintf(stdout, USAGE"\n"HELP"\n");
 	exit(0);
 }
 static int BRRCALL
@@ -130,6 +142,15 @@ i_parse_argument(const char *const arg, global_optionsT *const global, input_opt
 	} else IF_CHECK_ARG(1, "-ri", "-rgrn-inplace", "-rvb-inplace") {
 		BRRTIL_TOGGLE(options->inplace_regrain);
 		return 1;
+	} else IF_CHECK_ARG(1, "-cbl", "-codebook-library") {
+		global->next_is_cbl = 1;
+		return 1;
+	} else IF_CHECK_ARG(1, "-inline") {
+		options->library_index = -1;
+		return 1;
+	} else IF_CHECK_ARG(1, "-stripped") {
+		BRRTIL_TOGGLE(options->stripped_headers);
+		return 1;
 	} else IF_CHECK_ARG(1, "-Q", "-qq", "-too-quiet") {
 		BRRTIL_TOGGLE(options->log_enabled);
 		return 1;
@@ -166,9 +187,6 @@ i_parse_argument(const char *const arg, global_optionsT *const global, input_opt
 		return 1;
 	} else IF_CHECK_ARG(1, "-reset") {
 		BRRTIL_TOGGLE(global->should_reset);
-		return 1;
-	} else IF_CHECK_ARG(1, "-cbl", "-codebook-library") {
-		global->next_is_cbl = 1;
 		return 1;
 	}
 	return 0;
@@ -312,22 +330,19 @@ i_take_arguments(processed_inputT **const inputs, input_libraryT **const librari
 			continue;
 		} else if (global->next_is_cbl) {
 			current->library_index = i_find_library(arg, *libraries, nums->n_libraries);
-			if (current->library_index == nums->n_libraries) { /* Need to append library */
+			if (current->library_index == nums->n_libraries) {
+				/* Library not found, add it */
 				if (i_add_library(libraries, nums, arg)) {
 					BRRLOG_CRITICAL("Failed to add library '%s' to list : %s", arg, strerror(errno));
-					continue;
 				}
 			}
 			global->next_is_cbl = 0;
-			continue;
-		}
-		if ((tmp_arg = i_find_input(arg, *inputs, nums->n_inputs))) {
+		} else if ((tmp_arg = i_find_input(arg, *inputs, nums->n_inputs))) {
 			tmp_arg->options = *current;
 		} else {
 			gbrrlogctl.style_enabled = global->log_style_enabled;
 			if (i_add_input(inputs, nums, current, arg)) {
 				BRRLOG_CRITICAL("Failed to add input '%s' to list : %s", arg, strerror(errno));
-				continue;
 			}
 		}
 		if (global->should_reset)
@@ -389,23 +404,26 @@ i_process_input(processed_inputT *const input, input_libraryT *const libraries,
 		}
 	}
 	if (!err) {
+		input_libraryT *library = NULL;
 		BRRLOG_NORNP(""); /* Reset last log format and level */
+		if (input->options.library_index != -1)
+			library = &libraries[input->options.library_index];
 		if (input->options.type == INPUT_TYPE_OGG) {
 			BRRLOG_MESSAGETNP(gbrrlog_level_last, OGG_FORMAT, "%-*s",
 			    numbers->input_path_max_length, BRRTIL_NULSTR((char *)input->path.opaque));
-			regrain_ogg(numbers, input);
+			regrain_ogg(numbers, input->path.opaque, input->path.length, &input->options);
 		} else if (input->options.type == INPUT_TYPE_WEM) {
 			BRRLOG_MESSAGETNP(gbrrlog_level_last, WEM_FORMAT, "%-*s",
 			    numbers->input_path_max_length, BRRTIL_NULSTR((char *)input->path.opaque));
-			convert_wem(numbers, input, libraries);
+			convert_wem(numbers, input->path.opaque, input->path.length, &input->options, library);
 		} else if (input->options.type == INPUT_TYPE_WSP) {
 			BRRLOG_MESSAGETNP(gbrrlog_level_last, WSP_FORMAT, "%-*s",
 			    numbers->input_path_max_length, BRRTIL_NULSTR((char *)input->path.opaque));
-			extract_wsp(numbers, input, libraries);
+			extract_wsp(numbers, input->path.opaque, input->path.length, &input->options, library);
 		} else if (input->options.type == INPUT_TYPE_BNK) {
 			BRRLOG_MESSAGETNP(gbrrlog_level_last, BNK_FORMAT, "%-*s",
 			    numbers->input_path_max_length, BRRTIL_NULSTR((char *)input->path.opaque));
-			extract_bnk(numbers, input, libraries);
+			extract_bnk(numbers, input->path.opaque, input->path.length, &input->options, library);
 		}
 	}
 
@@ -454,11 +472,12 @@ i_process_inputs(processed_inputT *const inputs, input_libraryT *const libraries
 int main(int argc, char **argv)
 {
 	static const input_optionsT default_options = {
-		.log_enabled=1,
-		.log_color_enabled=1,
-		.log_priority=brrlog_priority_normal,
+		.library_index = -1,
+		.log_enabled = 1,
+		.log_color_enabled = 1,
+		.log_priority = brrlog_priority_normal,
 #if defined(NeDEBUG)
-		.log_debug=1,
+		.log_debug = 1,
 #endif
 	};
 	static global_optionsT global_options = {
@@ -472,7 +491,7 @@ int main(int argc, char **argv)
 	int err = 0;
 
 	if (argc == 1) {
-		print_help();
+		print_usage();
 	} else if (i_init_brrlog()) {
 		fprintf(stderr, "Failed to initialize logging output : %s", strerror(errno));
 		return 1;
@@ -495,5 +514,7 @@ int main(int argc, char **argv)
 	}
 	i_clear_inputs(&inputs, numbers.n_inputs);
 	i_clear_libraries(&libraries, numbers.n_libraries);
+
+	brrlog_deinit();
 	return err;
 }

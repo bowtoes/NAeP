@@ -27,8 +27,8 @@ limitations under the License.
 BRRCPPSTART
 
 typedef struct packed_codebook {
-	unsigned char *codebook_data;
-	brru4 codebook_size;
+	unsigned char *data;
+	brru4 size;
 } packed_codebookT;
 typedef struct codebook_library {
 	packed_codebookT *codebooks;

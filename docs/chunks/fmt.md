@@ -1,127 +1,60 @@
 [Up](.)
 
 # `fmt` Chunk
-`WAVE` files have a `fmt ` chunk, used to detail various aspects of the audio
-stored within. In Ogg/Vorbis, some of this information is stored in a different
-format in the identification & setup `vorbis` headers.  
+Microsoft WAVE files have a `fmt ` chunk, used to detail various aspects of the
+audio data stored within.  
 
-In WEMs, the `fmt ` chunk contains many fields; some are standard to the WAVE
-specification, however many are custom. It also seems many fields are not
-meaningfully standard across WEMs from different games, likely dependent on
-Wwise version, so there are some bits and pieces of the chunk that are inconsistent.  
+In [Ogg/Vorbis][vorbis spec], this information is stored differently, in the
+[identification and setup headers][vorbis header spec] of the Vorbis stream.  
 
-See this [MGSV soundswap guide][mgsv soundswap],
-[Topher Lee's page][topher lee pcm], and
-[some WEM format blueprints][wem format blueprints] as some examples of what I mean
-by _inconsistency_.
+In Wwise RIFF/Vorbis, this information is stored differently again, some of it
+in the `fmt ` chunk, and a majority of the Vorbis-specific data stored in
+(sometimes mangled) versions of the standard Vorbis headers, elsewhere in the
+stream.
+
+In Wwise RIFF/Vorbis, the `fmt ` chunk is largely similar to the standard WAVE
+version, however there is some customization. The details of the differences
+are illustrated at [Wwise Format Modifications](#wwise-format-modifications).
 
 ## Table of Contents
 1. [Standard `fmt ` Chunk Layouts](#standard-fmt--chunk-layouts)
-   1. [Common `fmt ` chunk structure (c-tag `WAVEFORMAT`)](#common-fmt--chunk-structure-tag-waveformat)
-   2. [PCM Extra format (c-tag `PCMWAVEFORMAT`)](#pcm-extra-format-tag-pcmwaveformat)
-   2. [Standard Extended Format Structure (c-tag `tWAVEFORMATEX`, `WAVEFORMATEX`)](#standard-extended-format-structure-tag-twaveformatex-waveformatex)
-   2. [New Extended Format Structure (c-tag `WAVEFORMATEXTENSIBLE`)](#new-extended-format-structure-tag-waveformatextensible)
-2. [Wwise-specific Format Structure(s)](#wwise-specific-format-structures)
-   1. [Fields common to all formats](#fields-common-to-all-formats)
-   1. [Format A, size `0x12` bytes](#format-a)
-   2. [Format B, size `0x18` bytes](#format-b)
-   3. [Format C, size `0x28` bytes](#format-c)
-   4. [Format D, size `0x42` bytes](#format-d)
+2. [Wwise Format Modifications](#wwise-format-modifications)
 3. [Format Tags](#format-tags)
 4. [References](#references)
 
 ## Standard `fmt ` Chunk Structure
 These structure layouts are taken from the [Windows 10 SDK][win10 sdk] file `mmreg.h`.
 
-* #### Common `fmt ` chunk structure (tag `WAVEFORMAT`)
-  |Field            |Type   |Size (bytes)|Description                                |
-  |:----            |:----  |:---:       |:----                                      |
-  |`wFormatTag`     |`WORD` |2           |[Format tag](#format-tags)                 |
-  |`nChannels`      |`WORD` |2           |Number of channels (i.e. mono, stereo, ...)|
-  |`nSamplesPerSec` |`DWORD`|4           |Sample rate of the audio                   |
-  |`nAvgBytesPerSec`|`DWORD`|4           |For buffer estimation (whatever that means)|
-  |`nBlockAlign`    |`WORD` |2           |Block size of data (wdtm)                  |
+![img](fmtchunk.png)
 
-  **Total Size:** `0x0E` 14 bytes  
-* #### PCM Extra format (tag `PCMWAVEFORMAT`)
-  |Field           |Type        |Size (bytes)|Description                                  |
-  |:----           |:----       |:---:       |:----                                        |
-  |`wf`            |`WAVEFORMAT`|14          |Inherits all fields of standard `fmt ` chunk.|
-  |`wBitsPerSample`|`WORD`      |2           |Bits used per PCM audio sample               |
+<center>
 
-  **Total Size:** `0x10` 16 bytes  
-* #### Standard extended format structure (tag `tWAVEFORMATEX`, `WAVEFORMATEX`)
-  |Field            |Type   |Size (bytes)|Description                                                    |
-  |:----            |:----  |:---:       |:----                                                          |
-  |`wFormatTag`     |`WORD` |2           |[Format tag](#format-tags)                                     |
-  |`nChannels`      |`WORD` |2           |Number of channels (i.e. mono, stereo, ...)                    |
-  |`nSamplesPerSec` |`DWORD`|4           |Sample rate of the audio                                       |
-  |`nAvgBytesPerSec`|`DWORD`|4           |For buffer estimation (whatever that means)                    |
-  |`nBlockAlign`    |`WORD` |2           |Block size of data (wdtm)                                      |
-  |`wBitsPerSample` |`WORD` |2           |Bits-per-sample of mono data                                   |
-  |`cbSize`         |`WORD` |2           |Size of the extra format information, starting after this field|
+|Field                    |Bytes|Description                                                           |
+|:---                     |:---:|:---                                                                  |
+|`format_tag`             |2    |[Format tag](#format-tags).                                           |
+|`n_channels`             |2    |Number of channels (i.e. mono, stereo, ...).                          |
+|`sample_rate`            |4    |Samples of audio per second.                                          |
+|`avg_byte_rate`          |4    |For buffer estimation (whatever that means).                          |
+|`block_align`            |2    |Block size of data (audio blocksize?).                                |
+|`bits_per_sample`        |2    |Bit-depth per PCM/mono audio sample.                                  |
+|`extra_size`             |2    |Size of the extra format information immediately following this field.|
+|`Samples`                |2    |A union of the following fields:                                      |
+|`->valid_bits_per_sample`|_0_  |Bits of precision per audio sample.                                   |
+|`->samples_per_block`    |_0_  |Valid of `bits_per_sample` is 0.                                      |
+|`channel_mask`           |4    |Which channels are present in the stream.                             |
+|`subformat`/`guid`       |16   |Extended sub-identifier for an extensible bitstream.                  |
 
-  **Total Size:**  `0x12` 18 bytes  
-* #### New extended format structure (tag `WAVEFORMATEXTENSIBLE`)
-  |Field                  |Type                          |Size (bytes)|Description                             |
-  |:----                  |:----                         |:---:       |:----                                   |
-  |`Format`               |`WAVEFORMATEX`                |18          |Standard extended information           |
-  |`Samples`              |<code><b>union</b> WORD</code>|2           |Union of the following fields:          |
-  |`->wValidBitsPerSample`|`WORD`                        |_0_         |Bits of precision per audio sample.     |
-  |`->wSamplesPerBlock`   |`WORD`                        |_0_         |Valid if `Format.wBitsPerSample` is 0   |
-  |`->wReserved`          |`WORD`                        |_0_         |Reserved                                |
-  |`dwChannelMask`        |`DWORD`                       |4           |Which channels are present in the stream|
-  |`SubFormat`            |[`GUID`][win10 guid]          |16          |TBW                                     |
+</center>
 
-  **Total Size:** `0x28` 40 bytes  
-  **Size without `GUID`:** `0x18` 24 bytes  
-
-## Wwise-specific format structure(s)
+## Wwise Format Modifications
 These fields I took from reading the source code of [ww2ogg][ww2ogg gh] and
 piecing things together from how they decoded the data.
 
-* #### Fields common to all formats
-  |Field            |Type   |Size (bytes)|Description                                                                            |
-  |:----            |:----  |:---:       |:----                                                                                  |
-  |`wFormatTag`     |`WORD` |2           |[Format tag](#format-tags), same as standard formats (one of `0xFFFE`/`0xFFFF`)        |
-  |`nChannels`      |`WORD` |2           |Number of channels, same as standard formats                                           |
-  |`nSamplesPerSec` |`DWORD`|4           |Sample rate of the audio, same as standard formats                                     |
-  |`nAvgBytesPerSec`|`DWORD`|4           |Average byte rate of the audio, same as standard formats                               |
-  |`nBlockAlign`    |`WORD` |2           |Block size of data, same as standard formats (expected 0)                              |
-  |`wBitsPerSample` |`WORD` |2           |Bits-per-sample/second of mono, same as standard formats (expected 0)                  |
-  |`cbSize`         |`WORD` |2           |Size of extra format information, same as standard formats (expected to be `size - 18`)|
+![img](wwisefmtchunk.png)
 
-  **Total Size:** `0x12` 18 bytes  
-
-* #### Format A
-  **Total Size:** `0x12` 18 bytes  
-  **Expected `cbSize`:** `0x00` 0 bytes  
-* #### Format B
-  |Field|Type |Size (bytes)|Description|
-  |:----|:----|:---:       |:----      |
-  |`Samples`      |<code><b>union</b> WORD</code>|2 |Same as in the extended format structure|
-  |`dwChannelMask`|`DWORD`                       |4 |Same as in the extended format structure|
-
-  **Total Size:** `0x18` 24 bytes  
-  **Expected `cbSize`:** `0x06` 6 bytes  
-* #### Format C
-  |Field|Type |Size (bytes)|Description|
-  |:----|:----|:---:       |:----      |
-  |`Samples`      |<code><b>union</b> WORD</code>|2 |Same as in the extended format structure|
-  |`dwChannelMask`|`DWORD`                       |4 |Same as in the extended format structure|
-  |`SubFormat`    |[`GUID`][win10 guid]          |16|Same as in the extended format structure|
-
-  **Total Size:** `0x28` 40 bytes  
-  **Expected `cbSize`:** `0x16` 22 bytes  
-* #### Format D
-  |Field          |Type                          |Size (bytes)|Description                                              |
-  |:----          |:----                         |:---:       |:----                                                    |
-  |`Samples`      |<code><b>union</b> WORD</code>|2           |Same as in the extended format structure                 |
-  |`dwChannelMask`|`DWORD`                       |4           |Same as in the extended format structure                 |
-  |`Vorbis`       |`vorb`                        |42          |Vorbis specific information; normally in a separate chunk|
-
-  **Total Size:** `0x42` 66 bytes  
-  **Expected `cbSize`:** `0x30` 48 bytes  
+Most fields are identical to their standard versions, except in `Type D`,
+the `vorb_data` field. `vorb_data` is the data of a `Type A`
+[`vorb`][vorbchunks] chunk stored in the extra data of the `fmt` chunk.
 
 ## Format Tags
 The format type for a given WAVE file is stored in the `wFormatTag` field of
@@ -136,12 +69,12 @@ Notable format types:
 ## References
 * [ww2ogg Github][ww2ogg gh]
 * [Windows 10 SDK][win10 sdk]
-* [MGSV Soundswap guide][mgsv soundswap]
-* [Wem Format Blueprints][wem format blueprints]
-* [Topher Lee's guide on PCM WAVE][topher lee pcm]
 
 [win10 guid]:../misc/windefs.md#guid---shared-guiddef.h
+[vorbchunks]:./vorb.md
 
+[vorbis spec]:https://xiph.org/vorbis/doc/Vorbis_I_spec.html
+[vorbis header spec]:https://xiph.org/vorbis/doc/Vorbis_I_spec.html#x1-590004
 [ww2ogg gh]:https://github.com/hcs64/ww2ogg
 [win10 sdk]:https://developer.microsoft.com/en-US/windows/downloads/windows-10-sdk/
 [mgsv soundswap]:https://bobdoleowndu.github.io/mgsv/documentation/soundswapping.html

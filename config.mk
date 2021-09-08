@@ -1,5 +1,6 @@
 # # # TOP CONFIG
 CURDIR:=$(PWD)
+VENDIR:=$(PWD)/vendor
 # Name of project (or overwrite it if you prefer)
 #PROJECT:=
 ifndef PROJECT
@@ -21,13 +22,13 @@ $(PROJECT)_REVIS=0
 
 # Default c-standard to used
 ifndef STD
-STD:=c11
+ STD:=c11
 endif
 # Default linker options
 ifndef LNK
-LNK:=-lm
+ LNK:=-lm
  ifeq ($(TARGET),UNIX)
-LNK:=$(LNK) -lmvec
+  LNK:=$(LNK) -lmvec
  endif
 endif
 
@@ -242,12 +243,20 @@ WRNS:=-Wall -Wextra -Wpedantic -pedantic -Werror=pedantic -pedantic-errors\
 DEFS:=-D$(UPROJECT)MAJOR=$($(PROJECT)_MAJOR)\
       -D$(UPROJECT)MINOR=$($(PROJECT)_MINOR)\
       -D$(UPROJECT)REVIS=$($(PROJECT)_REVIS)\
-      -D$(UPROJECT)VERSION='$($(PROJECT)_MAJOR).$($(PROJECT)_MINOR).$($(PROJECT)_REVIS)'\
+      -D$(UPROJECT)VERSION='"$($(PROJECT)_MAJOR).$($(PROJECT)_MINOR).$($(PROJECT)_REVIS)"'\
+
+VENDEFS:=-D$(UPROJECT)FIXVORBIS
+# Defining FIXVORBIS comments out some code I selected in my copy of libvorbis;
+# I need to figure out how to fix this without a workaround; is there something
+# wrong in the stream itself?
 
 ifdef DEBUG
  DEFS:=$(DEFS) -D$(UPROJECT)DEBUG
  ifdef MEMCHECK
   DEFS:=$(DEFS) -D$(UPROJECT)MEMCHECK
+ endif
+ ifdef VENDEBUG
+  VENDEFS:=$(VENDEFS) -D$(UPROJECT)VENDEBUG
  endif
 endif
 

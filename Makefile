@@ -128,7 +128,7 @@ ifdef LIBRECONFIG
   endif
  endif
 endif
-	make -C vendor/vorbis
+	make -C vendor/vorbis CFLAGS="$$CFLAGS -I$(VENDIR)/brrtools/src $(VENDEFS)"
 libs: brrtools ogg vorbis
 
 clean-brrtools: ; make -C vendor/brrtools clean
