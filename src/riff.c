@@ -351,7 +351,7 @@ riff_consume_chunk(riffT *const rf, riff_chunk_infoT *const sc, riff_data_syncT 
 			sc->is_list = 1;
 			sc->chunk_type = cktype;
 		} else { /* desync/unrecognized chunk */
-			ds->consumed += sc->chunksize; /* skip it for now */
+			ds->consumed -= 7; /* Seek forward 1 byte total */
 			return RIFF_CHUNK_UNRECOGNIZED;
 		}
 		return RIFF_CONSUME_MORE;

@@ -42,14 +42,13 @@ What the program can/will be able to do:
     Same capabilities as WSP extraction, with one addition:  
    * &#9744; Recursive extraction: search each passed BNK for WEMs
      referenced in other BNK/WSP files passed on command-line.  
-3. &#9744; WEM-to-ogg Conversion:  
-   * &#9744; All passed WEMs are converted to ogg, either in-place or to
+3. &#9746; WEM-to-ogg Conversion:  
+   * &#9746; All passed WEMs are converted to ogg, either in-place or to
      separate files (`.ogg`).  
    * &#9744; All WEMs extracted from BNKs or WSPs can be similarly converted.  
 4. &#9746; Ogg Regranularization:  
     * &#9746; All passed oggs are regranularized, either in-place or to
       separate files (`..._rvb.ogg`).  
-      _Actually,_ in-place revorb is yet to be implemented.
     * &#9746; ~All converted WEMs can be similarly revorbed automatically.~  
       Regranularization need-not be done separately from WEM conversion, it
       would be an error to have incorrect granule positions in the output oggs.

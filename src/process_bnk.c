@@ -18,6 +18,10 @@ limitations under the License.
 
 #include <brrtools/brrlog.h>
 
+static const input_optionsT *goptions = NULL;
+static const char *ginput_name = NULL;
+static char goutput_name[BRRPATH_MAX_PATH + 1] = {0};
+
 int BRRCALL
 extract_bnk(numbersT *const numbers, const char *const input, brrsz input_length,
     const input_optionsT *const options, input_libraryT *const library)
@@ -25,17 +29,20 @@ extract_bnk(numbersT *const numbers, const char *const input, brrsz input_length
 	int err = 0;
 	numbers->bnks_to_process++;
 	if (options->dry_run) {
-		BRRLOG_FOREP(DRY_COLOR, " Extract BNK (dry)");
+		BRRLOG_FOREP(NeLOG_COLOR_DRY, "Extract BNK (dry) ");
 	} else {
-		NeTODO("Implement 'extract_bnk' priority ZZZ (sleeping) ");
-		BRRLOG_FOREP(WET_COLOR, " Extracting BNK...");
+		BRRLOG_FOREP(NeLOG_COLOR_WET, "Extracting BNK... ");
+		BRRLOG_FOREP(NeLOG_COLOR_DISABLED, "BNK Extraction not implemented");
 		/* Very similar to 'extract_wsp', however banks may reference other banks and wsps.
-		 * TODO: How should this be done?
-		 * Hold off until the rest are done.
+		 * TODO Hold off until the rest are done.
 		 * */
 	}
 	if (!err) {
 		numbers->bnks_processed++;
+		BRRLOG_MESSAGETP(gbrrlog_level_normal, NeLOG_FORMAT_SUCCESS, "Success!");
+	} else {
+		numbers->bnks_failed++;
+		BRRLOG_MESSAGETP(gbrrlog_level_normal, NeLOG_FORMAT_FAILURE, "Failure! (%d)", err);
 	}
 	return err;
 }

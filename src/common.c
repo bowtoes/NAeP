@@ -33,6 +33,8 @@ const fourccT goggfcc = FCC_INIT("OggS");
 const fourccT gwemfcc = FCC_INIT("RIFF");
 const fourccT gbnkfcc = FCC_INIT("BKHD");
 
+static char i_strerr_str[256] = "";
+#define i_strerr_max sizeof(i_strerr_str)
 const char *BRRCALL
 i_strerr(int err)
 {
@@ -48,8 +50,12 @@ i_strerr(int err)
 		case I_NOT_RIFF: return "Data is not RIFF";
 		case I_UNRECOGNIZED_DATA: return "Data type is unrecognized";
 		case I_INSUFFICIENT_DATA: return "Insufficient data to decode";
-		case I_BAD_ERROR: return "I don't know what to do";
-		default: return "Unrecognized error code";
+		case I_BAD_ERROR:
+			snprintf(i_strerr_str, i_strerr_max, "I don't know what to do %d", err);
+			return i_strerr_str;
+		default:
+			snprintf(i_strerr_str, i_strerr_max, "Unrecognized error code %d", err);
+			return i_strerr_str;
 	}
 }
 
@@ -144,20 +150,20 @@ processed_input_print(const processed_inputT *const input, brrsz max_input_lengt
 	gbrrlog_level_last = gbrrlog_level_debug;
 	gbrrlog_format_last = gbrrlog_format_normal;
 	BRRLOG_LASTNP(" ");
-	if (input->options.type == INPUT_TYPE_OGG)      { BRRLOG_MESSAGETNP(gbrrlog_level_last, OGG_FORMAT, "OGG"); }
-	else if (input->options.type == INPUT_TYPE_WEM) { BRRLOG_MESSAGETNP(gbrrlog_level_last, WEM_FORMAT, "WEM"); }
-	else if (input->options.type == INPUT_TYPE_WSP) { BRRLOG_MESSAGETNP(gbrrlog_level_last, WSP_FORMAT, "WSP"); }
-	else if (input->options.type == INPUT_TYPE_BNK) { BRRLOG_MESSAGETNP(gbrrlog_level_last, BNK_FORMAT, "BNK"); }
-	else                                            { BRRLOG_MESSAGETNP(gbrrlog_level_last, AUT_FORMAT, "AUT"); }
+	if (input->options.type == INPUT_TYPE_OGG)      { BRRLOG_MESSAGETNP(gbrrlog_level_last, NeLOG_FORMAT_OGG, "OGG"); }
+	else if (input->options.type == INPUT_TYPE_WEM) { BRRLOG_MESSAGETNP(gbrrlog_level_last, NeLOG_FORMAT_WEM, "WEM"); }
+	else if (input->options.type == INPUT_TYPE_WSP) { BRRLOG_MESSAGETNP(gbrrlog_level_last, NeLOG_FORMAT_WSP, "WSP"); }
+	else if (input->options.type == INPUT_TYPE_BNK) { BRRLOG_MESSAGETNP(gbrrlog_level_last, NeLOG_FORMAT_BNK, "BNK"); }
+	else                                            { BRRLOG_MESSAGETNP(gbrrlog_level_last, NeLOG_FORMAT_AUT, "AUT"); }
 
 	BRRLOG_FORENP(gbrrlog_format_normal.foreground, " cbl ");
-	BRRLOG_STYLENP(ENABLED_COLOR, -1, brrlog_style_bold, "%zu", input->options.library_index);
+	BRRLOG_STYLENP(NeLOG_COLOR_ENABLED, -1, brrlog_style_bold, "%zu", input->options.library_index);
 	BRRLOG_FORENP(gbrrlog_format_normal.foreground, " log ");
-	if (input->options.log_enabled) { BRRLOG_STYLENP(ENABLED_COLOR, -1, brrlog_style_bold, "ENB"); }
-	else { BRRLOG_FORENP(DISABLED_COLOR, "DSB"); }
+	if (input->options.log_enabled) { BRRLOG_STYLENP(NeLOG_COLOR_ENABLED, -1, brrlog_style_bold, "ENB"); }
+	else { BRRLOG_FORENP(NeLOG_COLOR_DISABLED, "DSB"); }
 	BRRLOG_FORENP(gbrrlog_format_normal.foreground, " ");
-	if (input->options.log_color_enabled) { BRRLOG_STYLENP(ENABLED_COLOR, -1, brrlog_style_bold, "STY"); }
-	else { BRRLOG_FORENP(DISABLED_COLOR, "SMP"); }
+	if (input->options.log_color_enabled) { BRRLOG_STYLENP(NeLOG_COLOR_ENABLED, -1, brrlog_style_bold, "STY"); }
+	else { BRRLOG_FORENP(NeLOG_COLOR_DISABLED, "SMP"); }
 	BRRLOG_FORENP(gbrrlog_format_normal.foreground, " ");
 	if (input->options.log_debug) { BRRLOG_FORENP(brrlog_color_cyan, "DBG"); }
 	else { BRRLOG_FORENP(brrlog_color_yellow, "NRM"); }
@@ -165,29 +171,29 @@ processed_input_print(const processed_inputT *const input, brrsz max_input_lengt
 	BRRLOG_FORENP(brrlog_color_normal + 1 + input->options.log_priority,
 	    "%s", brrlog_priority_dbgstr(input->options.log_priority));
 	BRRLOG_FORENP(gbrrlog_format_normal.foreground, " operation ");
-	if (input->options.dry_run) { BRRLOG_FORENP(DRY_COLOR, "DRY"); }
-	else { BRRLOG_FORENP(WET_COLOR, "WET"); }
+	if (input->options.dry_run) { BRRLOG_FORENP(NeLOG_COLOR_DRY, "DRY"); }
+	else { BRRLOG_FORENP(NeLOG_COLOR_WET, "WET"); }
 	BRRLOG_FORENP(gbrrlog_format_normal.foreground, " w2o ");
-	if (input->options.auto_ogg) { BRRLOG_FORENP(AUT_COLOR, "AUT"); }
-	else { BRRLOG_FORENP(MANUAL_COLOR, "MAN"); }
+	if (input->options.auto_ogg) { BRRLOG_FORENP(NeLOG_COLOR_AUT, "AUT"); }
+	else { BRRLOG_FORENP(NeLOG_COLOR_MANUAL, "MAN"); }
 	BRRLOG_FORENP(gbrrlog_format_normal.foreground, " ");
-	if (input->options.inplace_ogg) { BRRLOG_FORENP(INPLACE_COLOR, "INP"); }
-	else { BRRLOG_FORENP(SEPARATE_COLOR, "SEP"); }
+	if (input->options.inplace_ogg) { BRRLOG_FORENP(NeLOG_COLOR_INPLACE, "INP"); }
+	else { BRRLOG_FORENP(NeLOG_COLOR_SEPARATE, "SEP"); }
 	BRRLOG_FORENP(gbrrlog_format_normal.foreground, " rvb ");
-	if (input->options.auto_ogg) { BRRLOG_FORENP(AUT_COLOR, "AUT"); }
-	else { BRRLOG_FORENP(MANUAL_COLOR, "MAN"); }
+	if (input->options.auto_ogg) { BRRLOG_FORENP(NeLOG_COLOR_AUT, "AUT"); }
+	else { BRRLOG_FORENP(NeLOG_COLOR_MANUAL, "MAN"); }
 	BRRLOG_FORENP(gbrrlog_format_normal.foreground, " ");
-	if (input->options.inplace_ogg) { BRRLOG_FORENP(INPLACE_COLOR, "INP"); }
-	else { BRRLOG_FORENP(MANUAL_COLOR, "SEP"); }
+	if (input->options.inplace_ogg) { BRRLOG_FORENP(NeLOG_COLOR_INPLACE, "INP"); }
+	else { BRRLOG_FORENP(NeLOG_COLOR_MANUAL, "SEP"); }
 	BRRLOG_FORENP(gbrrlog_format_normal.foreground, " bank recurse ");
-	if (input->options.bank_recurse) { BRRLOG_FORENP(ENABLED_COLOR, "FUL"); }
-	else { BRRLOG_FORENP(DISABLED_COLOR, "NON"); }
+	if (input->options.bank_recurse) { BRRLOG_FORENP(NeLOG_COLOR_ENABLED, "FUL"); }
+	else { BRRLOG_FORENP(NeLOG_COLOR_DISABLED, "NON"); }
 	if (newline)
 		BRRLOG_LASTP("");
 }
 
 int BRRCALL
-icount(unsigned int v)
+icount(unsigned long v)
 {
 	int r = 0;
 	while (v) {

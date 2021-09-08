@@ -39,59 +39,59 @@ limitations under the License.
 	gbrrlog_level_last = _lf_; \
 } while (0)
 
-#define OGG_FORMAT ((brrlog_formatT){brrlog_color_blue,    -1, -1, -1})
-#define OGG_COLOR OGG_FORMAT.foreground
-#define OGG_BGCOL OGG_FORMAT.background
-#define OGG_STYLE OGG_FORMAT.style
-#define OGG_FONT OGG_FORMAT.font
+#define NeLOG_FORMAT_OGG ((brrlog_formatT){brrlog_color_blue,    -1, -1, -1})
+#define NeLOG_COLOR_OGG  NeLOG_FORMAT_OGG.foreground
+#define NeLOG_BGCOL_OGG  NeLOG_FORMAT_OGG.background
+#define NeLOG_STYLE_OGG  NeLOG_FORMAT_OGG.style
+#define NeLOG_FONT_OGG   NeLOG_FORMAT_OGG.font
 
-#define WEM_FORMAT ((brrlog_formatT){brrlog_color_green,   -1, -1, -1})
-#define WEM_COLOR WEM_FORMAT.foreground
-#define WEM_BGCOL WEM_FORMAT.background
-#define WEM_STYLE WEM_FORMAT.style
-#define WEM_FONT WEM_FORMAT.font
+#define NeLOG_FORMAT_WEM ((brrlog_formatT){brrlog_color_green,   -1, -1, -1})
+#define NeLOG_COLOR_WEM  NeLOG_FORMAT_WEM.foreground
+#define NeLOG_BGCOL_WEM  NeLOG_FORMAT_WEM.background
+#define NeLOG_STYLE_WEM  NeLOG_FORMAT_WEM.style
+#define NeLOG_FONT_WEM   NeLOG_FORMAT_WEM.font
 
-#define WSP_FORMAT ((brrlog_formatT){brrlog_color_yellow,  -1, -1, -1})
-#define WSP_COLOR WSP_FORMAT.foreground
-#define WSP_BGCOL WSP_FORMAT.background
-#define WSP_STYLE WSP_FORMAT.style
-#define WSP_FONT WSP_FORMAT.font
+#define NeLOG_FORMAT_WSP ((brrlog_formatT){brrlog_color_yellow,  -1, -1, -1})
+#define NeLOG_COLOR_WSP  NeLOG_FORMAT_WSP.foreground
+#define NeLOG_BGCOL_WSP  NeLOG_FORMAT_WSP.background
+#define NeLOG_STYLE_WSP  NeLOG_FORMAT_WSP.style
+#define NeLOG_FONT_WSP   NeLOG_FORMAT_WSP.font
 
-#define BNK_FORMAT ((brrlog_formatT){brrlog_color_red,     -1, -1, -1})
-#define BNK_COLOR BNK_FORMAT.foreground
-#define BNK_BGCOL BNK_FORMAT.background
-#define BNK_STYLE BNK_FORMAT.style
-#define BNK_FONT BNK_FORMAT.font
+#define NeLOG_FORMAT_BNK ((brrlog_formatT){brrlog_color_red,     -1, -1, -1})
+#define NeLOG_COLOR_BNK  NeLOG_FORMAT_BNK.foreground
+#define NeLOG_BGCOL_BNK  NeLOG_FORMAT_BNK.background
+#define NeLOG_STYLE_BNK  NeLOG_FORMAT_BNK.style
+#define NeLOG_FONT_BNK   NeLOG_FORMAT_BNK.font
 
-#define AUT_FORMAT ((brrlog_formatT){brrlog_color_magenta, -1, brrlog_style_bold, -1})
-#define AUT_COLOR AUT_FORMAT.foreground
-#define AUT_BGCOL AUT_FORMAT.background
-#define AUT_STYLE AUT_FORMAT.style
-#define AUT_FONT AUT_FORMAT.font
+#define NeLOG_FORMAT_AUT ((brrlog_formatT){brrlog_color_magenta, -1, brrlog_style_bold, -1})
+#define NeLOG_COLOR_AUT  NeLOG_FORMAT_AUT.foreground
+#define NeLOG_BGCOL_AUT  NeLOG_FORMAT_AUT.background
+#define NeLOG_STYLE_AUT  NeLOG_FORMAT_AUT.style
+#define NeLOG_FONT_AUT   NeLOG_FORMAT_AUT.font
 
-#define DRY_COLOR brrlog_color_magenta
-#define WET_COLOR brrlog_color_cyan
+#define NeLOG_COLOR_DRY brrlog_color_magenta
+#define NeLOG_COLOR_WET brrlog_color_cyan
 
-#define MANUAL_COLOR brrlog_color_red
-#define INPLACE_COLOR brrlog_color_yellow
-#define SEPARATE_COLOR brrlog_color_cyan
-#define ENABLED_COLOR brrlog_color_green
-#define DISABLED_COLOR brrlog_color_red
+#define NeLOG_COLOR_MANUAL   brrlog_color_red
+#define NeLOG_COLOR_INPLACE  brrlog_color_yellow
+#define NeLOG_COLOR_SEPARATE brrlog_color_cyan
+#define NeLOG_COLOR_ENABLED  brrlog_color_green
+#define NeLOG_COLOR_DISABLED brrlog_color_red
 
-#define SUCCESS_FORMAT ((brrlog_formatT){brrlog_color_green, -1, brrlog_style_bold, -1})
-#define SUCCESS_COLOR SUCCESS_FORMAT.foreground
-#define SUCCESS_BGCOL SUCCESS_FORMAT.background
-#define SUCCESS_STYLE SUCCESS_FORMAT.style
-#define SUCCESS_FONT SUCCESS_FORMAT.font
+#define NeLOG_FORMAT_SUCCESS ((brrlog_formatT){brrlog_color_green, -1, brrlog_style_bold, -1})
+#define NeLOG_COLOR_SUCCESS  NeLOG_FORMAT_SUCCESS.foreground
+#define NeLOG_BGCOL_SUCCESS  NeLOG_FORMAT_SUCCESS.background
+#define NeLOG_STYLE_SUCCESS  NeLOG_FORMAT_SUCCESS.style
+#define NeLOG_FONT_SUCCESS   NeLOG_FORMAT_SUCCESS.font
 
-#define FAILURE_FORMAT ((brrlog_formatT){brrlog_color_red, -1, brrlog_style_bold, -1})
-#define FAILURE_COLOR FAILURE_FORMAT.foreground
-#define FAILURE_BGCOL FAILURE_FORMAT.background
-#define FAILURE_STYLE FAILURE_FORMAT.style
-#define FAILURE_FONT FAILURE_FORMAT.font
+#define NeLOG_FORMAT_FAILURE ((brrlog_formatT){brrlog_color_red, -1, brrlog_style_bold, -1})
+#define NeLOG_COLOR_FAILURE  NeLOG_FORMAT_FAILURE.foreground
+#define NeLOG_BGCOL_FAILURE  NeLOG_FORMAT_FAILURE.background
+#define NeLOG_STYLE_FAILURE  NeLOG_FORMAT_FAILURE.style
+#define NeLOG_FONT_FAILURE   NeLOG_FORMAT_FAILURE.font
 
-#define PATH_COLOR brrlog_color_cyan
-#define INFO_COLOR brrlog_color_magenta
+#define NeLOG_COLOR_PATH brrlog_color_cyan
+#define NeLOG_COLOR_INFO brrlog_color_magenta
 
 /* Common internal return codes */
 #define I_SUCCESS 0
@@ -141,11 +141,11 @@ typedef struct numbers {
 	brrsz n_libraries;
 	brrsz input_path_max_length; /* For log padding */
 
-	brrsz bnks_to_process, bnks_processed;
-	brrsz wsps_to_process, wsps_processed;
-	brrsz wems_extracted;
-	brrsz wems_to_convert, wems_converted;
-	brrsz oggs_to_regranularize, oggs_regranularized;
+	brrsz oggs_to_regrain, oggs_regrained, oggs_failed;
+	brrsz wems_to_convert, wems_converted, wems_failed;
+	brrsz wsps_to_process, wsps_processed, wsps_failed;
+	brrsz bnks_to_process, bnks_processed, bnks_failed;
+	brrsz wems_extracted, wems_extracted_converted, wems_extracted_failed;
 } numbersT;
 typedef struct global_options {
 	brru1 should_reset:1;
@@ -153,7 +153,9 @@ typedef struct global_options {
 	brru1 next_is_file:1;
 	brru1 always_file:1;
 	brru1 next_is_cbl:1;
-	brru1 _pad:3;
+	brru1 report_card:1;
+	brru1 full_report:1;
+	brru1 _pad:1;
 	/* < Byte boundary > */
 } global_optionsT;
 typedef struct input_options {
@@ -199,7 +201,9 @@ void BRRCALL processed_input_clear(processed_inputT *const input);
 void BRRCALL processed_input_print(const processed_inputT *const input, brrsz max_input_length,
     brrlog_priorityT priority, int newline);
 
-int BRRCALL icount(unsigned int number);
+/* Counts number of set bits in number */
+int BRRCALL icount(unsigned long number);
+/* Counts number of bits needed to store number (log base 2) */
 int BRRCALL ilog(long number);
 /* definitely not ripped from tremor */
 long BRRCALL lookup1_values(long entries, long dimensions);

@@ -61,6 +61,9 @@ typedef struct wwise_packet {
 	int header_length;
 } wwise_packetT;
 typedef struct wwise_wem {
+	brru1 fmt_initialized:1;
+	brru1 vorb_initialized:1;
+	brru1 data_initialized:1;
 	brru1 mod_packets:1; /* No idea what this means */
 	brru1 granule_present:1; /* Whether data packets have 4-bytes for granule */
 	brru1 all_headers_present:1; /* If all vorbis headers are present at

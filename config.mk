@@ -245,11 +245,6 @@ DEFS:=-D$(UPROJECT)MAJOR=$($(PROJECT)_MAJOR)\
       -D$(UPROJECT)REVIS=$($(PROJECT)_REVIS)\
       -D$(UPROJECT)VERSION='"$($(PROJECT)_MAJOR).$($(PROJECT)_MINOR).$($(PROJECT)_REVIS)"'\
 
-VENDEFS:=-D$(UPROJECT)FIXVORBIS
-# Defining FIXVORBIS comments out some code I selected in my copy of libvorbis;
-# I need to figure out how to fix this without a workaround; is there something
-# wrong in the stream itself?
-
 ifdef DEBUG
  DEFS:=$(DEFS) -D$(UPROJECT)DEBUG
  ifdef MEMCHECK
@@ -257,6 +252,7 @@ ifdef DEBUG
  endif
  ifdef VENDEBUG
   VENDEFS:=$(VENDEFS) -D$(UPROJECT)VENDEBUG
+  # Enables debug logging in my copy of libogg/libvorbis, for my sanity
  endif
 endif
 
@@ -293,7 +289,6 @@ $(PROJECT)_LDFLAGS=$(LNK) $(PRF) $(LDFLAGS)
 # should be specified relative to CURDIR
 SRC:=\
 	src/main.c\
-	src/bitstream.c\
 	src/codebook_library.c\
 	src/common.c\
 	src/riff.c\
@@ -304,7 +299,6 @@ SRC:=\
 	src/wwise.c\
 
 HDR:=\
-	src/bitstream.h\
 	src/codebook_library.h\
 	src/common.h\
 	src/riff.h\

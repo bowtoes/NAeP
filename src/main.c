@@ -85,7 +85,7 @@ limitations under the License.
 "\n        -reset  . . . . . . . . . . . . . .  Argument options reset to default after each file passed." \
 
 static void BRRCALL
-print_usage()
+print_usage(void)
 {
 	fprintf(stdout, "NAeP - NieR:Automata extraction Precept\n");
 	fprintf(stdout, "Compiled on "__DATE__", " __TIME__"\n");
@@ -93,12 +93,36 @@ print_usage()
 	exit(0);
 }
 static void BRRCALL
-print_help()
+print_help(void)
 {
 	fprintf(stdout, "NAeP - NieR:Automata extraction Precept\n");
 	fprintf(stdout, "Compiled on "__DATE__", " __TIME__"\n");
 	fprintf(stdout, USAGE"\n"HELP"\n");
 	exit(0);
+}
+static void BRRCALL
+print_numbers(const global_optionsT *const global, const numbersT *const numbers)
+{
+	brrsz input_count_digits = brrlib_ndigits(numbers->n_inputs, 0, 10);
+	brrsz total_success =
+	    numbers->oggs_regrained
+	    + numbers->wems_converted
+	    + numbers->wsps_processed
+	    + numbers->bnks_processed
+	    - numbers->wems_extracted_converted;
+	brrsz total_failure =
+	    numbers->oggs_failed
+	    + numbers->wems_failed
+	    + numbers->wsps_failed
+	    + numbers->bnks_failed
+	    - numbers->wems_extracted_failed;
+	BRRLOG_NORN("Successfully processed a total of ");
+	BRRLOG_FORENP(NeLOG_COLOR_INFO, "%*i / %*i",
+	    input_count_digits + 1, total_success, input_count_digits, numbers->n_inputs);
+	BRRLOG_NORP(" inputs");
+	if (global->full_report) {
+		/* Print full report card... */
+	}
 }
 static int BRRCALL
 i_parse_argument(const char *const arg, global_optionsT *const global, input_optionsT *const options)
@@ -251,7 +275,6 @@ i_determine_input_type(processed_inputT *const input, const char *const extensio
 	}
 	fclose(fp);
 	if (!err) {
-		BRRLOG_DEBUGNP("FCC %08X = %02X %02X %02X %02X ", input_fcc, FCC_GET_BYTES(input_fcc));
 		if (input_fcc.integer == goggfcc.integer) {
 			input->options.type = INPUT_TYPE_OGG;
 		} else if (input_fcc.integer == gwemfcc.integer) {
@@ -384,45 +407,45 @@ i_process_input(processed_inputT *const input, input_libraryT *const libraries,
 	if (brrpath_split(&directory, &base_name, &extension, input->path.opaque)) {
 		return -1;
 	}
-	BRRLOG_NORN("Parsing");
-	BRRLOG_FORENP(INFO_COLOR, " %*i / %*i ",
+	BRRLOG_NORN("Parsing ");
+	BRRLOG_FORENP(NeLOG_COLOR_INFO, "%*i / %*i",
 	    input_count_digits, posterity_index + 1, input_count_digits, numbers->n_inputs);
-#if !defined(NeDEBUG)
 	if (input->options.log_debug) {
-#endif
+		BRRLOG_NORNP(" ");
 		processed_input_print(input, numbers->input_path_max_length, brrlog_priority_debug, 0);
-#if !defined(NeDEBUG)
 	}
-#endif
 	BRRLOG_NORNP(" "); /* Reset last log format and level */
 	if (input->options.type == INPUT_TYPE_UNK) {
-		int err = 0;
-		if ((err = i_determine_input_type(input, extension.opaque))) {
-			BRRLOG_ERRN("Failed to determine filetype for ");
-			BRRLOG_FORENP(PATH_COLOR, "%-*s", numbers->input_path_max_length, BRRTIL_NULSTR((char *)input->path.opaque));
-			BRRLOG_ERRP(" : %s", i_strerr(errno));
-		}
+		BRRLOG_MESSAGETNP(gbrrlog_level_last, NeLOG_FORMAT_AUT, "%-*s",
+		    numbers->input_path_max_length, BRRTIL_NULSTR((char *)input->path.opaque));
+		err = i_determine_input_type(input, extension.opaque);
+	} else if (input->options.type == INPUT_TYPE_OGG) {
+		BRRLOG_MESSAGETNP(gbrrlog_level_last, NeLOG_FORMAT_OGG, "%-*s",
+		    numbers->input_path_max_length, BRRTIL_NULSTR((char *)input->path.opaque));
+	} else if (input->options.type == INPUT_TYPE_WEM) {
+		BRRLOG_MESSAGETNP(gbrrlog_level_last, NeLOG_FORMAT_OGG, "%-*s",
+		    numbers->input_path_max_length, BRRTIL_NULSTR((char *)input->path.opaque));
+	} else if (input->options.type == INPUT_TYPE_WSP) {
+		BRRLOG_MESSAGETNP(gbrrlog_level_last, NeLOG_FORMAT_OGG, "%-*s",
+		    numbers->input_path_max_length, BRRTIL_NULSTR((char *)input->path.opaque));
+	} else if (input->options.type == INPUT_TYPE_BNK) {
+		BRRLOG_MESSAGETNP(gbrrlog_level_last, NeLOG_FORMAT_OGG, "%-*s",
+		    numbers->input_path_max_length, BRRTIL_NULSTR((char *)input->path.opaque));
 	}
-	if (!err) {
+	BRRLOG_NORNP(" "); /* Reset last log format and level */
+	if (err) {
+		BRRLOG_ERR("Failed to determine filetype : %s", i_strerr(err));
+	} else {
 		input_libraryT *library = NULL;
-		BRRLOG_NORNP(""); /* Reset last log format and level */
 		if (input->options.library_index != -1)
 			library = &libraries[input->options.library_index];
 		if (input->options.type == INPUT_TYPE_OGG) {
-			BRRLOG_MESSAGETNP(gbrrlog_level_last, OGG_FORMAT, "%-*s",
-			    numbers->input_path_max_length, BRRTIL_NULSTR((char *)input->path.opaque));
 			regrain_ogg(numbers, input->path.opaque, input->path.length, &input->options);
 		} else if (input->options.type == INPUT_TYPE_WEM) {
-			BRRLOG_MESSAGETNP(gbrrlog_level_last, WEM_FORMAT, "%-*s",
-			    numbers->input_path_max_length, BRRTIL_NULSTR((char *)input->path.opaque));
 			convert_wem(numbers, input->path.opaque, input->path.length, &input->options, library);
 		} else if (input->options.type == INPUT_TYPE_WSP) {
-			BRRLOG_MESSAGETNP(gbrrlog_level_last, WSP_FORMAT, "%-*s",
-			    numbers->input_path_max_length, BRRTIL_NULSTR((char *)input->path.opaque));
 			extract_wsp(numbers, input->path.opaque, input->path.length, &input->options, library);
 		} else if (input->options.type == INPUT_TYPE_BNK) {
-			BRRLOG_MESSAGETNP(gbrrlog_level_last, BNK_FORMAT, "%-*s",
-			    numbers->input_path_max_length, BRRTIL_NULSTR((char *)input->path.opaque));
 			extract_bnk(numbers, input->path.opaque, input->path.length, &input->options, library);
 		}
 	}
@@ -515,6 +538,7 @@ int main(int argc, char **argv)
 	i_clear_inputs(&inputs, numbers.n_inputs);
 	i_clear_libraries(&libraries, numbers.n_libraries);
 
+	print_numbers(&global_options, &numbers);
 	brrlog_deinit();
 	return err;
 }

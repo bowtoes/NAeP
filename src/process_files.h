@@ -18,10 +18,16 @@ limitations under the License.
 #define PROCESS_FILES_H
 
 #include <brrtools/brrapi.h>
+#include <brrtools/brrpath.h>
 
 #include "common.h"
 
 BRRCPPSTART
+
+#define VORBIS_STR "vorbis"
+#define CODEBOOK_SYNC "BCV"
+
+/* Shared state */
 
 int BRRCALL regrain_ogg(numbersT *const numbers, const char *const input, brrsz input_length,
     const input_optionsT *const options);

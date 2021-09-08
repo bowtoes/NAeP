@@ -93,37 +93,36 @@ i_init_fmt(wwise_fmtT *const fmt, const unsigned char *const data, brru4 data_si
 int BRRCALL
 wwise_wem_init(wwise_wemT *const wem, const riffT *const rf)
 {
-	brru1 init_fmt = 0, init_vorb = 0, init_data = 0;
 	if (!wem || !rf)
 		return WWISE_ERROR;
 	memset(wem, 0, sizeof(*wem));
 	for (brru8 i = 0; i < rf->n_basics; ++i) {
 		riff_basic_chunkT *basic = &rf->basics[i];
 		if (basic->type == riff_basic_type_fmt) {
-			if (init_fmt)
+			if (wem->fmt_initialized)
 				return WWISE_DUPLICATE;
 			i_init_fmt(&wem->fmt, basic->data, basic->size);
-			init_fmt = 1;
+			wem->fmt_initialized = 1;
 			if (basic->size == 66) { /* Vorb implicit in the fmt */
-				if (init_vorb)
+				if (wem->vorb_initialized)
 					return WWISE_DUPLICATE;
 				i_init_vorb(wem, basic->data + 24, basic->size - 24);
-				init_vorb = 1;
+				wem->vorb_initialized = 1;
 			}
 		} else if (basic->type == riff_basic_type_vorb) { /* Vorb explicit */
-			if (init_vorb)
+			if (wem->vorb_initialized)
 				return WWISE_DUPLICATE;
 			i_init_vorb(wem, basic->data, basic->size);
-			init_vorb = 1;
+			wem->vorb_initialized = 1;
 		} else if (basic->type == riff_basic_type_data) {
-			if (init_data)
+			if (wem->data_initialized)
 				return WWISE_DUPLICATE;
 			wem->data = basic->data;
 			wem->data_size = basic->size;
-			init_data = 1;
+			wem->data_initialized = 1;
 		}
 	}
-	if (!init_fmt || !init_data || !init_vorb)
+	if (!wem->fmt_initialized || !wem->vorb_initialized || !wem->data_initialized)
 		return WWISE_INCOMPLETE;
 	if (wem->vorb.header_packets_offset > wem->data_size ||
 	    wem->vorb.audio_start_offset > wem->data_size)

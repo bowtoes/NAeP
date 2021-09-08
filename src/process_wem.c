@@ -31,9 +31,6 @@ limitations under the License.
 
 #include "riff.h"
 #include "wwise.h"
-#include "bitstream.h"
-
-static const char gvorbis_str[6] = "vorbis";
 
 static const input_optionsT *goptions = NULL;
 static const char *ginput_name = NULL;
@@ -186,8 +183,8 @@ i_packer_transfer_remaining(oggpack_buffer *const unpacker, oggpack_buffer *cons
 }
 /* Header processing */
 static int BRRCALL
-i_insert_packet(ogg_stream_state *const streamer, oggpack_buffer *const packer,
-    ogg_packet *const packet, brru8 packetno, brru8 granule, int end_of_stream)
+i_build_packet(ogg_packet *const packet, oggpack_buffer *const packer,
+	brru8 packetno, brru8 granule, int end_of_stream)
 {
 	packet->packet = oggpack_get_buffer(packer);
 	packet->bytes = oggpack_bytes(packer);
@@ -195,10 +192,32 @@ i_insert_packet(ogg_stream_state *const streamer, oggpack_buffer *const packer,
 	packet->e_o_s = end_of_stream != 0;
 	packet->granulepos = granule;
 	packet->packetno = packetno;
-	if (ogg_stream_packetin(streamer, packet))
+	return 0;
+}
+static int BRRCALL
+i_insert_packet(ogg_stream_state *const streamer, ogg_packet *const packet,
+    vorbis_info *const vi, vorbis_comment *const vc)
+{
+	if (ogg_stream_packetin(streamer, packet)) {
 		return I_BUFFER_ERROR;
+	} else if (vi || vc) {
+		int err = 0;
+		if (!vi || !vc) {
+			return I_BAD_ERROR;
+		} else if ((err = vorbis_synthesis_headerin(vi, vc, packet))) {
+			BRRLOG_ERRN("Failed to synthesize header %d : ", packet->packetno);
+			if (err == OV_ENOTVORBIS)
+				BRRLOG_ERR("NOT VORBIS");
+			else if (err == OV_EBADHEADER)
+				BRRLOG_ERR("BAD HEADER");
+			else
+				BRRLOG_ERR("INTERNAL ERROR");
+			return I_CORRUPT;
+		}
+	}
 	return I_SUCCESS;
 }
+/* COPY */
 static int BRRCALL
 i_copy_id_header(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 {
@@ -220,7 +239,7 @@ i_copy_id_header(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 
 	oggpack_write(packer, 1, 8);                    /* OUT Packet type */
 	for (int i = 0; i < 6; ++i)                     /* OUT Vorbis str */
-		oggpack_write(packer, gvorbis_str[i], 8);
+		oggpack_write(packer, VORBIS_STR[i], 8);
 	oggpack_write(packer, 0, 32);                   /* OUT Version */
 	oggpack_write(packer, audio_channels, 8);       /* OUT Audio channels */
 	oggpack_write(packer, sample_rate, 32);         /* OUT Sample rate */
@@ -244,7 +263,7 @@ i_copy_comment_header(oggpack_buffer *const unpacker, oggpack_buffer *const pack
 	for (int i = 0; i < 6; ++i)                     /* IN Vorbis str, should read 'vorbis' */
 		vorbis[i] = oggpack_read(unpacker, 8);
 	for (int i = 0; i < 6; ++i)                     /* OUT Vorbis str */
-		oggpack_write(packer, gvorbis_str[i], 8);
+		oggpack_write(packer, VORBIS_STR[i], 8);
 
 	vendor_length = i_packer_transfer(unpacker, 32, packer, 32);      /* IN/OUT Vendor length */
 	for (brrs8 i = 0; i < vendor_length; ++i) {                       /* IN/OUT Vendor string */
@@ -331,7 +350,7 @@ i_copy_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packer
 	for (int i = 0; i < 6; ++i)                     /* IN Vorbis str, should read 'vorbis' */
 		vorbis[i] = oggpack_read(unpacker, 8);
 	for (int i = 0; i < 6; ++i)                     /* OUT Vorbis str */
-		oggpack_write(packer, gvorbis_str[i], 8);
+		oggpack_write(packer, VORBIS_STR[i], 8);
 
 	codebook_count = 1 + i_packer_transfer(unpacker, 8, packer, 8); /* IN/OUT Codebooks counts */
 	if (!glibrary || 1) { /* Inline codebooks, copy verbatim */
@@ -374,12 +393,12 @@ i_copy_headers(ogg_stream_state *const streamer, wwise_wemT *const wem,
 		if (err) {
 			oggpack_writeclear(&packer);
 			return err;
-		} else if ((err = i_insert_packet(streamer, &packer, &packet, current_header, 0, 0))) {
+		} else if ((err = i_build_packet(&packet, &packer, current_header, 0, 0))) {
 			oggpack_writeclear(&packer);
 			return err;
-		} else if (vorbis_synthesis_headerin(vi, vc, &packet)) {
+		} else if ((err = i_insert_packet(streamer, &packet, vi, vc))) {
 			oggpack_writeclear(&packer);
-			return I_CORRUPT;
+			return err;
 		}
 		oggpack_writeclear(&packer);
 		packets_start += packeteer.header_length + packeteer.payload_size;
@@ -387,12 +406,13 @@ i_copy_headers(ogg_stream_state *const streamer, wwise_wemT *const wem,
 	}
 	return I_SUCCESS;
 }
+/* BUILD */
 static int BRRCALL
 i_build_id_header(oggpack_buffer *const packer, const wwise_wemT *const wem)
 {
 	oggpack_write(packer, 1, 8);                           /* OUT Packet type */
 	for (int i = 0; i < 6; ++i)                            /* OUT Vorbis string */
-		oggpack_write(packer, gvorbis_str[i], 8);
+		oggpack_write(packer, VORBIS_STR[i], 8);
 	oggpack_write(packer, 0, 32);                          /* OUT Vorbis version */
 	oggpack_write(packer, wem->fmt.n_channels, 8);         /* OUT Audio channels */
 	oggpack_write(packer, wem->fmt.samples_per_sec, 32);   /* OUT Sample rate */
@@ -415,7 +435,7 @@ i_build_comments_header(oggpack_buffer *const packer)
 
 	oggpack_write(packer, 3, 8);                            /* OUT Packet type */
 	for (int i = 0; i < 6; ++i)                             /* OUT Vorbis string */
-		oggpack_write(packer, gvorbis_str[i], 8);
+		oggpack_write(packer, VORBIS_STR[i], 8);
 
 	oggpack_write(packer, (sizeof(vendor_string) - 1), 32); /* OUT Vendor string length */
 	for (long i = 0; i < sizeof(vendor_string) - 1; ++i)    /* OUT Vendor string */
@@ -435,27 +455,23 @@ static int BRRCALL
 i_build_codebook(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 {
 	int dimensions, entries, ordered, lookup;
-	long total_read = 0;
 
 	oggpack_write(packer, 'B', 8); /* OUT Sync */
 	oggpack_write(packer, 'C', 8); /* OUT Sync */
 	oggpack_write(packer, 'V', 8); /* OUT Sync */
 
 	dimensions = i_packer_transfer(unpacker,  4, packer, 16); /* IN/OUT Dimensions */
-	total_read += 4;
 	entries = i_packer_transfer(unpacker, 14, packer, 24);    /* IN/OUT Entries */
-	total_read += 14;
 	ordered = i_packer_transfer(unpacker, 1, packer, 1);      /* IN/OUT Ordered flag */
-	total_read += 1;
 	if (ordered) { /* Ordered codeword decode identical to spec */
 		int current_length = 1 + i_packer_transfer(unpacker, 5, packer, 5); /* IN/OUT Start length */
 		long current_entry = 0;
+#if defined(NeWEMDEBUG)
 		BRRLOG_DEBUGNP("Ordered  ");
-		total_read += 5;
+#endif
 		while (current_entry < entries) {
 			int number_bits = ilog(entries - current_entry);
 			long number = i_packer_transfer(unpacker, number_bits, packer, number_bits); /* IN/OUT Magic number */
-			total_read += number_bits;
 			current_entry += number;
 			current_length++;
 		}
@@ -463,34 +479,34 @@ i_build_codebook(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 			return I_CORRUPT;
 	} else {
 		int codeword_length_bits, sparse;
+#if defined(NeWEMDEBUG)
 		BRRLOG_DEBUGNP("Unordered");
+#endif
 		codeword_length_bits = oggpack_read(unpacker, 3);     /* IN Codeword length bits */
-		total_read += 3;
 		if (codeword_length_bits < 0 || codeword_length_bits > 5)
 			return I_CORRUPT;
 		sparse = i_packer_transfer(unpacker, 1, packer, 1);   /* IN/OUT Sparse flag */
-		total_read += 1;
 		if (!sparse) { /* IN/OUT Nonsparse codeword lengths */
+#if defined(NeWEMDEBUG)
 			BRRLOG_DEBUGNP(", Nonsparse");
+#endif
 			for (int i = 0; i < entries; ++i) {
 				int length = i_packer_transfer(unpacker, codeword_length_bits, packer, 5);
-				total_read += codeword_length_bits;
 			}
 		} else { /* IN/OUT Sparse codeword lengths */
+#if defined(NeWEMDEBUG)
 			BRRLOG_DEBUGNP(", Sparse   ");
+#endif
 			for (int i = 0; i < entries; ++i) {
 				int used = i_packer_transfer(unpacker, 1, packer, 1); /* IN/OUT Used flag */
-				total_read += 1;
 				if (used) {
 					int length = i_packer_transfer(unpacker, codeword_length_bits, packer, 5); /* IN/OUT Codeword length */
-					total_read += codeword_length_bits;
 				}
 			}
 		}
 	}
 
 	lookup = i_packer_transfer(unpacker, 1, packer, 4); /* IN/OUT Lookup type */
-	total_read += 1;
 	if (lookup == 1) { /* Lookup 1 decode identical to spec */
 		long minval_packed = i_packer_transfer(unpacker, 32, packer, 32); /* IN/OUT Minimum value */
 		long delval_packed = i_packer_transfer(unpacker, 32, packer, 32); /* IN/OUT Delta value */
@@ -498,25 +514,26 @@ i_build_codebook(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 		int sequence_flag = i_packer_transfer(unpacker, 1, packer, 1);   /* IN/OUT Sequence flag */
 
 		long lookup_values = lookup1_values(entries, dimensions);
+#if defined(NeWEMDEBUG)
 		BRRLOG_DEBUGNP(", Lookup 1 values %3lld", lookup_values);
+#endif
 
-		total_read += 32;
-		total_read += 32;
-		total_read += 4;
-		total_read += 1;
 		for (long i = 0; i < lookup_values; ++i) { /* IN/OUT Codebook multiplicands */
 			long multiplicand = i_packer_transfer(unpacker, value_bits, packer, value_bits);
-			total_read += value_bits;
 		}
 	} else if (lookup == 0) {
+#if defined(NeWEMDEBUG)
 		BRRLOG_DEBUGNP(", Lookup 0 no values ");
+#endif
 	} else {
-		BRRLOG_ERR("\nLOOKUP FAILED");
+		BRRLOG_ERR("LOOKUP FAILED");
 	}
+#if defined(NeWEMDEBUG)
 	if (codebook_bytes)
-		BRRLOG_DEBUGP(", %sRead %4lld == %4lld == %3lld of %lld",
-		    oggpack_bits(unpacker)!=total_read?"!  ":(total_read/8)+1!=codebook_bytes?"!! ":"   ",
-		    oggpack_bits(unpacker), total_read, oggpack_bytes(unpacker), codebook_bytes);
+		BRRLOG_DEBUGP(", %sRead %4lld == %3lld of %lld",
+		    (oggpack_bits(unpacker)/8)+1!=codebook_bytes?"!! ":"   ",
+		    oggpack_bits(unpacker), oggpack_bytes(unpacker), codebook_bytes);
+#endif
 	return I_SUCCESS;
 }
 static int BRRCALL
@@ -658,16 +675,17 @@ i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packe
     wwise_wemT *const wem, int stripped)
 {
 	int codebook_count, err = 0;
-
 	oggpack_write(packer, 5, 8);                            /* OUT Packet type */
 	for (int i = 0; i < 6; ++i)                             /* OUT Vorbis string */
-		oggpack_write(packer, gvorbis_str[i], 8);
+		oggpack_write(packer, VORBIS_STR[i], 8);
 
 	codebook_count = 1 + i_packer_transfer(unpacker, 8, packer, 8); /* IN/OUT Codebook count */
 	if (!glibrary) { /* Internal codebooks */
 		if (!stripped) { /* Full codebooks, can be copied directly */
 			for (int err = 0, i = 0; i < codebook_count; ++i) {
+#if defined(NeWEMDEBUG)
 				BRRLOG_DEBUG("Copying internal codebook %d", i);
+#endif
 				if ((err = i_copy_next_codebook(unpacker, packer))) {
 					BRRLOG_ERR("Failed to copy codebook %d", i);
 					return err;
@@ -675,7 +693,9 @@ i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packe
 			}
 		} else {
 			for (int err = 0, i = 0; i < codebook_count; ++i) {
+#if defined(NeWEMDEBUG)
 				BRRLOG_DEBUG("Rebuilding internal codebook %d", i);
+#endif
 				if ((err = i_build_codebook(unpacker, packer))) {
 					BRRLOG_ERR("Failed to build codebook %d", i);
 					return err;
@@ -700,7 +720,9 @@ i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packe
 				BRRLOG_ERR("Codebook index too large %d", cbidx);
 				return I_CORRUPT;
 			}
+#if defined(NeWEMDEBUG)
 			BRRLOG_DEBUGN("Building external codebook %3d: ", cbidx);
+#endif
 			codebook_bytes = glibrary->codebooks[cbidx].size;
 			oggpack_readinit(&cb_unpacker, glibrary->codebooks[cbidx].data, glibrary->codebooks[cbidx].size);
 			if ((err = i_build_codebook(&cb_unpacker, packer))) { /* Copy from external */
@@ -755,7 +777,9 @@ i_build_headers(ogg_stream_state *const streamer, wwise_wemT *const wem,
 			unsigned char *packets_start = wem->data + wem->vorb.header_packets_offset;
 			brru4 packets_size = wem->vorb.audio_start_offset - wem->vorb.header_packets_offset;
 			wwise_packetT packeteer = {0};
+#if defined (NeWEMDEBUG)
 			BRRLOG_DEBUG("Building setup header");
+#endif
 			if (WWISE_SUCCESS != (err = wwise_packet_init(&packeteer, wem, packets_start, packets_size))) {
 				BRRLOG_ERRN("Failed to init setup header packet (%d)", err);
 				err = I_INSUFFICIENT_DATA;
@@ -767,24 +791,18 @@ i_build_headers(ogg_stream_state *const streamer, wwise_wemT *const wem,
 		if (err) {
 			oggpack_writeclear(&packer);
 			return err;
-		} else if ((err = i_insert_packet(streamer, &packer, &packet, current_header, 0, 0))) {
+		} else if ((err = i_build_packet(&packet, &packer, current_header, 0, 0))) {
 			oggpack_writeclear(&packer);
 			return err;
-		} else if ((err = vorbis_synthesis_headerin(vi, vc, &packet))) {
+		} else if ((err = i_insert_packet(streamer, &packet, vi, vc))) {
 			oggpack_writeclear(&packer);
-			BRRLOG_ERR("Failed to synthesize header %d", current_header);
-			if (err == OV_ENOTVORBIS)
-				BRRLOG_ERRN("NOT VORBIS");
-			else if (err == OV_EBADHEADER)
-				BRRLOG_ERRN("BAD HEADER");
-			else
-				BRRLOG_ERRN("INTERNAL ERROR");
 			return I_CORRUPT;
 		}
 		oggpack_writeclear(&packer);
 	}
 	return I_SUCCESS;
 }
+/* PROCESS */
 static int BRRCALL
 i_process_headers(ogg_stream_state *const streamer, wwise_wemT *const wem,
 	vorbis_info *const vi, vorbis_comment *const vc)
@@ -805,11 +823,12 @@ i_process_audio(ogg_stream_state *const streamer, wwise_wemT *const wem,
 	      packets_size = wem->data_size - wem->vorb.audio_start_offset;
 	wwise_packetT packeteer = {0};
 	int prev_blockflag = 0,  mode_count_bits = ilog(wem->mode_count - 1);
-
-	for (long packetno = 0; packets_start < wem->data_size; ++packetno) {
+	brru8 packetno = 0, last_block = 0, total_block = 0;
+	for (; packets_start < wem->data_size; ++packetno) {
+		int eos = 0;
 		ogg_packet packet;
 		oggpack_buffer unpacker, packer;
-		brru8 packet_granule = 0;
+		brru8 packet_granule = 1;
 		if (WWISE_SUCCESS != wwise_packet_init(&packeteer, wem, wem->data + packets_start, packets_size)) {
 			return I_INSUFFICIENT_DATA;
 		}
@@ -830,10 +849,8 @@ i_process_audio(ogg_stream_state *const streamer, wwise_wemT *const wem,
 				      next_size = packets_size + packeteer.header_length + packeteer.payload_size;
 				int next_blockflag = 0;
 				if (WWISE_SUCCESS != wwise_packet_init(&next_packeteer, wem, wem->data + next_start, next_size)) {
-					BRRLOG_ERRN("NEXT PACKEETER %zu", packetno);
-					return I_INSUFFICIENT_DATA;
-				}
-				if (next_packeteer.payload_size) {
+					eos = 1;
+				} else if (next_packeteer.payload_size) {
 					int next_number;
 					oggpack_buffer next_unpacker;
 					oggpack_readinit(&next_unpacker, next_packeteer.payload, next_packeteer.payload_size);
@@ -850,20 +867,32 @@ i_process_audio(ogg_stream_state *const streamer, wwise_wemT *const wem,
 			int transferred = i_packer_transfer(&unpacker, 8, &packer, 8); /* Unmodified first byte */
 		}
 		i_packer_transfer_remaining(&unpacker, &packer);
-
 		if (err) {
 			oggpack_writeclear(&packer);
 			return err;
-		} else if ((err = i_insert_packet(streamer, &packer, &packet, packetno + 3,
-		                                  packet_granule,
-										  packets_start == wem->data_size))) {
+		} else if ((err = i_build_packet(&packet, &packer, packetno + 3, 0, eos))) {
 			oggpack_writeclear(&packer);
 			return err;
+		} else {
+			/* This granule calculation from revorb, not sure its source though
+			 * Probably somewhere in vorbis docs, haven't found it */
+			long current_block = vorbis_packet_blocksize(vi, &packet);
+			if (last_block)
+				total_block += (last_block + current_block) / 4;
+			last_block = current_block;
+			packet.granulepos = total_block;
+			if ((err = i_insert_packet(streamer, &packet, NULL, NULL))) {
+				oggpack_writeclear(&packer);
+				return err;
+			}
 		}
 		oggpack_writeclear(&packer);
 		packets_start += packeteer.header_length + packeteer.payload_size;
 		packets_size -= packeteer.header_length + packeteer.payload_size;
 	}
+#if defined(NeWEMDEBUG)
+	BRRLOG_DEBUG("Packetno : %lld", 3 + packetno);
+#endif
 	return I_SUCCESS;
 }
 
@@ -888,6 +917,7 @@ i_write_out(ogg_stream_state *const streamer)
 			return I_IO_ERROR;
 		}
 	}
+	fclose(out);
 	return I_SUCCESS;
 }
 static int BRRCALL
@@ -917,7 +947,20 @@ int_convert_wem(void)
 	if (WWISE_SUCCESS != (err = wwise_wem_init(&wem, &rf))) {
 		riff_clear(&rf);
 		if (err == WWISE_INCOMPLETE) {
-			BRRLOG_ERRN("WEM missing 'fmt', 'data' or 'vorb' chunk(s)");
+			BRRLOG_ERRN("WEM missing");
+			if (!wem.fmt_initialized)
+				BRRLOG_ERRNP(" 'fmt'");
+			if (!wem.vorb_initialized) {
+				if (!wem.fmt_initialized)
+					BRRLOG_ERRNP(",");
+				BRRLOG_ERRNP(" 'vorb'");
+			}
+			if (!wem.data_initialized) {
+				if (!wem.fmt_initialized || !wem.vorb_initialized)
+					BRRLOG_ERRNP(",");
+				BRRLOG_ERRNP(" 'data'");
+			}
+			BRRLOG_ERRNP(" chunks");
 		} else if (err == WWISE_DUPLICATE) {
 			BRRLOG_ERRN("WEM has duplicate 'fmt', 'data', or 'vorb' chunk(s)");
 		} else if (err == WWISE_CORRUPT) {
@@ -953,33 +996,31 @@ convert_wem(numbersT *const numbers, const char *const input, brrsz input_length
 	int err = 0;
 	numbers->wems_to_convert++;
 	if (options->dry_run) {
-		BRRLOG_FORENP(DRY_COLOR, " Convert WEM (dry)");
+		BRRLOG_FORENP(NeLOG_COLOR_DRY, "Convert WEM (dry) ");
 	} else {
-		BRRLOG_FORENP(WET_COLOR, " Converting WEM...");
+		BRRLOG_FORENP(NeLOG_COLOR_WET, "Converting WEM... ");
 		goptions = options;
 		ginput_name = input;
-		replace_ext(ginput_name, input_length, goutput_name, NULL, ".tmp.ogg");
+		if (options->inplace_ogg) {
+			snprintf(goutput_name, sizeof(goutput_name), "%s", input);
+		} else {
+			replace_ext(ginput_name, input_length, goutput_name, NULL, ".ogg");
+		}
 		if (!library) {
 			glibrary = NULL;
 		} else if ((err = input_library_load(library))) {
-			BRRLOG_ERRN(" Failed to load codebook library '%s' : %s", (char *)library->library_path.opaque, i_strerr(err));
+			BRRLOG_ERRN("Failed to load codebook library '%s' : %s", (char *)library->library_path.opaque, i_strerr(err));
 		} else {
 			glibrary = &library->library;
 			err = int_convert_wem();
-			if (!err) {
-				if (options->inplace_ogg) {
-					NeTODO("WEM CONVERT IN-PLACE");
-					/* remove 'path' and rename 'output' to 'path' */
-				}
-			}
 		}
 	}
 	if (!err) {
 		numbers->wems_converted++;
-		BRRLOG_MESSAGETP(gbrrlog_level_last, SUCCESS_FORMAT, " Success!");
+		BRRLOG_MESSAGETP(gbrrlog_level_normal, NeLOG_FORMAT_SUCCESS, "Success!");
 	} else {
-		/* remove 'output' */
-		BRRLOG_MESSAGETP(gbrrlog_level_last, FAILURE_FORMAT, " Failure! (%d)", err);
+		numbers->wems_failed++;
+		BRRLOG_MESSAGETP(gbrrlog_level_normal, NeLOG_FORMAT_FAILURE, " Failure! (%d)", err);
 	}
 	return err;
 }

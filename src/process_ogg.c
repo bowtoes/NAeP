@@ -27,6 +27,7 @@ limitations under the License.
 #include <brrtools/brrlog.h>
 #include <brrtools/brrpath.h>
 
+static const input_optionsT *goptions = NULL;
 static const char *ginput_name = NULL;
 static char goutput_name[BRRPATH_MAX_PATH + 1] = {0};
 
@@ -252,26 +253,25 @@ regrain_ogg(numbersT *const numbers, const char *const input, brrsz input_length
     const input_optionsT *const options)
 {
 	int err = 0;
-	numbers->oggs_to_regranularize++;
+	numbers->oggs_to_regrain++;
 	if (options->dry_run) {
-		BRRLOG_FOREP(DRY_COLOR, " Regranularize OGG ");
+		BRRLOG_FORENP(NeLOG_COLOR_DRY, "Regranularize OGG ");
 	} else {
-		BRRLOG_FORENP(WET_COLOR, " Regranularizing OGG... ");
+		BRRLOG_FORENP(NeLOG_COLOR_WET, "Regranularizing OGG... ");
 		ginput_name = input;
-		replace_ext(ginput_name, input_length, goutput_name, NULL, "_rvb.ogg");
-		if (!(err = i_regrain())) {
-			if (options->inplace_regrain) {
-				NeTODO("ANTIGRAIN IN-PLACE");
-				/* remove 'path' and rename 'output' to 'path' */
-			}
+		if (options->inplace_regrain) {
+			snprintf(goutput_name, sizeof(goutput_name), "%s", input);
+		} else {
+			replace_ext(ginput_name, input_length, goutput_name, NULL, "_rvb.ogg");
 		}
+		err = i_regrain();
 	}
 	if (!err) {
-		numbers->oggs_regranularized++;
-		BRRLOG_MESSAGETP(gbrrlog_level_last, SUCCESS_FORMAT, "Success!");
+		numbers->oggs_regrained++;
+		BRRLOG_MESSAGETP(gbrrlog_level_normal, NeLOG_FORMAT_SUCCESS, "Success!");
 	} else {
-		/* remove 'output' */
-		BRRLOG_MESSAGETP(gbrrlog_level_last, FAILURE_FORMAT, " Failure! (%d)", err);
+		numbers->oggs_failed++;
+		BRRLOG_MESSAGETP(gbrrlog_level_normal, NeLOG_FORMAT_FAILURE, " Failure! (%d)", err);
 	}
 	return err;
 }
