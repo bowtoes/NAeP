@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#define _riff_keep_types_defines
+#define _riff_keepsies
 #include "riff.h"
 
 #include <limits.h>
@@ -22,102 +22,80 @@ limitations under the License.
 #include <string.h>
 
 #include <brrtools/brrlib.h>
-#include <brrtools/brrlog.h>
 #include <brrtools/brrmem.h>
 #include <brrtools/brrplatform.h>
+
+#include "common_lib.h"
 
 #define RIFF_BUFF_EXTRA 4096
 #define RIFF_BUFF_MAX INT_MAX
 
-#define _int_defs(_l_, _d_) const brru4 riff_##_l_##_int_##_d_ = FCC_CODE_INT(#_d_"    ");
-#define _fcc_defs(_l_, _d_) const fourccT riff_##_l_##_fcc_##_d_ = FCC_INIT(#_d_"    ");
-_riff_basic_types(_int_defs)
-_riff_basic_types(_fcc_defs)
-_riff_list_types(_int_defs)
-_riff_list_types(_fcc_defs)
-_riff_sub_types(_int_defs)
-_riff_sub_types(_fcc_defs)
-_riff_data_types(_int_defs)
-_riff_data_types(_fcc_defs)
-#undef _fcc_defs
-#undef _int_defs
+#define _array_processor(_type_, _cc_) FCC_GET_INT(#_cc_"    "),
+#define _arrlen(_k_) (sizeof(_k_)/sizeof((_k_)[0]))
+#define _getter_boiler(_t_,_t2_) \
+	const brru4 riff_##_t_##_ccs[riff_##_t_##_count - 1] = { _riff_##_t_##s_gen(_array_processor) }; \
+    riff_##_t_##_t2_##T BRRCALL \
+    riff_cc_##_t_##_t2_(brru4 cc) { \
+    	riff_##_t_##_t2_##T t = 0; \
+    	for (;t < _arrlen(riff_##_t_##_ccs); ++t) { \
+    		if (cc == riff_##_t_##_ccs[t]) \
+    			return t + 1; \
+    	} \
+    	return 0; \
+    }
+_riff_boiler_gen(_getter_boiler)
+#undef _getter_boiler
+#undef _array_processor
 
-#define _arr_defs(_l_, _d_) riff_##_l_##_int_##_d_,
-const brru4 riff_basic_types[riff_basic_type_count - 1] = { _riff_basic_types(_arr_defs) };
-const brru4 riff_list_types[riff_list_type_count - 1] = { _riff_list_types(_arr_defs) };
-const brru4 riff_sub_types[riff_sub_type_count - 1] = { _riff_sub_types(_arr_defs) };
-const brru4 riff_data_types[riff_data_type_count - 1] = { _riff_data_types(_arr_defs) };
-#undef _arr_defs
+riff_byteorderT BRRCALL
+riff_cc_byteorder(brru4 cc)
+{
+	riff_byteorderT t = 0;
+	for (;t < _arrlen(riff_format_ccs); ++t) {
+		if (cc == riff_format_ccs[t])
+			return 1 + (t & 3);
+	}
+	return 0;
+}
 
-static void* BRRCALL
+static void*
 cpy_rvs(void *restrict const dst, const void *restrict const src, size_t size)
 {
 	memcpy(dst, src, size);
 	_brrmem_reverse(dst, size);
 	return dst;
 }
-static void* BRRCALL
+static void*
 move_rvs(void *const dst, const void *const src, size_t size)
 {
 	memmove(dst, src, size);
 	_brrmem_reverse(dst, size);
 	return dst;
 }
-static void *(*const BRRCALL memfuntable[])(void *const, const void *const, size_t) = {
-	memcpy, memcpy,  cpy_rvs, cpy_rvs, memmove, memmove,  move_rvs, move_rvs,
-	memcpy, cpy_rvs, memcpy,  cpy_rvs, memmove, move_rvs, memmove,  move_rvs,
-};
 
-static riff_byteorderT BRRCALL
-i_determine_byteorder(brru4 fcc)
+#if BRRENDIAN_SYSTEM == BRRENDIAN_BIG
+# define _riff_copier_idx(_bo_) (4 - (_bo_))
+#else
+# define _riff_copier_idx(_bo_) ((_bo_) - 1)
+#endif
+
+static void *(*const _riff_copy_table[8])(void *const, const void *const, size_t) = {
+	memcpy, memcpy,  cpy_rvs, cpy_rvs,
+	memcpy, cpy_rvs, memcpy,  cpy_rvs,
+};
+riff_copierT BRRCALL
+riff_copier_cc(riff_byteorderT byteorder)
 {
-	if (fcc == riff_list_type_int_RIFF) {
-		return riff_byteorder_RIFF;
-	} else if (fcc == riff_list_type_int_RIFX) {
-		return riff_byteorder_RIFX;
-	} else if (fcc == riff_list_type_int_XFIR) {
-		return riff_byteorder_XFIR;
-	} else if (fcc == riff_list_type_int_FFIR) {
-		return riff_byteorder_FFIR;
-	} else {
-		return riff_byteorder_unrecognized;
-	}
+	if (!byteorder)
+		return _riff_copy_table[0];
+	return _riff_copy_table[0 + _riff_copier_idx(byteorder)];
 }
-static riff_basic_typeT BRRCALL
-i_get_basic_type(brru4 fcc)
+riff_copierT BRRCALL
+riff_copier_data(riff_byteorderT byteorder)
 {
-	for (riff_basic_typeT i = 1; i < riff_basic_type_count; ++i) {
-		if (fcc == riff_basic_types[i - 1])
-			return i;
-	}
-	return riff_basic_type_unrecognized;
-}
-static riff_list_typeT BRRCALL
-i_get_list_type(brru4 fcc)
-{
-	for (riff_list_typeT i = 1; i < riff_list_type_count; ++i) {
-		if (fcc == riff_list_types[i - 1])
-			return i;
-	}
-	return riff_list_type_unrecognized;
-}
-static riff_sub_typeT BRRCALL
-i_get_sub_type(brru4 fcc)
-{
-	for (riff_sub_typeT i = 1; i < riff_sub_type_count; ++i) {
-		if (fcc == riff_sub_types[i - 1])
-			return i;
-	}
-	return riff_sub_type_unrecognized;
-}
-static riff_data_typeT BRRCALL
-i_get_data_type(brru4 fcc)
-{
-	for (riff_data_typeT i = 1; i < riff_data_type_count; ++i) {
-		if (fcc == riff_data_types[i - 1])
-			return i;
-	}
-	return riff_data_type_unrecognized;
+	if (!byteorder)
+		return _riff_copy_table[4];
+	return _riff_copy_table[4 + _riff_copier_idx(byteorder)];
 }
 
 void BRRCALL
@@ -128,13 +106,6 @@ riff_chunk_info_clear(riff_chunk_infoT *const sc)
 	}
 }
 
-int BRRCALL
-riff_data_sync_check(const riff_data_syncT *const ds)
-{
-	if (!ds)
-		return -1;
-	return 0;
-}
 void BRRCALL
 riff_data_sync_clear(riff_data_syncT *const ds)
 {
@@ -143,6 +114,13 @@ riff_data_sync_clear(riff_data_syncT *const ds)
 			free(ds->data);
 		memset(ds, 0, sizeof(*ds));
 	}
+}
+int BRRCALL
+riff_data_sync_check(const riff_data_syncT *const ds)
+{
+	if (!ds)
+		return -1;
+	return 0;
 }
 char *BRRCALL
 riff_data_sync_buffer(riff_data_syncT *const ds, brru4 size)
@@ -182,13 +160,6 @@ riff_data_sync_apply(riff_data_syncT *const ds, brru4 size)
 	return 0;
 }
 
-int BRRCALL
-riff_init(riffT *const rf)
-{
-	if (rf)
-		memset(rf, 0, sizeof(*rf));
-	return 0;
-}
 void BRRCALL
 riff_clear(riffT *const rf)
 {
@@ -204,6 +175,13 @@ riff_clear(riffT *const rf)
 	}
 }
 int BRRCALL
+riff_init(riffT *const rf)
+{
+	if (rf)
+		memset(rf, 0, sizeof(*rf));
+	return 0;
+}
+int BRRCALL
 riff_check(const riffT *const rf)
 {
 	if (!rf)
@@ -217,31 +195,22 @@ i_setup_riff(riffT *const rf, riff_data_syncT *const ds)
 	unsigned char *ckdata = ds->data + ds->consumed;
 	brrs8 stor = ds->stored - ds->consumed;
 	brru4 datacc, typecc;
-	int idx = 0;
 	if (stor < 4) { /* Not enough DATA */
 		return RIFF_CHUNK_INCOMPLETE;
 	}
 	memcpy(&typecc, ckdata, 4);
-	if (!(ds->byteorder = i_determine_byteorder(typecc))) {
+	if (!(ds->byteorder = riff_cc_byteorder(typecc))) {
 		riff_data_sync_clear(ds);
 		riff_clear(rf);
 		return RIFF_NOT_RIFF;
 	}
-#if BRRENDIAN_SYSTE == BRRENDIAN_BIG
-	idx = 3 - (rf->byteorder - 1);
-#else
-	idx = ds->byteorder - 1;
-#endif
-	/* Function pointers for interpreting data from the given riff. */
-	ds->cpy_cc    = memfuntable[ 0 + idx];
-	ds->move_cc   = memfuntable[ 4 + idx];
-	ds->cpy_data  = memfuntable[ 8 + idx];
-	ds->move_data = memfuntable[12 + idx];
+	ds->cpy_cc   = riff_copier_cc(ds->byteorder);
+	ds->cpy_data = riff_copier_data(ds->byteorder);
 
 	ds->cpy_data(&rf->total_size, ckdata + 4, 4);
 	ds->cpy_cc(&datacc, ckdata + 8, 4);
 	ds->consumed += 12;
-	rf->data_type = i_get_data_type(datacc);
+	rf->format = riff_cc_format(datacc);
 	return RIFF_CONSUME_MORE;
 }
 static int BRRCALL
@@ -279,7 +248,7 @@ i_add_basic_type(riffT *const rf, riff_data_syncT *const ds, riff_basic_typeT ck
 	return RIFF_CHUNK_CONSUMED;
 }
 static int BRRCALL
-i_add_list_type(riffT *const rf, riff_data_syncT *const ds, riff_list_typeT cktype, brru4 cksize)
+i_add_list_type(riffT *const rf, riff_data_syncT *const ds, brru4 cksize)
 {
 	unsigned char *ckdata = ds->data + ds->consumed;
 	riff_list_chunkT list = {0};
@@ -287,8 +256,7 @@ i_add_list_type(riffT *const rf, riff_data_syncT *const ds, riff_list_typeT ckty
 	ds->cpy_cc(&subcc, ckdata, 4);
 	ds->consumed += 4;
 	list.size = cksize;
-	list.type = cktype;
-	list.sub_type = i_get_sub_type(subcc);
+	list.type = riff_cc_list_type(subcc);
 	list.first_basic_index = rf->n_basics;
 	list.n_basics = 0;
 	ds->list_end = list.size - 4; /* list size includes sub_type */
@@ -317,7 +285,7 @@ riff_consume_chunk(riffT *const rf, riff_chunk_infoT *const sc, riff_data_syncT 
 			return RIFF_CHUNK_INCOMPLETE;
 		else if (RIFF_CHUNK_CONSUMED != (err = i_add_basic_type(rf, ds, sc->chunk_type, sc->chunksize)))
 			return err;
-		sc->chunk_info_index = rf->n_basics - 1;
+		sc->chunk_index = rf->n_basics - 1;
 		return RIFF_CHUNK_CONSUMED;
 	} else if (sc->is_list) {
 		int err = 0;
@@ -329,9 +297,9 @@ riff_consume_chunk(riffT *const rf, riff_chunk_infoT *const sc, riff_data_syncT 
 		}
 		if (stor < 4) /* Not enough to get sub_type */
 			return RIFF_CHUNK_INCOMPLETE;
-		else if (RIFF_CHUNK_CONSUMED != (err = i_add_list_type(rf, ds, sc->chunk_type, sc->chunksize)))
+		else if (RIFF_CHUNK_CONSUMED != (err = i_add_list_type(rf, ds, sc->chunksize)))
 			return err;
-		sc->chunk_info_index = rf->n_lists - 1;
+		sc->chunk_index = rf->n_lists - 1;
 		return RIFF_CHUNK_CONSUMED;
 	} else { /* We don't know yet. */
 		int cktype = 0;
@@ -342,11 +310,11 @@ riff_consume_chunk(riffT *const rf, riff_chunk_infoT *const sc, riff_data_syncT 
 		ds->cpy_cc(&sc->chunkcc, ckdata, 4);
 		ds->cpy_data(&sc->chunksize, ckdata + 4, 4);
 		ds->consumed += 8;
-		if ((cktype = i_get_basic_type(sc->chunkcc))) {
+		if ((cktype = riff_cc_basic_type(sc->chunkcc))) {
 			sc->is_basic = 1;
 			sc->is_list = 0;
 			sc->chunk_type = cktype;
-		} else if ((cktype = i_get_list_type(sc->chunkcc))) {
+		} else if ((cktype = riff_cc_list_type(sc->chunkcc))) {
 			sc->is_basic = 0;
 			sc->is_list = 1;
 			sc->chunk_type = cktype;

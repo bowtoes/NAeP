@@ -14,44 +14,31 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <stdarg.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
-#include <errno.h>
 
-#include <brrtools/brrplatform.h>
 #include <brrtools/brrlib.h>
 #include <brrtools/brrlog.h>
 #include <brrtools/brrmem.h>
-#include <brrtools/brrstg.h>
-#include <brrtools/brrtil.h>
-#include <brrtools/brrpath.h>
 
-#include "common.h"
+#include "common_input.h"
+#include "common_lib.h"
+#include "errors.h"
 #include "process_files.h"
 
 /*
- *
  * TODO
- * Right now, all codebooks passed in and the default are loaded before any
- * other file processing is done; so if any passed in codebooks aren't found
- * when you run the program, it will quit before processing anything.
- *
- * It should do a lazy init of the codebooks instead; if the relevant library
- * isn't found, error that input and continue.
- *
- * Also, only a naive strcmp is done when checking for duplicate library files,
- * so one could pass 'library.cbl' and './library.cbl' and that one library
- * would be allocated twice; this'll be something for brrpath to help with
- * eventually.
- *
+ * Only a naive strcmp is done when checking for duplicate files, so one could
+ * pass the same file differently and that one file would be allocated and
+ * processed twice; this'll be something for brrpath to help with eventually.
  * */
 
 #define USAGE "Usage: NAeP [[OPTION ...] FILE ...] ..."
 #define HELP \
 "Most options take affect on all files following and can be toggled." \
+"\nSome options are global, and apply to the meta-process itself, marked with (g)." \
 "\nOptions:" \
 "\n        -h, -help, -v . . . . . . . . . . . .Print this help." \
 "\n    File Type Specification:" \
@@ -71,36 +58,41 @@ limitations under the License.
 "\n        -inline . . . . . . . . . . . . . .  The following WEMs have inline codebooks." \
 "\n        -stripped . . . . . . . . . . . . .  The vorbis headers of the WEM are stripped." \
 "\n    WSP/BNK Processing Options:" \
-"\n        -O, -wem2ogg. . . . . . . . . . . .  Convert extracted WEMs to OGGs." \
-"\n        -R, -recurse-bank . . . . . . . . .  Search passed bank files for all referenced WEMs." \
+"\n        -w2o, -wem2ogg. . . . . . . . . . .  Convert extracted WEMs to OGGs." \
+"\n        -Rbk, -recurse-bank . . . . . . . .  Search passed bank files for all referenced WEMs." \
 "\n    Miscellaneous options:" \
 "\n        --  . . . . . . . . . . . . . . . .  The following argument is a file path, not an option." \
 "\n        -!  . . . . . . . . . . . . . . . .  All following arguments are file paths, not options." \
 "\n        -d, -debug  . . . . . . . . . . . .  Enable debug output, irrespective of quiet settings." \
 "\n        -c, -color  . . . . . . . . . . . .  Toggle color logging." \
+"\n        -C, -global-color (g) . . . . . . .  Toggle whether log styling is enabled at all." \
+"\n        -r, -report-card (g)  . . . . . . .  Print a status report of all files processed after processing." \
+"\n        +r, -full-report (g)  . . . . . . .  Print a more full report of all files processed." \
 "\n        -q, -quiet  . . . . . . . . . . . .  Suppress one additional level of non-critical." \
 "\n        +q, +quiet  . . . . . . . . . . . .  Show one additional level non-critical output." \
 "\n        -Q, -qq, -too-quiet . . . . . . . .  Suppress all output, including anything critical." \
 "\n        -n, -dry, -dry-run  . . . . . . . .  Don't actually do anything, just log what would happen." \
-"\n        -reset  . . . . . . . . . . . . . .  Argument options reset to default after each file passed." \
+"\n        -reset (g)  . . . . . . . . . . . .  Argument options reset to default values after each file passed." \
 
-static void BRRCALL
+static int BRRCALL
 print_usage(void)
 {
 	fprintf(stdout, "NAeP - NieR:Automata extraction Precept\n");
 	fprintf(stdout, "Compiled on "__DATE__", " __TIME__"\n");
 	fprintf(stdout, USAGE"\n""    -h, -help, -v . . . . . . . . . . . .Print help.""\n");
 	exit(0);
+	return 0;
 }
-static void BRRCALL
+static int BRRCALL
 print_help(void)
 {
 	fprintf(stdout, "NAeP - NieR:Automata extraction Precept\n");
 	fprintf(stdout, "Compiled on "__DATE__", " __TIME__"\n");
 	fprintf(stdout, USAGE"\n"HELP"\n");
 	exit(0);
+	return 0;
 }
-static void BRRCALL
+static int BRRCALL
 print_numbers(const global_optionsT *const global, const numbersT *const numbers)
 {
 	brrsz input_count_digits = brrlib_ndigits(numbers->n_inputs, 0, 10);
@@ -117,104 +109,13 @@ print_numbers(const global_optionsT *const global, const numbersT *const numbers
 	    + numbers->bnks_failed
 	    - numbers->wems_extracted_failed;
 	BRRLOG_NORN("Successfully processed a total of ");
-	BRRLOG_FORENP(NeLOG_COLOR_INFO, "%*i / %*i",
+	BRRLOG_FORENP(LOG_COLOR_INFO, "%*i / %*i",
 	    input_count_digits + 1, total_success, input_count_digits, numbers->n_inputs);
 	BRRLOG_NORP(" inputs");
 	if (global->full_report) {
-		/* Print full report card... */
-	}
-}
-static int BRRCALL
-i_parse_argument(const char *const arg, global_optionsT *const global, input_optionsT *const options)
-{
-#define IF_CHECK_ARG(_cse_, ...) if (-1 != brrstg_cstr_compare(arg, _cse_, __VA_ARGS__, NULL))
-	if (arg[0] == 0) { /* Argument is of 0 length, very bad! */
-		return 1;
-	} else if (global->always_file) {
-		return 0;
-	} else if (global->next_is_file) {
-		global->next_is_file = 0;
-		return 0;
-	} else if (global->next_is_cbl) {
-		return 0;
-	} else IF_CHECK_ARG(0, "-h", "-help", "--help", "-v", "-version", "--version") {
-		print_help();
-	} else IF_CHECK_ARG(1, "-a", "-auto", "-detect") {
-		options->type = INPUT_TYPE_UNK;
-		return 1;
-	} else IF_CHECK_ARG(1, "-o", "-ogg") {
-		options->type = INPUT_TYPE_OGG;
-		return 1;
-	} else IF_CHECK_ARG(1, "-w", "-wem", "-weem") {
-		options->type = INPUT_TYPE_WEM;
-		return 1;
-	} else IF_CHECK_ARG(1, "-W", "-wsp", "-wisp") {
-		options->type = INPUT_TYPE_WSP;
-		return 1;
-	} else IF_CHECK_ARG(1, "-b", "-bnk", "-bank") {
-		options->type = INPUT_TYPE_BNK;
-		return 1;
-	} else IF_CHECK_ARG(1, "-R", "-recurse-bank") {
-		BRRTIL_TOGGLE(options->bank_recurse);
-		return 1;
-	} else IF_CHECK_ARG(1, "-O", "-wem2ogg") {
-		BRRTIL_TOGGLE(options->auto_ogg);
-		return 1;
-	} else IF_CHECK_ARG(1, "-oi", "-ogg-inplace") {
-		BRRTIL_TOGGLE(options->inplace_ogg);
-		return 1;
-	} else IF_CHECK_ARG(1, "-ri", "-rgrn-inplace", "-rvb-inplace") {
-		BRRTIL_TOGGLE(options->inplace_regrain);
-		return 1;
-	} else IF_CHECK_ARG(1, "-cbl", "-codebook-library") {
-		global->next_is_cbl = 1;
-		return 1;
-	} else IF_CHECK_ARG(1, "-inline") {
-		options->library_index = -1;
-		return 1;
-	} else IF_CHECK_ARG(1, "-stripped") {
-		BRRTIL_TOGGLE(options->stripped_headers);
-		return 1;
-	} else IF_CHECK_ARG(1, "-Q", "-qq", "-too-quiet") {
-		BRRTIL_TOGGLE(options->log_enabled);
-		return 1;
-	} else IF_CHECK_ARG(1, "-c", "-color") {
-		BRRTIL_TOGGLE(options->log_color_enabled);
-		return 1;
-	} else IF_CHECK_ARG(1, "-C", "-global-color") {
-		BRRTIL_TOGGLE(global->log_style_enabled);
-		return 1;
-	} else IF_CHECK_ARG(1, "--") {
-		global->next_is_file = 1;
-		return 1;
-	} else IF_CHECK_ARG(1, "-!") {
-		global->always_file = 1;
-		return 1;
-	} else IF_CHECK_ARG(1, "-d", "-debug") {
-		BRRTIL_TOGGLE(options->log_debug);
-		if (options->log_debug)
-			options->log_enabled = 1;
-		return 1;
-	} else IF_CHECK_ARG(1, "-q", "-quiet") {
-		if (options->log_priority > 0)
-			options->log_priority--;
-		if (options->log_priority == 0 && !options->log_debug)
-			options->log_enabled = 0;
-		return 1;
-	} else IF_CHECK_ARG(1, "+q", "+quiet") {
-		if (options->log_priority < brrlog_priority_count - 1)
-			options->log_priority++;
-		options->log_enabled = 1;
-		return 1;
-	} else IF_CHECK_ARG(1, "-n", "-dry", "-dry-run") {
-		BRRTIL_TOGGLE(options->dry_run);
-		return 1;
-	} else IF_CHECK_ARG(1, "-reset") {
-		BRRTIL_TOGGLE(global->should_reset);
-		return 1;
+		BRRLOG_NOR("Imagine there's a full report");
 	}
 	return 0;
-#undef IF_CHECK_ARG
 }
 
 static int BRRCALL
@@ -233,19 +134,23 @@ i_init_brrlog(void)
 
 	return 0;
 }
-static processed_inputT *BRRCALL
-i_find_input(const char *const arg, const processed_inputT *const inputs, brrsz input_count)
+static inputT *BRRCALL
+i_find_input(const char *const arg, const inputT *const inputs, brrsz input_count)
 {
 	for (brrsz i = 0; i < input_count; ++i) {
 		if (0 == strcmp(inputs[i].path.opaque, arg))
-			return (processed_inputT *)&inputs[i];
+			return (inputT *)&inputs[i];
 	}
 	return NULL;
 }
 
 static int BRRCALL
-i_determine_input_type(processed_inputT *const input, const char *const extension)
+i_determine_input_type(inputT *const input, const char *const extension)
 {
+	static const fourccT oggfcc = FCC_INIT("OggS");
+	static const fourccT wemfcc = FCC_INIT("RIFF");
+	static const fourccT bnkfcc = FCC_INIT("BKHD");
+
 	int err = 0;
 	fourccT input_fcc = {0};
 	FILE *fp = NULL;
@@ -255,13 +160,13 @@ i_determine_input_type(processed_inputT *const input, const char *const extensio
 		if (feof(fp)) {
 			fclose(fp);
 			if (!brrstg_cstr_compare(extension, 0, "ogg", NULL)) {
-				input->options.type = INPUT_TYPE_OGG;
+				input->options.type = input_type_ogg;
 			} else if (!brrstg_cstr_compare(extension, 0, "wem", NULL)) {
-				input->options.type = INPUT_TYPE_WEM;
+				input->options.type = input_type_wem;
 			} else if (!brrstg_cstr_compare(extension, 0, "wsp", NULL)) {
-				input->options.type = INPUT_TYPE_WSP;
+				input->options.type = input_type_wsp;
 			} else if (!brrstg_cstr_compare(extension, 0, "bnk", NULL)) {
-				input->options.type = INPUT_TYPE_BNK;
+				input->options.type = input_type_bnk;
 			} else {
 				err = I_UNRECOGNIZED_DATA;
 			}
@@ -275,17 +180,17 @@ i_determine_input_type(processed_inputT *const input, const char *const extensio
 	}
 	fclose(fp);
 	if (!err) {
-		if (input_fcc.integer == goggfcc.integer) {
-			input->options.type = INPUT_TYPE_OGG;
-		} else if (input_fcc.integer == gwemfcc.integer) {
+		if (input_fcc.integer == oggfcc.integer) {
+			input->options.type = input_type_ogg;
+		} else if (input_fcc.integer == wemfcc.integer) {
 			if (!brrstg_cstr_compare(extension, 0, "wem", NULL))
-				input->options.type = INPUT_TYPE_WEM;
+				input->options.type = input_type_wem;
 			else if (!brrstg_cstr_compare(extension, 0, "wsp", NULL))
-				input->options.type = INPUT_TYPE_WSP;
+				input->options.type = input_type_wsp;
 			else
 				err = I_UNRECOGNIZED_DATA;
-		} else if (input_fcc.integer == gbnkfcc.integer) {
-			input->options.type = INPUT_TYPE_BNK;
+		} else if (input_fcc.integer == bnkfcc.integer) {
+			input->options.type = input_type_bnk;
 		} else {
 			err = I_UNRECOGNIZED_DATA;
 		}
@@ -318,7 +223,7 @@ i_add_library(input_libraryT **const libraries, numbersT *const nums, const char
 		if (dot < next.library_path.length) {
 			char extension[6] = "";
 			snprintf(extension, 6, "%s", (char *)next.library_path.opaque + dot);
-			if (0 == cstr_compare(extension, "ocbl", 6, 0))
+			if (0 == lib_cstr_compare(extension, "ocbl", 6, 0))
 				next.old = 1;
 		}
 	}
@@ -326,12 +231,12 @@ i_add_library(input_libraryT **const libraries, numbersT *const nums, const char
 	return 0;
 }
 static int
-i_add_input(processed_inputT **const inputs, numbersT *const nums, input_optionsT *current, const char *const arg)
+i_add_input(inputT **const inputs, numbersT *const nums, input_optionsT *current, const char *const arg)
 {
-	processed_inputT next = {.options = *current};
+	inputT next = {.options = *current};
 	if (brrstg_new(&next.path, arg, -1)) {
 		return 1;
-	} else if (brrlib_alloc((void **)inputs, (nums->n_inputs + 1) * sizeof(processed_inputT), 0)) {
+	} else if (brrlib_alloc((void **)inputs, (nums->n_inputs + 1) * sizeof(inputT), 0)) {
 		brrstg_delete(&next.path);
 		return 1;
 	} else {
@@ -342,13 +247,78 @@ i_add_input(processed_inputT **const inputs, numbersT *const nums, input_options
 	return 0;
 }
 static int BRRCALL
-i_take_arguments(processed_inputT **const inputs, input_libraryT **const libraries, numbersT *const nums,
+i_crement_log(input_optionsT *const options, int delta)
+{
+	if (delta <= 0) {
+		if (options->log_priority > 0)
+			options->log_priority--;
+		if (options->log_priority == 0 && !options->log_debug)
+			options->log_enabled = 0;
+		return 1;
+	} else {
+		if (options->log_priority < brrlog_priority_count - 1)
+			options->log_priority++;
+		options->log_enabled = 1;
+		return 1;
+	}
+}
+static int BRRCALL
+i_parse_argument(const char *const arg, global_optionsT *const global, input_optionsT *const options)
+{
+	/* TODO reorder the checks in the order of the help */
+	if (arg[0] == 0) { /* Argument is of 0 length, very bad! */
+		return 1;
+	} else if (global->always_file) {
+		return 0;
+	} else if (global->next_is_file) {
+		global->next_is_file = 0;
+		return 0;
+	} else if (global->next_is_cbl) {
+		return 0;
+	}
+#define IF_CHECK_ARG(_cse_, ...) if (-1 != brrstg_cstr_compare(arg, _cse_, __VA_ARGS__, NULL))
+#define CHECK_TOGGLE_ARG(_c_, _a_, ...) IF_CHECK_ARG((_c_), __VA_ARGS__) { (_a_) = !(_a_); return 1; }
+#define CHECK_SET_ARG(_c_, _a_, _v_, ...) IF_CHECK_ARG((_c_), __VA_ARGS__) { (_a_) = (_v_); return 1; }
+#define CHECK_RUN_ARG(_c_, _a_, ...) IF_CHECK_ARG((_c_), __VA_ARGS__) { _a_; }
+	else CHECK_RUN_ARG(0, return print_help(), "-h", "-help", "--help", "-v", "-version", "--version")
+	else CHECK_SET_ARG(1, options->type, input_type_auto, "-a", "-auto", "-detect")
+	else CHECK_SET_ARG(1, options->type, input_type_ogg, "-a", "-ogg")
+	else CHECK_SET_ARG(1, options->type, input_type_wem, "-w", "-wem", "-weem")
+	else CHECK_SET_ARG(1, options->type, input_type_wsp, "-W", "-wsp", "-wisp")
+	else CHECK_SET_ARG(1, options->type, input_type_bnk, "-b", "-bnk", "-bank")
+	else CHECK_TOGGLE_ARG(1, options->bank_recurse, "-Rbnk", "-recurse_bank")
+	else CHECK_TOGGLE_ARG(1, options->auto_ogg, "-w2o", "-wem2ogg")
+	else CHECK_TOGGLE_ARG(1, options->inplace_ogg, "-oi", "-ogg-inplace")
+	else CHECK_TOGGLE_ARG(1, options->inplace_regrain, "-ri", "-rgrn-inplace", "-rvb-inplace")
+	else CHECK_SET_ARG(1, global->next_is_cbl, 1, "-cbl", "-codebook-library")
+	else CHECK_SET_ARG(1, options->library_index, -1, "-inline")
+	else CHECK_TOGGLE_ARG(1, options->stripped_headers, "-stripped")
+	else CHECK_TOGGLE_ARG(1, options->log_enabled, "-Q", "-qq", "too-quiet")
+	else CHECK_TOGGLE_ARG(1, options->log_color_enabled, "-c", "-color")
+	else CHECK_TOGGLE_ARG(1, global->log_style_enabled, "-C", "-global-color")
+	else CHECK_TOGGLE_ARG(1, global->report_card, "-r", "-report-card")
+	else CHECK_TOGGLE_ARG(1, global->full_report, "+r", "-full-report")
+	else CHECK_TOGGLE_ARG(1, global->next_is_file, "--")
+	else CHECK_TOGGLE_ARG(1, global->always_file, "-!")
+	else CHECK_TOGGLE_ARG(1, options->log_debug, "-d", "-debug")
+	else CHECK_RUN_ARG(1, return i_crement_log(options, +1), "+q", "+quiet")
+	else CHECK_RUN_ARG(1, return i_crement_log(options, -1), "-q", "-quiet")
+	else CHECK_TOGGLE_ARG(1, options->dry_run, "-n", "-dry", "-dry-run")
+	else CHECK_TOGGLE_ARG(1, global->should_reset, "-reset")
+#undef IF_CHECK_ARG
+#undef CHECK_TOGGLE_ARG
+#undef CHECK_SET_ARG
+#undef CHECK_RUN_ARG
+	else return 0;
+}
+static int BRRCALL
+i_take_arguments(inputT **const inputs, input_libraryT **const libraries, numbersT *const nums,
     input_optionsT default_options, input_optionsT *const current, global_optionsT *const global,
 	int argc, char **argv)
 {
 	for (brrsz i = 0; i < argc; ++i) {
 		char *arg = argv[i];
-		processed_inputT *tmp_arg = NULL;
+		inputT *tmp_arg = NULL;
 		if (i_parse_argument(arg, global, current)) {
 			continue;
 		} else if (global->next_is_cbl) {
@@ -374,11 +344,11 @@ i_take_arguments(processed_inputT **const inputs, input_libraryT **const librari
 	return 0;
 }
 static void BRRCALL
-i_clear_inputs(processed_inputT **const inputs, brrsz n_inputs)
+i_clear_inputs(inputT **const inputs, brrsz n_inputs)
 {
 	if (*inputs) {
 		for (brrsz i = 0; i < n_inputs; ++i) {
-			processed_input_clear(&(*inputs)[i]);
+			input_clear(&(*inputs)[i]);
 		}
 		free(*inputs);
 		*inputs = NULL;
@@ -397,7 +367,7 @@ i_clear_libraries(input_libraryT **const libraries, brrsz n_libraries)
 }
 
 static int BRRCALL
-i_process_input(processed_inputT *const input, input_libraryT *const libraries,
+i_process_input(inputT *const input, input_libraryT *const libraries,
     numbersT *const numbers, brrsz posterity_index)
 {
 	int err = 0;
@@ -408,44 +378,44 @@ i_process_input(processed_inputT *const input, input_libraryT *const libraries,
 		return -1;
 	}
 	BRRLOG_NORN("Parsing ");
-	BRRLOG_FORENP(NeLOG_COLOR_INFO, "%*i / %*i",
+	BRRLOG_FORENP(LOG_COLOR_INFO, "%*i / %*i",
 	    input_count_digits, posterity_index + 1, input_count_digits, numbers->n_inputs);
 	if (input->options.log_debug) {
 		BRRLOG_NORNP(" ");
-		processed_input_print(input, numbers->input_path_max_length, brrlog_priority_debug, 0);
+		input_print(input, numbers->input_path_max_length, brrlog_priority_debug, 0);
 	}
 	BRRLOG_NORNP(" "); /* Reset last log format and level */
-	if (input->options.type == INPUT_TYPE_UNK) {
-		BRRLOG_MESSAGETNP(gbrrlog_level_last, NeLOG_FORMAT_AUT, "%-*s",
-		    numbers->input_path_max_length, BRRTIL_NULSTR((char *)input->path.opaque));
+	if (input->options.type == input_type_auto) {
+		BRRLOG_MESSAGETNP(gbrrlog_level_last, LOG_FORMAT_AUT, "%-*s",
+		    numbers->input_path_max_length, input->path.opaque);
 		err = i_determine_input_type(input, extension.opaque);
-	} else if (input->options.type == INPUT_TYPE_OGG) {
-		BRRLOG_MESSAGETNP(gbrrlog_level_last, NeLOG_FORMAT_OGG, "%-*s",
-		    numbers->input_path_max_length, BRRTIL_NULSTR((char *)input->path.opaque));
-	} else if (input->options.type == INPUT_TYPE_WEM) {
-		BRRLOG_MESSAGETNP(gbrrlog_level_last, NeLOG_FORMAT_OGG, "%-*s",
-		    numbers->input_path_max_length, BRRTIL_NULSTR((char *)input->path.opaque));
-	} else if (input->options.type == INPUT_TYPE_WSP) {
-		BRRLOG_MESSAGETNP(gbrrlog_level_last, NeLOG_FORMAT_OGG, "%-*s",
-		    numbers->input_path_max_length, BRRTIL_NULSTR((char *)input->path.opaque));
-	} else if (input->options.type == INPUT_TYPE_BNK) {
-		BRRLOG_MESSAGETNP(gbrrlog_level_last, NeLOG_FORMAT_OGG, "%-*s",
-		    numbers->input_path_max_length, BRRTIL_NULSTR((char *)input->path.opaque));
+	} else if (input->options.type == input_type_ogg) {
+		BRRLOG_MESSAGETNP(gbrrlog_level_last, LOG_FORMAT_OGG, "%-*s",
+		    numbers->input_path_max_length, input->path.opaque);
+	} else if (input->options.type == input_type_wem) {
+		BRRLOG_MESSAGETNP(gbrrlog_level_last, LOG_FORMAT_OGG, "%-*s",
+		    numbers->input_path_max_length, input->path.opaque);
+	} else if (input->options.type == input_type_wsp) {
+		BRRLOG_MESSAGETNP(gbrrlog_level_last, LOG_FORMAT_OGG, "%-*s",
+		    numbers->input_path_max_length, input->path.opaque);
+	} else if (input->options.type == input_type_bnk) {
+		BRRLOG_MESSAGETNP(gbrrlog_level_last, LOG_FORMAT_OGG, "%-*s",
+		    numbers->input_path_max_length, input->path.opaque);
 	}
 	BRRLOG_NORNP(" "); /* Reset last log format and level */
 	if (err) {
-		BRRLOG_ERR("Failed to determine filetype : %s", i_strerr(err));
+		BRRLOG_ERR("Failed to determine filetype : %s", (err));
 	} else {
 		input_libraryT *library = NULL;
 		if (input->options.library_index != -1)
 			library = &libraries[input->options.library_index];
-		if (input->options.type == INPUT_TYPE_OGG) {
+		if (input->options.type == input_type_ogg) {
 			regrain_ogg(numbers, input->path.opaque, input->path.length, &input->options);
-		} else if (input->options.type == INPUT_TYPE_WEM) {
+		} else if (input->options.type == input_type_wem) {
 			convert_wem(numbers, input->path.opaque, input->path.length, &input->options, library);
-		} else if (input->options.type == INPUT_TYPE_WSP) {
+		} else if (input->options.type == input_type_wsp) {
 			extract_wsp(numbers, input->path.opaque, input->path.length, &input->options, library);
-		} else if (input->options.type == INPUT_TYPE_BNK) {
+		} else if (input->options.type == input_type_bnk) {
 			extract_bnk(numbers, input->path.opaque, input->path.length, &input->options, library);
 		}
 	}
@@ -456,11 +426,11 @@ i_process_input(processed_inputT *const input, input_libraryT *const libraries,
 	return err;
 }
 static int BRRCALL
-i_process_inputs(processed_inputT *const inputs, input_libraryT *const libraries, numbersT *const numbers,
+i_process_inputs(inputT *const inputs, input_libraryT *const libraries, numbersT *const numbers,
     global_optionsT *const global)
 {
 	for (brrsz i = 0; i < numbers->n_inputs; ++i) {
-		processed_inputT *const input = &inputs[i];
+		inputT *const input = &inputs[i];
 		brrpath_stat_resultT path_stat = {0};
 		if (global->log_style_enabled) {
 			gbrrlogctl.style_enabled = input->options.log_color_enabled;
@@ -478,16 +448,16 @@ i_process_inputs(processed_inputT *const inputs, input_libraryT *const libraries
 			BRRLOG_ERR("Failed to stat path '%s' : %s", (char *)input->path.opaque, strerror(errno));
 		} else if (!path_stat.exists) {
 			BRRLOG_WARN("Cannot parse ");
-			BRRLOG_FORENP(brrlog_color_cyan, "%s", BRRTIL_NULSTR((char *)input->path.opaque));
+			BRRLOG_FORENP(brrlog_color_cyan, "%s", input->path.opaque);
 			BRRLOG_WARP(" : Path does not exist");
 		} else if (path_stat.type != brrpath_type_file) {
 			BRRLOG_WARN("Cannot parse ");
-			BRRLOG_FORENP(brrlog_color_cyan, "%s", BRRTIL_NULSTR((char *)input->path.opaque));
+			BRRLOG_FORENP(brrlog_color_cyan, "%s", input->path.opaque);
 			BRRLOG_WARP(" : Path is not a regular file");
 		} else {
 			i_process_input(input, &libraries[input->options.library_index], numbers, i);
 		}
-		processed_input_clear(input);
+		input_clear(input);
 	}
 	return 0;
 }
@@ -506,11 +476,13 @@ int main(int argc, char **argv)
 	static global_optionsT global_options = {
 		.should_reset = 0,
 		.log_style_enabled = 1,
+		.report_card = 1,
+		.full_report = 1,
 	};
-	input_optionsT current_options = default_options;
-	processed_inputT *inputs = NULL;
-	input_libraryT *libraries = NULL;
 	numbersT numbers = {0};
+	input_optionsT current_options = default_options;
+	input_libraryT *libraries = NULL;
+	inputT *inputs = NULL;
 	int err = 0;
 
 	if (argc == 1) {
@@ -538,7 +510,8 @@ int main(int argc, char **argv)
 	i_clear_inputs(&inputs, numbers.n_inputs);
 	i_clear_libraries(&libraries, numbers.n_libraries);
 
-	print_numbers(&global_options, &numbers);
+	if (global_options.report_card || global_options.full_report)
+		print_numbers(&global_options, &numbers);
 	brrlog_deinit();
 	return err;
 }

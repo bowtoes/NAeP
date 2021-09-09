@@ -20,12 +20,10 @@ limitations under the License.
 #include <stdio.h>
 #include <string.h>
 
-#include <ogg/ogg.h>
-#include <vorbis/codec.h>
+#include <vorbis/vorbisenc.h>
 
-#include <brrtools/brrlib.h>
-#include <brrtools/brrlog.h>
-#include <brrtools/brrpath.h>
+#include "common_lib.h"
+#include "errors.h"
 
 static const input_optionsT *goptions = NULL;
 static const char *ginput_name = NULL;
@@ -216,15 +214,15 @@ i_regrain(void)
 	ogg_sync_init(&syncer);
 	if ((err = i_init_streams(in, &syncer, &sync_page, &istream, &ostream))) {
 		i_clear(&in, NULL, &syncer, NULL, NULL, NULL, NULL);
-		BRRLOG_ERRN("Failed to initialize streams for regrain of '%s' : %s", ginput_name, i_strerr(err));
+		BRRLOG_ERRN("Failed to initialize streams for regrain of '%s' : %s", ginput_name, lib_strerr(err));
 		return err;
 	} else if ((err = i_init_headers(in, &syncer, &sync_page, &sync_packet, &istream, &ostream, &info, &comment))) {
 		i_clear(&in, NULL, &syncer, &istream, &ostream, NULL, NULL);
-		BRRLOG_ERRN("Failed to initialize vorbis headers from '%s' : %s", ginput_name, i_strerr(err));
+		BRRLOG_ERRN("Failed to initialize vorbis headers from '%s' : %s", ginput_name, lib_strerr(err));
 		return err;
 	} else if ((err = i_recompute_grains(in, &syncer, &sync_page, &sync_packet, &istream, &ostream, &info))) {
 		i_clear(&in, NULL, &syncer, &istream, &ostream, &info, &comment);
-		BRRLOG_ERRN("Failed to recompute granules of '%s' : %s", ginput_name, i_strerr(err));
+		BRRLOG_ERRN("Failed to recompute granules of '%s' : %s", ginput_name, lib_strerr(err));
 		return err;
 	}
 	i_clear(&in, NULL, &syncer, &istream, NULL, &info, &comment);
@@ -255,23 +253,23 @@ regrain_ogg(numbersT *const numbers, const char *const input, brrsz input_length
 	int err = 0;
 	numbers->oggs_to_regrain++;
 	if (options->dry_run) {
-		BRRLOG_FORENP(NeLOG_COLOR_DRY, "Regranularize OGG ");
+		BRRLOG_FORENP(LOG_COLOR_DRY, "Regranularize OGG ");
 	} else {
-		BRRLOG_FORENP(NeLOG_COLOR_WET, "Regranularizing OGG... ");
+		BRRLOG_FORENP(LOG_COLOR_WET, "Regranularizing OGG... ");
 		ginput_name = input;
 		if (options->inplace_regrain) {
 			snprintf(goutput_name, sizeof(goutput_name), "%s", input);
 		} else {
-			replace_ext(ginput_name, input_length, goutput_name, NULL, "_rvb.ogg");
+			lib_replace_ext(ginput_name, input_length, goutput_name, NULL, "_rvb.ogg");
 		}
 		err = i_regrain();
 	}
 	if (!err) {
 		numbers->oggs_regrained++;
-		BRRLOG_MESSAGETP(gbrrlog_level_normal, NeLOG_FORMAT_SUCCESS, "Success!");
+		BRRLOG_MESSAGETP(gbrrlog_level_normal, LOG_FORMAT_SUCCESS, "Success!");
 	} else {
 		numbers->oggs_failed++;
-		BRRLOG_MESSAGETP(gbrrlog_level_normal, NeLOG_FORMAT_FAILURE, " Failure! (%d)", err);
+		BRRLOG_MESSAGETP(gbrrlog_level_normal, LOG_FORMAT_FAILURE, " Failure! (%d)", err);
 	}
 	return err;
 }

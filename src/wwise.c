@@ -98,7 +98,7 @@ wwise_wem_init(wwise_wemT *const wem, const riffT *const rf)
 	memset(wem, 0, sizeof(*wem));
 	for (brru8 i = 0; i < rf->n_basics; ++i) {
 		riff_basic_chunkT *basic = &rf->basics[i];
-		if (basic->type == riff_basic_type_fmt) {
+		if (basic->type == riff_basic_fmt) {
 			if (wem->fmt_initialized)
 				return WWISE_DUPLICATE;
 			i_init_fmt(&wem->fmt, basic->data, basic->size);
@@ -109,12 +109,12 @@ wwise_wem_init(wwise_wemT *const wem, const riffT *const rf)
 				i_init_vorb(wem, basic->data + 24, basic->size - 24);
 				wem->vorb_initialized = 1;
 			}
-		} else if (basic->type == riff_basic_type_vorb) { /* Vorb explicit */
+		} else if (basic->type == riff_basic_vorb) { /* Vorb explicit */
 			if (wem->vorb_initialized)
 				return WWISE_DUPLICATE;
 			i_init_vorb(wem, basic->data, basic->size);
 			wem->vorb_initialized = 1;
-		} else if (basic->type == riff_basic_type_data) {
+		} else if (basic->type == riff_basic_data) {
 			if (wem->data_initialized)
 				return WWISE_DUPLICATE;
 			wem->data = basic->data;

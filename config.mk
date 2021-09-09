@@ -244,6 +244,7 @@ DEFS:=-D$(UPROJECT)MAJOR=$($(PROJECT)_MAJOR)\
       -D$(UPROJECT)MINOR=$($(PROJECT)_MINOR)\
       -D$(UPROJECT)REVIS=$($(PROJECT)_REVIS)\
       -D$(UPROJECT)VERSION='"$($(PROJECT)_MAJOR).$($(PROJECT)_MINOR).$($(PROJECT)_REVIS)"'\
+	  -DRIFF_EXTENDED='"riff_extension.h"'\
 
 ifdef DEBUG
  DEFS:=$(DEFS) -D$(UPROJECT)DEBUG
@@ -290,17 +291,21 @@ $(PROJECT)_LDFLAGS=$(LNK) $(PRF) $(LDFLAGS)
 SRC:=\
 	src/main.c\
 	src/codebook_library.c\
-	src/common.c\
-	src/riff.c\
+	src/common_input.c\
+	src/common_lib.c\
 	src/process_ogg.c\
 	src/process_wem.c\
 	src/process_wsp.c\
 	src/process_bnk.c\
+	src/riff.c\
 	src/wwise.c\
 
 HDR:=\
 	src/codebook_library.h\
-	src/common.h\
-	src/riff.h\
+	src/common_input.h\
+	src/common_lib.h\
+	src/errors.h\
 	src/process_files.h\
+	src/riff.h\
+	src/riff_extension.h\
 	src/wwise.h\

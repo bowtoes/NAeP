@@ -17,6 +17,8 @@ limitations under the License.
 #ifndef CODEBOOK_LIBRARY_H
 #define CODEBOOK_LIBRARY_H
 
+#include <ogg/ogg.h>
+
 #include <brrtools/brrapi.h>
 #include <brrtools/brrtypes.h>
 
@@ -28,13 +30,30 @@ BRRCPPSTART
 
 typedef struct packed_codebook {
 	unsigned char *data;
+	unsigned char *unpacked_data;
 	brru4 size;
+	int did_unpack;
+	brru8 unpacked_bits;
 } packed_codebookT;
 typedef struct codebook_library {
 	packed_codebookT *codebooks;
 	brru4 codebook_count;
 } codebook_libraryT;
 
+void BRRCALL packed_codebook_clear(packed_codebookT *const pc);
+void BRRCALL packed_codebook_clear_unpacked(packed_codebookT *const pc);
+/* -2 : decode error/corrupt data
+ * -1 : error (allocation/argument)
+ *  0 : success
+ * */
+int BRRCALL packed_codebook_unpack_raw(oggpack_buffer *const unpacker, oggpack_buffer *const packer);
+/* -2 : decode error/corrupt data
+ * -1 : error (allocation/argument)
+ *  0 : success
+ * */
+int BRRCALL packed_codebook_unpack(packed_codebookT *const pc);
+
+void BRRCALL codebook_library_clear(codebook_libraryT *const cb);
 /* -2 : corruption
  * -1 : error (allocation/argument)
  *  0 : success
@@ -57,8 +76,6 @@ int BRRCALL codebook_library_serialize_deprecated(const codebook_libraryT *const
  * */
 int BRRCALL codebook_library_serialize(const codebook_libraryT *const cb,
     void **const data, brru8 *const data_size);
-
-void BRRCALL codebook_library_clear(codebook_libraryT *const cb);
 
 BRRCPPEND
 

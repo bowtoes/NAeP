@@ -20,7 +20,7 @@ limitations under the License.
 #include <brrtools/brrapi.h>
 #include <brrtools/brrpath.h>
 
-#include "common.h"
+#include "common_input.h"
 
 BRRCPPSTART
 

@@ -29,20 +29,20 @@ extract_bnk(numbersT *const numbers, const char *const input, brrsz input_length
 	int err = 0;
 	numbers->bnks_to_process++;
 	if (options->dry_run) {
-		BRRLOG_FOREP(NeLOG_COLOR_DRY, "Extract BNK (dry) ");
+		BRRLOG_FOREP(LOG_COLOR_DRY, "Extract BNK (dry) ");
 	} else {
-		BRRLOG_FOREP(NeLOG_COLOR_WET, "Extracting BNK... ");
-		BRRLOG_FOREP(NeLOG_COLOR_DISABLED, "BNK Extraction not implemented");
+		BRRLOG_FOREP(LOG_COLOR_WET, "Extracting BNK... ");
+		BRRLOG_FOREP(LOG_COLOR_DISABLED, "BNK Extraction not implemented");
 		/* Very similar to 'extract_wsp', however banks may reference other banks and wsps.
 		 * TODO Hold off until the rest are done.
 		 * */
 	}
 	if (!err) {
 		numbers->bnks_processed++;
-		BRRLOG_MESSAGETP(gbrrlog_level_normal, NeLOG_FORMAT_SUCCESS, "Success!");
+		BRRLOG_MESSAGETP(gbrrlog_level_normal, LOG_FORMAT_SUCCESS, "Success!");
 	} else {
 		numbers->bnks_failed++;
-		BRRLOG_MESSAGETP(gbrrlog_level_normal, NeLOG_FORMAT_FAILURE, "Failure! (%d)", err);
+		BRRLOG_MESSAGETP(gbrrlog_level_normal, LOG_FORMAT_FAILURE, "Failure! (%d)", err);
 	}
 	return err;
 }

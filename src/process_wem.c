@@ -17,19 +17,13 @@ limitations under the License.
 #include "process_files.h"
 
 #include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include <ogg/ogg.h>
-#include <vorbis/codec.h>
+#include <vorbis/vorbisenc.h>
 
-#include <brrtools/brrlib.h>
-#include <brrtools/brrlog.h>
-#include <brrtools/brrpath.h>
-#include <brrtools/brrtil.h>
-
-#include "riff.h"
+#include "common_lib.h"
+#include "errors.h"
 #include "wwise.h"
 
 static const input_optionsT *goptions = NULL;
@@ -150,37 +144,6 @@ i_read_riff_chunks(FILE *const file, riffT *const rf)
 	return err;
 }
 
-static long BRRCALL
-i_packer_transfer(oggpack_buffer *const unpacker, int in_bits,
-    oggpack_buffer *const packer, int out_bits)
-{
-	long r = oggpack_read(unpacker, in_bits);
-	if (r == -1)
-		return r;
-	oggpack_write(packer, r, out_bits);
-	return r;
-}
-static long BRRCALL
-i_packer_transfer_remaining(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
-{
-	long dwords = 0, left = 0, transferred = 0;
-	if (unpacker->endbit) {
-		int bits = 7 - unpacker->endbit;
-		i_packer_transfer(unpacker, bits, packer, bits);
-		transferred += bits;
-	}
-	dwords = (unpacker->storage - unpacker->endbyte) / 4;
-	for (long i = 0; i < dwords; ++i) {
-		i_packer_transfer(unpacker, 32, packer, 32);
-		transferred += 32;
-	}
-	left = 8 * (unpacker->storage - unpacker->endbyte);
-	if (left) {
-		i_packer_transfer(unpacker, left, packer, left);
-		transferred += 8;
-	}
-	return I_SUCCESS;
-}
 /* Header processing */
 static int BRRCALL
 i_build_packet(ogg_packet *const packet, oggpack_buffer *const packer,
@@ -207,11 +170,11 @@ i_insert_packet(ogg_stream_state *const streamer, ogg_packet *const packet,
 		} else if ((err = vorbis_synthesis_headerin(vi, vc, packet))) {
 			BRRLOG_ERRN("Failed to synthesize header %d : ", packet->packetno);
 			if (err == OV_ENOTVORBIS)
-				BRRLOG_ERR("NOT VORBIS");
+				BRRLOG_ERRNP("NOT VORBIS");
 			else if (err == OV_EBADHEADER)
-				BRRLOG_ERR("BAD HEADER");
+				BRRLOG_ERRNP("BAD HEADER");
 			else
-				BRRLOG_ERR("INTERNAL ERROR");
+				BRRLOG_ERRNP("INTERNAL ERROR");
 			return I_CORRUPT;
 		}
 	}
@@ -265,15 +228,15 @@ i_copy_comment_header(oggpack_buffer *const unpacker, oggpack_buffer *const pack
 	for (int i = 0; i < 6; ++i)                     /* OUT Vorbis str */
 		oggpack_write(packer, VORBIS_STR[i], 8);
 
-	vendor_length = i_packer_transfer(unpacker, 32, packer, 32);      /* IN/OUT Vendor length */
+	vendor_length = lib_packer_transfer(unpacker, 32, packer, 32);      /* IN/OUT Vendor length */
 	for (brrs8 i = 0; i < vendor_length; ++i) {                       /* IN/OUT Vendor string */
-		char vendor_str = i_packer_transfer(unpacker, 32, packer, 8);
+		char vendor_str = lib_packer_transfer(unpacker, 32, packer, 8);
 	}
-	comments_count = i_packer_transfer(unpacker, 32, packer, 32);     /* IN/OUT Comment list length */
+	comments_count = lib_packer_transfer(unpacker, 32, packer, 32);     /* IN/OUT Comment list length */
 	for (brrs8 i = 0; i < comments_count; ++i) {
-		brrs8 comment_length = i_packer_transfer(unpacker, 32, packer, 32); /* IN/OUT Comment length */
+		brrs8 comment_length = lib_packer_transfer(unpacker, 32, packer, 32); /* IN/OUT Comment length */
 		for (brrs8 j = 0; j < comment_length; ++j) {                        /* IN/OUT Comment string */
-			char comment_str = i_packer_transfer(unpacker, 8, packer, 8);
+			char comment_str = lib_packer_transfer(unpacker, 8, packer, 8);
 		}
 	}
 	frame_flag = oggpack_read(unpacker, 1);         /* IN Frame flag, should be 1 */
@@ -285,56 +248,56 @@ i_copy_next_codebook(oggpack_buffer *const unpacker, oggpack_buffer *const packe
 {
 	long dimensions, entries;
 	int ordered, lookup;
-	if ('B' != i_packer_transfer(unpacker, 8, packer, 8) ||   /* IN/OUT Codebook sync */
-	    'C' != i_packer_transfer(unpacker, 8, packer, 8) ||   /* IN/OUT Codebook sync */
-	    'V' != i_packer_transfer(unpacker, 8, packer, 8)) {   /* IN/OUT Codebook sync */
+	if ('B' != lib_packer_transfer(unpacker, 8, packer, 8) ||   /* IN/OUT Codebook sync */
+	    'C' != lib_packer_transfer(unpacker, 8, packer, 8) ||   /* IN/OUT Codebook sync */
+	    'V' != lib_packer_transfer(unpacker, 8, packer, 8)) {   /* IN/OUT Codebook sync */
 		return I_CORRUPT;
 	}
-	dimensions = i_packer_transfer(unpacker, 16, packer, 16); /* IN/OUT Codebook dimensions */
-	entries = i_packer_transfer(unpacker, 24, packer, 24);    /* IN/OUT Codebook entries */
-	ordered = i_packer_transfer(unpacker, 1, packer, 1);      /* IN/OUT Ordered flag */
+	dimensions = lib_packer_transfer(unpacker, 16, packer, 16); /* IN/OUT Codebook dimensions */
+	entries = lib_packer_transfer(unpacker, 24, packer, 24);    /* IN/OUT Codebook entries */
+	ordered = lib_packer_transfer(unpacker, 1, packer, 1);      /* IN/OUT Ordered flag */
 	if (ordered) {
-		int current_length = 1 + i_packer_transfer(unpacker, 5, packer, 5); /* IN/OUT Start length */
+		int current_length = 1 + lib_packer_transfer(unpacker, 5, packer, 5); /* IN/OUT Start length */
 		long current_entry = 0;
 		while (current_entry < entries) {
-			int number_bits = ilog(entries - current_entry);
-			long number = i_packer_transfer(unpacker, number_bits, packer, number_bits); /* IN/OUT Magic number */
+			int number_bits = lib_count_bits(entries - current_entry);
+			long number = lib_packer_transfer(unpacker, number_bits, packer, number_bits); /* IN/OUT Magic number */
 			current_entry += number;
 			current_length++;
 		}
 		if (current_entry > entries)
 			return I_CORRUPT;
 	} else {
-		int sparse = i_packer_transfer(unpacker, 1, packer, 1); /* IN/OUT Sparse flag */
+		int sparse = lib_packer_transfer(unpacker, 1, packer, 1); /* IN/OUT Sparse flag */
 		for (long i = 0; i < entries; ++i) {
 			if (!sparse) {
-				int length = 1 + i_packer_transfer(unpacker, 5, packer, 5); /* IN/OUT Codeword length */
+				int length = 1 + lib_packer_transfer(unpacker, 5, packer, 5); /* IN/OUT Codeword length */
 			} else {
-				int used = i_packer_transfer(unpacker, 1, packer, 1); /* IN/OUT Used flag */
+				int used = lib_packer_transfer(unpacker, 1, packer, 1); /* IN/OUT Used flag */
 				if (used) {
-					int length = 1 + i_packer_transfer(unpacker, 5, packer, 5); /* IN/OUT Codeword length */
+					int length = 1 + lib_packer_transfer(unpacker, 5, packer, 5); /* IN/OUT Codeword length */
 				}
 			}
 		}
 	}
-	lookup = i_packer_transfer(unpacker, 4, packer, 4); /* IN/OUT Lookup type */
+	lookup = lib_packer_transfer(unpacker, 4, packer, 4); /* IN/OUT Lookup type */
 	if (lookup) {
 		long minval_packed = 0, delval_packed = 0;
 		int value_bits = 0, sequence_flag = 0;
 		long lookup_values = 0;
 		if (lookup > 2)
 			return I_CORRUPT;
-		minval_packed = i_packer_transfer(unpacker, 32, packer, 32); /* IN/OUT Minimum value */
-		delval_packed = i_packer_transfer(unpacker, 32, packer, 32); /* IN/OUT Delta value */
-		value_bits = 1 + i_packer_transfer(unpacker, 4, packer, 4);  /* IN/OUT Value bits */
-		sequence_flag = i_packer_transfer(unpacker, 1, packer, 1);   /* IN/OUT Sequence flag */
+		minval_packed = lib_packer_transfer(unpacker, 32, packer, 32); /* IN/OUT Minimum value */
+		delval_packed = lib_packer_transfer(unpacker, 32, packer, 32); /* IN/OUT Delta value */
+		value_bits = 1 + lib_packer_transfer(unpacker, 4, packer, 4);  /* IN/OUT Value bits */
+		sequence_flag = lib_packer_transfer(unpacker, 1, packer, 1);   /* IN/OUT Sequence flag */
 		if (lookup == 1)
-			lookup_values = lookup1_values(entries, dimensions);
+			lookup_values = lib_lookup1_values(entries, dimensions);
 		else
 			lookup_values = entries * dimensions;
 
 		for (long i = 0; i < lookup_values; ++i) { /* IN/OUT Codebook multiplicands */
-			long multiplicand = i_packer_transfer(unpacker, value_bits, packer, value_bits);
+			long multiplicand = lib_packer_transfer(unpacker, value_bits, packer, value_bits);
 		}
 	}
 	return I_SUCCESS;
@@ -352,7 +315,7 @@ i_copy_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packer
 	for (int i = 0; i < 6; ++i)                     /* OUT Vorbis str */
 		oggpack_write(packer, VORBIS_STR[i], 8);
 
-	codebook_count = 1 + i_packer_transfer(unpacker, 8, packer, 8); /* IN/OUT Codebooks counts */
+	codebook_count = 1 + lib_packer_transfer(unpacker, 8, packer, 8); /* IN/OUT Codebooks counts */
 	if (!glibrary || 1) { /* Inline codebooks, copy verbatim */
 		// For now, copy verbatim
 		for (int err = 0, i = 0; i < codebook_count; ++i) {
@@ -363,7 +326,7 @@ i_copy_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packer
 		return I_BAD_ERROR;
 	}
 	/* Now copy the rest of it (naive shallow copy) */
-	i_packer_transfer_remaining(unpacker, packer);
+	lib_packer_transfer_remaining(unpacker, packer);
 	return I_SUCCESS;
 }
 static int BRRCALL
@@ -450,7 +413,6 @@ i_build_comments_header(oggpack_buffer *const packer)
 	oggpack_write(packer, 1, 1);                            /* OUT Frame flag */
 	return I_SUCCESS;
 }
-static long codebook_bytes;
 static int BRRCALL
 i_build_codebook(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 {
@@ -460,18 +422,15 @@ i_build_codebook(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 	oggpack_write(packer, 'C', 8); /* OUT Sync */
 	oggpack_write(packer, 'V', 8); /* OUT Sync */
 
-	dimensions = i_packer_transfer(unpacker,  4, packer, 16); /* IN/OUT Dimensions */
-	entries = i_packer_transfer(unpacker, 14, packer, 24);    /* IN/OUT Entries */
-	ordered = i_packer_transfer(unpacker, 1, packer, 1);      /* IN/OUT Ordered flag */
+	dimensions = lib_packer_transfer(unpacker,  4, packer, 16); /* IN/OUT Dimensions */
+	entries = lib_packer_transfer(unpacker, 14, packer, 24);    /* IN/OUT Entries */
+	ordered = lib_packer_transfer(unpacker, 1, packer, 1);      /* IN/OUT Ordered flag */
 	if (ordered) { /* Ordered codeword decode identical to spec */
-		int current_length = 1 + i_packer_transfer(unpacker, 5, packer, 5); /* IN/OUT Start length */
+		int current_length = 1 + lib_packer_transfer(unpacker, 5, packer, 5); /* IN/OUT Start length */
 		long current_entry = 0;
-#if defined(NeWEMDEBUG)
-		BRRLOG_DEBUGNP("Ordered  ");
-#endif
 		while (current_entry < entries) {
-			int number_bits = ilog(entries - current_entry);
-			long number = i_packer_transfer(unpacker, number_bits, packer, number_bits); /* IN/OUT Magic number */
+			int number_bits = lib_count_bits(entries - current_entry);
+			long number = lib_packer_transfer(unpacker, number_bits, packer, number_bits); /* IN/OUT Magic number */
 			current_entry += number;
 			current_length++;
 		}
@@ -479,61 +438,39 @@ i_build_codebook(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 			return I_CORRUPT;
 	} else {
 		int codeword_length_bits, sparse;
-#if defined(NeWEMDEBUG)
-		BRRLOG_DEBUGNP("Unordered");
-#endif
 		codeword_length_bits = oggpack_read(unpacker, 3);     /* IN Codeword length bits */
 		if (codeword_length_bits < 0 || codeword_length_bits > 5)
 			return I_CORRUPT;
-		sparse = i_packer_transfer(unpacker, 1, packer, 1);   /* IN/OUT Sparse flag */
+		sparse = lib_packer_transfer(unpacker, 1, packer, 1);   /* IN/OUT Sparse flag */
 		if (!sparse) { /* IN/OUT Nonsparse codeword lengths */
-#if defined(NeWEMDEBUG)
-			BRRLOG_DEBUGNP(", Nonsparse");
-#endif
 			for (int i = 0; i < entries; ++i) {
-				int length = i_packer_transfer(unpacker, codeword_length_bits, packer, 5);
+				int length = lib_packer_transfer(unpacker, codeword_length_bits, packer, 5);
 			}
 		} else { /* IN/OUT Sparse codeword lengths */
-#if defined(NeWEMDEBUG)
-			BRRLOG_DEBUGNP(", Sparse   ");
-#endif
 			for (int i = 0; i < entries; ++i) {
-				int used = i_packer_transfer(unpacker, 1, packer, 1); /* IN/OUT Used flag */
+				int used = lib_packer_transfer(unpacker, 1, packer, 1); /* IN/OUT Used flag */
 				if (used) {
-					int length = i_packer_transfer(unpacker, codeword_length_bits, packer, 5); /* IN/OUT Codeword length */
+					int length = lib_packer_transfer(unpacker, codeword_length_bits, packer, 5); /* IN/OUT Codeword length */
 				}
 			}
 		}
 	}
 
-	lookup = i_packer_transfer(unpacker, 1, packer, 4); /* IN/OUT Lookup type */
+	lookup = lib_packer_transfer(unpacker, 1, packer, 4); /* IN/OUT Lookup type */
 	if (lookup == 1) { /* Lookup 1 decode identical to spec */
-		long minval_packed = i_packer_transfer(unpacker, 32, packer, 32); /* IN/OUT Minimum value */
-		long delval_packed = i_packer_transfer(unpacker, 32, packer, 32); /* IN/OUT Delta value */
-		int value_bits = 1 + i_packer_transfer(unpacker, 4, packer, 4);  /* IN/OUT Value bits */
-		int sequence_flag = i_packer_transfer(unpacker, 1, packer, 1);   /* IN/OUT Sequence flag */
+		long minval_packed = lib_packer_transfer(unpacker, 32, packer, 32); /* IN/OUT Minimum value */
+		long delval_packed = lib_packer_transfer(unpacker, 32, packer, 32); /* IN/OUT Delta value */
+		int value_bits = 1 + lib_packer_transfer(unpacker, 4, packer, 4);  /* IN/OUT Value bits */
+		int sequence_flag = lib_packer_transfer(unpacker, 1, packer, 1);   /* IN/OUT Sequence flag */
 
-		long lookup_values = lookup1_values(entries, dimensions);
-#if defined(NeWEMDEBUG)
-		BRRLOG_DEBUGNP(", Lookup 1 values %3lld", lookup_values);
-#endif
+		long lookup_values = lib_lookup1_values(entries, dimensions);
 
 		for (long i = 0; i < lookup_values; ++i) { /* IN/OUT Codebook multiplicands */
-			long multiplicand = i_packer_transfer(unpacker, value_bits, packer, value_bits);
+			long multiplicand = lib_packer_transfer(unpacker, value_bits, packer, value_bits);
 		}
-	} else if (lookup == 0) {
-#if defined(NeWEMDEBUG)
-		BRRLOG_DEBUGNP(", Lookup 0 no values ");
-#endif
 	} else {
 		BRRLOG_ERR("LOOKUP FAILED");
 	}
-#if defined(NeWEMDEBUG)
-	if (codebook_bytes)
-		BRRLOG_DEBUGP(", %sRead %4lld == %3lld of %lld",
-		    (oggpack_bits(unpacker)/8)+1!=codebook_bytes?"!! ":"   ",
-		    oggpack_bits(unpacker), oggpack_bytes(unpacker), codebook_bytes);
-#endif
 	return I_SUCCESS;
 }
 static int BRRCALL
@@ -541,35 +478,35 @@ i_build_floors(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 {
 	/* Floor 1 decode mostly identical to spec, except floor type is absent from
 	 * each floor (because there is only a single floor type) */
-	int floor_count = 1 + i_packer_transfer(unpacker, 6, packer, 6); /* IN/OUT Floor count */
+	int floor_count = 1 + lib_packer_transfer(unpacker, 6, packer, 6); /* IN/OUT Floor count */
 	for (int i = 0; i < floor_count; ++i) {
 		int partitions, partition_classes[31], max_class = -1;
 		int class_dims[16], class_subs[16], class_books[16], sub_books[16][16];
 		int multiplier, rangebits;
 		oggpack_write(packer, 1, 16);                            /* OUT Floor type, always 1 */
-		partitions = i_packer_transfer(unpacker, 5, packer, 5);  /* IN/OUT Floor partitions */
+		partitions = lib_packer_transfer(unpacker, 5, packer, 5);  /* IN/OUT Floor partitions */
 		for (int j = 0; j < partitions; ++j) {                   /* IN/OUT Partition classes */
-			int class = partition_classes[j] = i_packer_transfer(unpacker, 4, packer, 4);
+			int class = partition_classes[j] = lib_packer_transfer(unpacker, 4, packer, 4);
 			if (class > max_class)
 				max_class = class;
 		}
 		for (int j = 0; j <= max_class; ++j) {
-			int dim = class_dims[j] = 1 + i_packer_transfer(unpacker, 3, packer, 3); /* IN/OUT Class dimensions */
-			int sub = class_subs[j] = i_packer_transfer(unpacker, 2, packer, 2);     /* IN/OUT Class subclasses */
+			int dim = class_dims[j] = 1 + lib_packer_transfer(unpacker, 3, packer, 3); /* IN/OUT Class dimensions */
+			int sub = class_subs[j] = lib_packer_transfer(unpacker, 2, packer, 2);     /* IN/OUT Class subclasses */
 			int limit_break = 1 << sub;
 			if (sub) {                                                               /* IN/OUT Class books */
-				int master = class_books[j] = i_packer_transfer(unpacker, 8, packer, 8);
+				int master = class_books[j] = lib_packer_transfer(unpacker, 8, packer, 8);
 			}
 			for (int k = 0; k < limit_break; ++k) {                                  /* IN/OUT Subclass books */
-				sub_books[j][k] = -1 + i_packer_transfer(unpacker, 8, packer, 8);
+				sub_books[j][k] = -1 + lib_packer_transfer(unpacker, 8, packer, 8);
 			}
 		}
-		multiplier = 1 + i_packer_transfer(unpacker, 2, packer, 2); /* IN/OUT Floor multiplier */
-		rangebits = i_packer_transfer(unpacker, 4, packer, 4);      /* IN/OUT Floor rangebits */
+		multiplier = 1 + lib_packer_transfer(unpacker, 2, packer, 2); /* IN/OUT Floor multiplier */
+		rangebits = lib_packer_transfer(unpacker, 4, packer, 4);      /* IN/OUT Floor rangebits */
 		for (int j = 0; j < partitions; ++j) {
 			int dims = class_dims[partition_classes[j]];
 			for (int k = 0; k < dims; ++k) {           /* IN/OUT Floor X list */
-				long X = i_packer_transfer(unpacker, rangebits, packer, rangebits);
+				long X = lib_packer_transfer(unpacker, rangebits, packer, rangebits);
 			}
 		}
 	}
@@ -579,34 +516,34 @@ static int BRRCALL
 i_build_residues(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 {
 	/* As far as I can tell, residue decode is identical to spec */
-	int residue_count = 1 + i_packer_transfer(unpacker, 6, packer, 6); /* IN/OUT Residue count */
+	int residue_count = 1 + lib_packer_transfer(unpacker, 6, packer, 6); /* IN/OUT Residue count */
 	for (int i = 0; i < residue_count; ++i) {
 		long start, end, partition_size;
 		int classes, classbook;
 		int type;
 		int cascades[64];
 		int acc = 0; /* ??????? */
-		type = i_packer_transfer(unpacker, 2, packer, 16);  /* IN/OUT Residue type */
+		type = lib_packer_transfer(unpacker, 2, packer, 16);  /* IN/OUT Residue type */
 		if (type > 2)
 			return I_CORRUPT;
 
-		start = i_packer_transfer(unpacker, 24, packer, 24);              /* IN/OUT Residue begin */
-		end = i_packer_transfer(unpacker, 24, packer, 24);                /* IN/OUT Residue end */
-		partition_size = 1 + i_packer_transfer(unpacker, 24, packer, 24); /* IN/OUT Partition size */
-		classes = 1 + i_packer_transfer(unpacker, 6, packer, 6);          /* IN/OUT Residue classes */
-		classbook = i_packer_transfer(unpacker, 8, packer, 8);            /* IN/OUT Residue classbook */
+		start = lib_packer_transfer(unpacker, 24, packer, 24);              /* IN/OUT Residue begin */
+		end = lib_packer_transfer(unpacker, 24, packer, 24);                /* IN/OUT Residue end */
+		partition_size = 1 + lib_packer_transfer(unpacker, 24, packer, 24); /* IN/OUT Partition size */
+		classes = 1 + lib_packer_transfer(unpacker, 6, packer, 6);          /* IN/OUT Residue classes */
+		classbook = lib_packer_transfer(unpacker, 8, packer, 8);            /* IN/OUT Residue classbook */
 
 		for (int j = 0; j < classes; ++j) {                               /* IN/OUT Residue cascades */
 			int bitflag;
-			cascades[j] = i_packer_transfer(unpacker, 3, packer, 3);          /* IN/OUT Cascade low-bits */
-			bitflag = i_packer_transfer(unpacker, 1, packer, 1);              /* IN/OUT Cascade bitflag */
+			cascades[j] = lib_packer_transfer(unpacker, 3, packer, 3);          /* IN/OUT Cascade low-bits */
+			bitflag = lib_packer_transfer(unpacker, 1, packer, 1);              /* IN/OUT Cascade bitflag */
 			if (bitflag)
-				cascades[j] += 8 * i_packer_transfer(unpacker, 5, packer, 5); /* IN/OUT Cascade high-bits */
+				cascades[j] += 8 * lib_packer_transfer(unpacker, 5, packer, 5); /* IN/OUT Cascade high-bits */
 
-			acc += icount(cascades[j]);
+			acc += lib_count_set(cascades[j]);
 		}
 		for (int j = 0; j < acc; ++j) {/* IN/OUT Residue books */
-			int residue_book_index_jb = i_packer_transfer(unpacker, 8, packer, 8);
+			int residue_book_index_jb = lib_packer_transfer(unpacker, 8, packer, 8);
 		}
 	}
 	return I_SUCCESS;
@@ -614,25 +551,25 @@ i_build_residues(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 static int BRRCALL
 i_build_mappings(oggpack_buffer *const unpacker, oggpack_buffer *const packer, int n_channels)
 {
-	int mapping_count = 1 + i_packer_transfer(unpacker, 6, packer, 6); /* IN/OUT Mapping count */
+	int mapping_count = 1 + lib_packer_transfer(unpacker, 6, packer, 6); /* IN/OUT Mapping count */
 	for (int i = 0; i < mapping_count; ++i) {
-		int n_channel_bits = ilog(n_channels - 1);
+		int n_channel_bits = lib_count_bits(n_channels - 1);
 		long mapping_type = 0; /* Mapping type always 0 */
 		int submaps_flag, submaps = 1;
 		int square_mapping, coupling_steps = 0;
 		int reserved;
 		oggpack_write(packer, mapping_type, 16); /* OUT Mapping type */
-		submaps_flag = i_packer_transfer(unpacker, 1, packer, 1); /* IN/OUT Submaps flag */
+		submaps_flag = lib_packer_transfer(unpacker, 1, packer, 1); /* IN/OUT Submaps flag */
 
 		if (submaps_flag)
-			submaps = 1 + i_packer_transfer(unpacker, 4, packer, 4); /* IN/OUT Submaps */
+			submaps = 1 + lib_packer_transfer(unpacker, 4, packer, 4); /* IN/OUT Submaps */
 
-		square_mapping = i_packer_transfer(unpacker, 1, packer, 1);  /* IN/OUT Square mapping flag */
+		square_mapping = lib_packer_transfer(unpacker, 1, packer, 1);  /* IN/OUT Square mapping flag */
 		if (square_mapping) {
-			coupling_steps = 1 + i_packer_transfer(unpacker, 8, packer, 8); /* IN/OUT Coupling steps */
+			coupling_steps = 1 + lib_packer_transfer(unpacker, 8, packer, 8); /* IN/OUT Coupling steps */
 			for (int j = 0; j < coupling_steps; ++j) { /* IN/OUT Mapping vectors */
-				long mapping_magnitude = i_packer_transfer(unpacker, n_channel_bits, packer, n_channel_bits);
-				long mapping_angle = i_packer_transfer(unpacker, n_channel_bits, packer, n_channel_bits);
+				long mapping_magnitude = lib_packer_transfer(unpacker, n_channel_bits, packer, n_channel_bits);
+				long mapping_angle = lib_packer_transfer(unpacker, n_channel_bits, packer, n_channel_bits);
 			}
 		}
 
@@ -641,13 +578,13 @@ i_build_mappings(oggpack_buffer *const unpacker, oggpack_buffer *const packer, i
 
 		if (submaps > 1) {                    /* IN/OUT Mapping channel multiplexes */
 			for (int j = 0; j < n_channels; ++j) {
-				int mapping_mux = i_packer_transfer(unpacker, 4, packer, 4);
+				int mapping_mux = lib_packer_transfer(unpacker, 4, packer, 4);
 			}
 		}
 		for (int i = 0; i < submaps; ++i) { /* IN/OUT Submap configurations */
-			int discarded = i_packer_transfer(unpacker, 8, packer, 8);
-			int floor = i_packer_transfer(unpacker, 8, packer, 8);
-			int residue = i_packer_transfer(unpacker, 8, packer, 8);
+			int discarded = lib_packer_transfer(unpacker, 8, packer, 8);
+			int floor = lib_packer_transfer(unpacker, 8, packer, 8);
+			int residue = lib_packer_transfer(unpacker, 8, packer, 8);
 		}
 	}
 	return I_SUCCESS;
@@ -656,15 +593,15 @@ static int BRRCALL
 i_build_modes(oggpack_buffer *const unpacker, oggpack_buffer *const packer,
     brru1 *const mode_blockflags, int *const mode_count)
 {
-	int md_count = 1 + i_packer_transfer(unpacker, 6, packer, 6); /* IN/OUT Mode count */
+	int md_count = 1 + lib_packer_transfer(unpacker, 6, packer, 6); /* IN/OUT Mode count */
 	*mode_count = md_count;
 	for (int i = 0; i < md_count; ++i) {
 		int blockflag, mapping;
 		long window = 0, transform = 0;
-		blockflag = i_packer_transfer(unpacker, 1, packer, 1); /* IN/OUT Blockflag */
+		blockflag = lib_packer_transfer(unpacker, 1, packer, 1); /* IN/OUT Blockflag */
 		oggpack_write(packer, window, 16);                     /* OUT Window type */
 		oggpack_write(packer, transform, 16);                  /* OUT Transform type */
-		mapping = i_packer_transfer(unpacker, 8, packer, 8);   /* IN/OUT Mode mapping */
+		mapping = lib_packer_transfer(unpacker, 8, packer, 8);   /* IN/OUT Mode mapping */
 
 		mode_blockflags[i] = blockflag;
 	}
@@ -679,7 +616,7 @@ i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packe
 	for (int i = 0; i < 6; ++i)                             /* OUT Vorbis string */
 		oggpack_write(packer, VORBIS_STR[i], 8);
 
-	codebook_count = 1 + i_packer_transfer(unpacker, 8, packer, 8); /* IN/OUT Codebook count */
+	codebook_count = 1 + lib_packer_transfer(unpacker, 8, packer, 8); /* IN/OUT Codebook count */
 	if (!glibrary) { /* Internal codebooks */
 		if (!stripped) { /* Full codebooks, can be copied directly */
 			for (int err = 0, i = 0; i < codebook_count; ++i) {
@@ -696,7 +633,7 @@ i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packe
 #if defined(NeWEMDEBUG)
 				BRRLOG_DEBUG("Rebuilding internal codebook %d", i);
 #endif
-				if ((err = i_build_codebook(unpacker, packer))) {
+				if ((err = packed_codebook_unpack_raw(unpacker, packer))) {
 					BRRLOG_ERR("Failed to build codebook %d", i);
 					return err;
 				}
@@ -704,7 +641,7 @@ i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packe
 		}
 	} else { /* External codebooks */
 		for (int i = 0, err = 0; i < codebook_count; ++i) {
-			oggpack_buffer cb_unpacker;
+			packed_codebookT *cb = NULL;
 			int cbidx = 1 + oggpack_read(unpacker, 10);      /* IN Codebook index */
 			/* I don't know why it's off by 1; ww2ogg just sorta rolls with it
 			 * without too much checking (specifically in get_codebook_size) and
@@ -723,11 +660,19 @@ i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packe
 #if defined(NeWEMDEBUG)
 			BRRLOG_DEBUGN("Building external codebook %3d: ", cbidx);
 #endif
-			codebook_bytes = glibrary->codebooks[cbidx].size;
-			oggpack_readinit(&cb_unpacker, glibrary->codebooks[cbidx].data, glibrary->codebooks[cbidx].size);
-			if ((err = i_build_codebook(&cb_unpacker, packer))) { /* Copy from external */
-				BRRLOG_ERR("Failed to copy external codebook %d", cbidx);
+			cb = &glibrary->codebooks[cbidx];
+			if (CODEBOOK_SUCCESS != (err = packed_codebook_unpack(cb))) { /* Copy from external */
+				if (err == CODEBOOK_ERROR)
+					err = I_BUFFER_ERROR;
+				else if (err == CODEBOOK_CORRUPT)
+					err = I_CORRUPT;
+				BRRLOG_ERR("Failed to copy external codebook %d : %s", cbidx, lib_strerr(err));
 				return err;
+			} else {
+				oggpack_buffer cb_unpacker;
+				oggpack_readinit(&cb_unpacker, cb->unpacked_data, (cb->unpacked_bits + 7) / 8);
+				if (-1 == lib_packer_write_lots(&cb_unpacker, packer, cb->unpacked_bits))
+					return I_BUFFER_ERROR;
 			}
 		}
 	}
@@ -736,7 +681,7 @@ i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packe
 	oggpack_write(packer, 0, 16); /* OUT Vorbis time-domain stuff */
 
 	if (!stripped) { /* Rest of the header in-spec, copy verbatim */
-		if ((err = i_packer_transfer_remaining(unpacker, packer))) {
+		if ((err = lib_packer_transfer_remaining(unpacker, packer))) {
 			BRRLOG_ERR("Failed to copy setup packet");
 			return err;
 		}
@@ -818,17 +763,15 @@ i_process_audio(ogg_stream_state *const streamer, wwise_wemT *const wem,
 	vorbis_info *const vi, vorbis_comment *const vc)
 {
 	int err = 0;
-	oggpack_buffer blockflag_unpacker;
 	brru4 packets_start = wem->vorb.audio_start_offset,
 	      packets_size = wem->data_size - wem->vorb.audio_start_offset;
 	wwise_packetT packeteer = {0};
-	int prev_blockflag = 0,  mode_count_bits = ilog(wem->mode_count - 1);
+	int prev_blockflag = 0,  mode_count_bits = lib_count_bits(wem->mode_count - 1);
 	brru8 packetno = 0, last_block = 0, total_block = 0;
 	for (; packets_start < wem->data_size; ++packetno) {
 		int eos = 0;
 		ogg_packet packet;
 		oggpack_buffer unpacker, packer;
-		brru8 packet_granule = 1;
 		if (WWISE_SUCCESS != wwise_packet_init(&packeteer, wem, wem->data + packets_start, packets_size)) {
 			return I_INSUFFICIENT_DATA;
 		}
@@ -839,7 +782,7 @@ i_process_audio(ogg_stream_state *const streamer, wwise_wemT *const wem,
 			int packet_type = 0;
 			int mode_number, remainder;
 			oggpack_write(&packer, packet_type, 1); /* OUT Packet type */
-			mode_number = i_packer_transfer(&unpacker, mode_count_bits, &packer, mode_count_bits); /* IN/OUT Mode number */
+			mode_number = lib_packer_transfer(&unpacker, mode_count_bits, &packer, mode_count_bits); /* IN/OUT Mode number */
 			remainder = oggpack_read(&unpacker, 8 - mode_count_bits); /* IN Remainder bits */
 
 			if (wem->mode_blockflags[mode_number]) {
@@ -864,13 +807,10 @@ i_process_audio(ogg_stream_state *const streamer, wwise_wemT *const wem,
 			oggpack_write(&packer, remainder, 8 - mode_count_bits); /* OUT Remainder of read-in first byte */
 			prev_blockflag = wem->mode_blockflags[mode_number];
 		} else {
-			int transferred = i_packer_transfer(&unpacker, 8, &packer, 8); /* Unmodified first byte */
+			int transferred = lib_packer_transfer(&unpacker, 8, &packer, 8); /* Unmodified first byte */
 		}
-		i_packer_transfer_remaining(&unpacker, &packer);
-		if (err) {
-			oggpack_writeclear(&packer);
-			return err;
-		} else if ((err = i_build_packet(&packet, &packer, packetno + 3, 0, eos))) {
+		lib_packer_transfer_remaining(&unpacker, &packer);
+		if ((err = i_build_packet(&packet, &packer, packetno + 3, 0, eos))) {
 			oggpack_writeclear(&packer);
 			return err;
 		} else {
@@ -932,13 +872,13 @@ int_convert_wem(void)
 	vorbis_comment vc;
 
 	if (!(in = fopen(ginput_name, "rb"))) {
-		BRRLOG_ERRN("Failed to open wem for conversion input '%s' : %s ", ginput_name, strerror(errno));
+		BRRLOG_ERRN("Failed to open wem for conversion input : %s", strerror(errno));
 		return I_IO_ERROR;
 	}
 
 	riff_init(&rf);
 	if (I_SUCCESS != (err = i_read_riff_chunks(in, &rf))) {
-		BRRLOG_ERRN("Failed to consume RIFF chunk : %s ", i_strerr(err));
+		BRRLOG_ERRN("Failed to consume RIFF chunk : %s", lib_strerr(err));
 		fclose(in);
 		riff_clear(&rf);
 		return err;
@@ -996,20 +936,21 @@ convert_wem(numbersT *const numbers, const char *const input, brrsz input_length
 	int err = 0;
 	numbers->wems_to_convert++;
 	if (options->dry_run) {
-		BRRLOG_FORENP(NeLOG_COLOR_DRY, "Convert WEM (dry) ");
+		BRRLOG_FORENP(LOG_COLOR_DRY, "Convert WEM (dry) ");
 	} else {
-		BRRLOG_FORENP(NeLOG_COLOR_WET, "Converting WEM... ");
+		BRRLOG_FORENP(LOG_COLOR_WET, "Converting WEM... ");
 		goptions = options;
 		ginput_name = input;
 		if (options->inplace_ogg) {
 			snprintf(goutput_name, sizeof(goutput_name), "%s", input);
 		} else {
-			replace_ext(ginput_name, input_length, goutput_name, NULL, ".ogg");
+			lib_replace_ext(ginput_name, input_length, goutput_name, NULL, ".ogg");
 		}
 		if (!library) {
 			glibrary = NULL;
 		} else if ((err = input_library_load(library))) {
-			BRRLOG_ERRN("Failed to load codebook library '%s' : %s", (char *)library->library_path.opaque, i_strerr(err));
+			BRRLOG_ERRN("Failed to load codebook library '%s' : %s",
+			    (char *)library->library_path.opaque, lib_strerr(err));
 		} else {
 			glibrary = &library->library;
 			err = int_convert_wem();
@@ -1017,10 +958,10 @@ convert_wem(numbersT *const numbers, const char *const input, brrsz input_length
 	}
 	if (!err) {
 		numbers->wems_converted++;
-		BRRLOG_MESSAGETP(gbrrlog_level_normal, NeLOG_FORMAT_SUCCESS, "Success!");
+		BRRLOG_MESSAGETP(gbrrlog_level_normal, LOG_FORMAT_SUCCESS, "Success!");
 	} else {
 		numbers->wems_failed++;
-		BRRLOG_MESSAGETP(gbrrlog_level_normal, NeLOG_FORMAT_FAILURE, " Failure! (%d)", err);
+		BRRLOG_MESSAGETP(gbrrlog_level_normal, LOG_FORMAT_FAILURE, " Failure! (%d)", err);
 	}
 	return err;
 }

@@ -18,10 +18,131 @@ limitations under the License.
 
 #include <stdlib.h>
 #include <string.h>
+
 #include <brrtools/brrlib.h>
+#include <brrtools/brrlog.h>
+
+#include "common_lib.h"
 
 /* TODO Same issue as elsewhere, I can't verify how big-endian systems will
  * work with this, or if any modification is necessary */
+
+void BRRCALL
+packed_codebook_clear(packed_codebookT *const pc)
+{
+	if (pc) {
+		if (pc->data)
+			free(pc->data);
+		if (pc->unpacked_data)
+			free(pc->unpacked_data);
+		memset(pc, 0, sizeof(*pc));
+	}
+}
+void BRRCALL
+packed_codebook_clear_unpacked(packed_codebookT *const pc)
+{
+	if (pc) {
+		if (pc->unpacked_data)
+			free(pc->unpacked_data);
+		pc->unpacked_data = 0;
+		pc->unpacked_bits = 0;
+		pc->did_unpack = 0;
+	}
+}
+int BRRCALL
+packed_codebook_unpack_raw(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
+{
+	int dimensions, entries, ordered, lookup;
+
+	if (!unpacker)
+		return -1;
+
+	oggpack_write(packer, 'B', 8); /* OUT Sync */
+	oggpack_write(packer, 'C', 8); /* OUT Sync */
+	oggpack_write(packer, 'V', 8); /* OUT Sync */
+
+	dimensions = lib_packer_transfer(unpacker,  4, packer, 16); /* IN/OUT Dimensions */
+	entries = lib_packer_transfer(unpacker, 14, packer, 24);    /* IN/OUT Entries */
+	ordered = lib_packer_transfer(unpacker, 1, packer, 1);      /* IN/OUT Ordered flag */
+	if (ordered) { /* Ordered codeword decode identical to spec */
+		int current_length = 1 + lib_packer_transfer(unpacker, 5, packer, 5); /* IN/OUT Start length */
+		long current_entry = 0;
+		while (current_entry < entries) {
+			int number_bits = lib_count_bits(entries - current_entry);
+			long number = lib_packer_transfer(unpacker, number_bits, packer, number_bits); /* IN/OUT Magic number */
+			current_entry += number;
+			current_length++;
+		}
+		if (current_entry > entries)
+			return CODEBOOK_CORRUPT;
+	} else {
+		int codeword_length_bits, sparse;
+		codeword_length_bits = oggpack_read(unpacker, 3);     /* IN Codeword length bits */
+		if (codeword_length_bits < 0 || codeword_length_bits > 5)
+			return CODEBOOK_CORRUPT;
+		sparse = lib_packer_transfer(unpacker, 1, packer, 1);   /* IN/OUT Sparse flag */
+		if (!sparse) { /* IN/OUT Nonsparse codeword lengths */
+			for (int i = 0; i < entries; ++i) {
+				int length = lib_packer_transfer(unpacker, codeword_length_bits, packer, 5);
+			}
+		} else { /* IN/OUT Sparse codeword lengths */
+			for (int i = 0; i < entries; ++i) {
+				int used = lib_packer_transfer(unpacker, 1, packer, 1); /* IN/OUT Used flag */
+				if (used) {
+					int length = lib_packer_transfer(unpacker, codeword_length_bits, packer, 5); /* IN/OUT Codeword length */
+				}
+			}
+		}
+	}
+
+	lookup = lib_packer_transfer(unpacker, 1, packer, 4); /* IN/OUT Lookup type */
+	if (lookup == 1) { /* Lookup 1 decode identical to spec */
+		long minval_packed = lib_packer_transfer(unpacker, 32, packer, 32); /* IN/OUT Minimum value */
+		long delval_packed = lib_packer_transfer(unpacker, 32, packer, 32); /* IN/OUT Delta value */
+		int value_bits = 1 + lib_packer_transfer(unpacker, 4, packer, 4);   /* IN/OUT Value bits */
+		int sequence_flag  = lib_packer_transfer(unpacker, 1, packer, 1);   /* IN/OUT Sequence flag */
+
+		long lookup_values = lib_lookup1_values(entries, dimensions);
+
+		for (long i = 0; i < lookup_values; ++i) { /* IN/OUT Codebook multiplicands */
+			long multiplicand = lib_packer_transfer(unpacker, value_bits, packer, value_bits);
+		}
+	} else if (lookup) {
+		BRRLOG_ERR("LOOKUP FAILED");
+		return CODEBOOK_CORRUPT;
+	}
+
+	return CODEBOOK_SUCCESS;
+}
+int BRRCALL
+packed_codebook_unpack(packed_codebookT *const pc)
+{
+	int err = CODEBOOK_SUCCESS;
+	oggpack_buffer unpacker, packer;
+	if (!pc)
+		return CODEBOOK_ERROR;
+	else if (pc->did_unpack)
+		return CODEBOOK_SUCCESS;
+	else if (pc->unpacked_data)
+		return CODEBOOK_CORRUPT;
+
+	oggpack_readinit(&unpacker, pc->data, pc->size);
+	oggpack_writeinit(&packer);
+
+	if ((err = packed_codebook_unpack_raw(&unpacker, &packer))) {
+		oggpack_writeclear(&packer);
+	} else {
+#if defined(NeWEMDEBUG)
+		BRRLOG_DEBUG("%sRead %4lld == %3lld of %lld",
+		    (oggpack_bits(unpacker)/8)+1!=pc->size?"!! ":"   ",
+		    oggpack_bits(unpacker), oggpack_bytes(unpacker), pc->size);
+#endif
+		pc->unpacked_data = packer.buffer;
+		pc->unpacked_bits = oggpack_bits(&packer);
+		pc->did_unpack = 1;
+	}
+	return err;
+}
 
 int BRRCALL
 codebook_library_deserialize_deprecated(codebook_libraryT *const cb,
@@ -147,8 +268,7 @@ codebook_library_clear(codebook_libraryT *const cb)
 		if (cb->codebooks) {
 			for (brru4 i = 0; i < cb->codebook_count; ++i) {
 				packed_codebookT *pc = &cb->codebooks[i];
-				if (pc->data)
-					free(pc->data);
+				packed_codebook_clear(pc);
 			}
 			free(cb->codebooks);
 		}
