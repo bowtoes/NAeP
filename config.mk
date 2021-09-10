@@ -298,7 +298,9 @@ SRC:=\
 	src/process_wsp.c\
 	src/process_bnk.c\
 	src/riff.c\
+	src/wspbnk.c\
 	src/wwise.c\
+	src/wwise_riff.c\
 
 HDR:=\
 	src/codebook_library.h\
@@ -308,4 +310,6 @@ HDR:=\
 	src/process_files.h\
 	src/riff.h\
 	src/riff_extension.h\
+	src/wspbnk.h\
 	src/wwise.h\
+	src/wwise_riff.h\

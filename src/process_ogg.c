@@ -173,17 +173,13 @@ i_recompute_grains(FILE *const file, ogg_sync_state *const syncer,
 	return err;
 }
 static void BRRCALL
-i_clear(FILE **const in, FILE **const out, ogg_sync_state *const syncer,
+i_clear(FILE **const in, ogg_sync_state *const syncer,
     ogg_stream_state *const istream, ogg_stream_state *ostream,
     vorbis_info *const info, vorbis_comment *const comment)
 {
 	if (in && *in) {
 		fclose(*in);
 		*in = NULL;
-	}
-	if (out && *out) {
-		fclose(*out);
-		*out = NULL;
 	}
 	if (syncer)
 		ogg_sync_clear(syncer);
@@ -200,7 +196,7 @@ static int BRRCALL
 i_regrain(void)
 {
 	int err = 0;
-	FILE *in, *out;
+	FILE *in;
 	ogg_sync_state syncer;
 	ogg_page sync_page;
 	ogg_packet sync_packet;
@@ -213,36 +209,21 @@ i_regrain(void)
 	}
 	ogg_sync_init(&syncer);
 	if ((err = i_init_streams(in, &syncer, &sync_page, &istream, &ostream))) {
-		i_clear(&in, NULL, &syncer, NULL, NULL, NULL, NULL);
+		i_clear(&in, &syncer, NULL, NULL, NULL, NULL);
 		BRRLOG_ERRN("Failed to initialize streams for regrain of '%s' : %s", ginput_name, lib_strerr(err));
 		return err;
 	} else if ((err = i_init_headers(in, &syncer, &sync_page, &sync_packet, &istream, &ostream, &info, &comment))) {
-		i_clear(&in, NULL, &syncer, &istream, &ostream, NULL, NULL);
+		i_clear(&in, &syncer, &istream, &ostream, NULL, NULL);
 		BRRLOG_ERRN("Failed to initialize vorbis headers from '%s' : %s", ginput_name, lib_strerr(err));
 		return err;
 	} else if ((err = i_recompute_grains(in, &syncer, &sync_page, &sync_packet, &istream, &ostream, &info))) {
-		i_clear(&in, NULL, &syncer, &istream, &ostream, &info, &comment);
+		i_clear(&in, &syncer, &istream, &ostream, &info, &comment);
 		BRRLOG_ERRN("Failed to recompute granules of '%s' : %s", ginput_name, lib_strerr(err));
 		return err;
 	}
-	i_clear(&in, NULL, &syncer, &istream, NULL, &info, &comment);
-	if (!(out = fopen(goutput_name, "wb"))) {
-		i_clear(NULL, NULL, NULL, NULL, &ostream, NULL, NULL);
-		BRRLOG_ERRN("Failed to open file for regrain output '%s' : %s", goutput_name, strerror(errno));
-		return I_IO_ERROR;
-	}
-	while (ogg_stream_pageout(&ostream, &sync_page) || ogg_stream_flush(&ostream, &sync_page)) {
-		if (sync_page.header_len != fwrite(sync_page.header, 1, sync_page.header_len, out)) {
-			i_clear(NULL, &out, NULL, NULL, &ostream, NULL, NULL);
-			BRRLOG_ERRN("Failed to write ogg page header to output '%s' : %s", goutput_name, strerror(errno));
-			return I_IO_ERROR;
-		} else if (sync_page.body_len != fwrite(sync_page.body, 1, sync_page.body_len, out)) {
-			i_clear(NULL, &out, NULL, NULL, &ostream, NULL, NULL);
-			BRRLOG_ERRN("Failed to write ogg page body to output '%s' : %s", goutput_name, strerror(errno));
-			return I_IO_ERROR;
-		}
-	}
-	i_clear(NULL, &out, NULL, NULL, &ostream, NULL, NULL);
+	i_clear(&in, &syncer, &istream, NULL, &info, &comment);
+	err = lib_write_ogg_out(&ostream, goutput_name);
+	i_clear(NULL, NULL, NULL, &ostream, NULL, NULL);
 	return I_SUCCESS;
 }
 

@@ -24,9 +24,6 @@ limitations under the License.
 
 BRRCPPSTART
 
-#define VORBIS_STR "vorbis"
-#define CODEBOOK_SYNC "BCV"
-
 /* Shared state */
 
 int BRRCALL regrain_ogg(numbersT *const numbers, const char *const input, brrsz input_length,

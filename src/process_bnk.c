@@ -18,9 +18,8 @@ limitations under the License.
 
 #include <brrtools/brrlog.h>
 
-static const input_optionsT *goptions = NULL;
-static const char *ginput_name = NULL;
-static char goutput_name[BRRPATH_MAX_PATH + 1] = {0};
+#include "common_lib.h"
+#include "wspbnk.h"
 
 int BRRCALL
 extract_bnk(numbersT *const numbers, const char *const input, brrsz input_length,
@@ -29,13 +28,20 @@ extract_bnk(numbersT *const numbers, const char *const input, brrsz input_length
 	int err = 0;
 	numbers->bnks_to_process++;
 	if (options->dry_run) {
-		BRRLOG_FOREP(LOG_COLOR_DRY, "Extract BNK (dry) ");
+		BRRLOG_FORENP(LOG_COLOR_DRY, "Extract BNK (dry) ");
 	} else {
-		BRRLOG_FOREP(LOG_COLOR_WET, "Extracting BNK... ");
-		BRRLOG_FOREP(LOG_COLOR_DISABLED, "BNK Extraction not implemented");
-		/* Very similar to 'extract_wsp', however banks may reference other banks and wsps.
-		 * TODO Hold off until the rest are done.
-		 * */
+		codebook_libraryT *cbl = NULL;
+		BRRLOG_FORENP(LOG_COLOR_WET, " Extracting BNK...");
+
+		if (library) {
+			if ((err = input_library_load(library))) {
+				BRRLOG_ERRN("Failed to load codebook library '%s' : %s",
+				    (char *)library->library_path.opaque, lib_strerr(err));
+				return err;
+			}
+			cbl = &library->library;
+		}
+		err = wspbnk_extract(numbers, input, input_length, options, cbl);
 	}
 	if (!err) {
 		numbers->bnks_processed++;

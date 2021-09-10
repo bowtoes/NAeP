@@ -89,7 +89,8 @@ typedef struct numbers {
 	brrsz wems_to_convert, wems_converted, wems_failed;
 	brrsz wsps_to_process, wsps_processed, wsps_failed;
 	brrsz bnks_to_process, bnks_processed, bnks_failed;
-	brrsz wems_extracted, wems_extracted_converted, wems_extracted_failed;
+	brrsz wems_to_extract, wems_extracted;
+	brrsz wems_to_convert_extract, wems_convert_extracted;
 } numbersT;
 typedef struct global_options {
 	brru1 should_reset:1;

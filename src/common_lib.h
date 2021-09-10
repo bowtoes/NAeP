@@ -22,6 +22,8 @@ limitations under the License.
 #include <brrtools/brrapi.h>
 #include <brrtools/brrtypes.h>
 
+#include "riff.h"
+
 BRRCPPSTART
 
 typedef union fourcc {
@@ -67,12 +69,16 @@ long BRRCALL lib_packer_transfer(oggpack_buffer *const unpacker, int in_bits,
 long BRRCALL lib_packer_transfer_remaining(oggpack_buffer *const unpacker, oggpack_buffer *const packer);
 long BRRCALL lib_packer_write_lots(oggpack_buffer *const unpacker, oggpack_buffer *const packer, long data_bits);
 
+int BRRCALL lib_write_ogg_out(ogg_stream_state *const stream,
+    const char *const destination);
+
+int BRRCALL lib_read_riff_from_buffer(riffT *const rf, unsigned char *const buffer, brrsz buffer_size);
+int BRRCALL lib_read_riff_chunks(FILE *const file, riffT *const rf);
+
 int BRRCALL lib_replace_ext(const char *const input, brrsz inlen,
     char *const output, brrsz *const outlen,
 	const char *const replacement);
-
-int BRRCALL
-lib_cstr_compare(const char *const a, const char *const b,
+int BRRCALL lib_cstr_compare(const char *const a, const char *const b,
     brrsz max_length, int case_sensitive);
 
 BRRCPPEND

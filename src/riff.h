@@ -36,6 +36,9 @@ BRRCPPSTART
 #if !defined(RIFF_EXTENDED_LISTS)
 # define RIFF_EXTENDED_LISTS(...)
 #endif
+#if !defined(RIFF_EXTENDED_LIST_FORMATS)
+# define RIFF_EXTENDED_LIST_FORMATS(...)
+#endif
 #if !defined(RIFF_EXTENDED_ROOTS)
 # define RIFF_EXTENDED_ROOTS(...)
 #endif
@@ -44,45 +47,51 @@ BRRCPPSTART
 #endif
 
 #define _riff_basics_gen(_processor_) \
-	_processor_(basic,cue) \
-	_processor_(basic,data) \
-	_processor_(basic,fmt) \
-	_processor_(basic,JUNK) \
-	_processor_(basic,labl) \
-	RIFF_EXTENDED_BASICS(_processor_)
+    _processor_(basic,cue) \
+    _processor_(basic,data) \
+    _processor_(basic,fmt) \
+    _processor_(basic,JUNK) \
+    _processor_(basic,labl) \
+    RIFF_EXTENDED_BASICS(_processor_)
 
 #define _riff_lists_gen(_processor_) \
-	_processor_(list,LIST) \
-	RIFF_EXTENDED_LISTS(_processor_)
+    _processor_(list,LIST) \
+    RIFF_EXTENDED_LISTS(_processor_)
+
+#define _riff_list_formats_gen(_processor_) \
+    _processor_(list_format,adtl) \
+    RIFF_EXTENDED_LIST_FORMATS(_processor_)
 
 #define _riff_roots_gen(_processor_) \
-	_processor_(format,RIFF) \
-	_processor_(format,RIFX) \
-	_processor_(format,XFIR) \
-	_processor_(format,FFIR) \
-	RIFF_EXTENDED_ROOTS(_processor_)
+    _processor_(root,RIFF) \
+    _processor_(root,RIFX) \
+    _processor_(root,XFIR) \
+    _processor_(root,FFIR) \
+    RIFF_EXTENDED_ROOTS(_processor_)
 
 #define _riff_formats_gen(_processor_) \
-	_processor_(format,WAVE) \
-	RIFF_EXTENDED_FORMATS(_processor_)
+    _processor_(format,WAVE) \
+    RIFF_EXTENDED_FORMATS(_processor_)
 
 #define _riff_boiler_gen(_boiler_) \
-	_boiler_(basic,_type) \
-	_boiler_(list,_type) \
-	_boiler_(root,) \
-	_boiler_(format,) \
+    _boiler_(basic,_type) \
+    _boiler_(list,_type) \
+    _boiler_(list_format,) \
+    _boiler_(root,) \
+    _boiler_(format,) \
 
-#define _riff_enum_processor(_type_, _cc_) riff_##_type_##_##_cc_,
+#define _enum_processor(_type_, _cc_) riff_##_type_##_##_cc_,
 #define _enum_boiler(_t_,_t2_) \
     typedef enum riff_##_t_##_t2_ { \
     	riff_##_t_##_unrecognized = 0, \
-    	_riff_##_t_##s_gen(_riff_enum_processor) \
+    	_riff_##_t_##s_gen(_enum_processor) \
     	riff_##_t_##_count, \
     } riff_##_t_##_t2_##T; \
     extern const brru4 riff_##_t_##_ccs[riff_##_t_##_count - 1]; \
     riff_##_t_##_t2_##T BRRCALL riff_cc_##_t_##_t2_(brru4 cc);
 _riff_boiler_gen(_enum_boiler)
 #undef _enum_boiler
+#undef _enum_processor
 
 #if !defined(_riff_keepsies)
 # undef _riff_basics_gen
@@ -91,7 +100,6 @@ _riff_boiler_gen(_enum_boiler)
 # undef _riff_formats_gen
 # undef _riff_boiler_gen
 #endif
-#undef _riff_enum_processor
 
 typedef void *(*riff_copierT)(void *const, const void *const, size_t);
 
@@ -111,7 +119,7 @@ typedef struct riff_basic_chunk {
 } riff_basic_chunkT;
 /* A representation of a riff LIST chunk */
 typedef struct riff_list_chunk {
-	riff_list_typeT type;    /* Type of the list */
+	riff_list_formatT type;  /* Type of the list */
 	brru4 size;              /* Size of list data in bytes */
 	brru4 first_basic_index; /* Index in the riff struct of the first child chunk */
 	brru4 n_basics;          /* How many children this list has */
@@ -119,10 +127,10 @@ typedef struct riff_list_chunk {
 /* Used to help reading chunks into a riff struct */
 typedef struct riff_data_sync {
 	unsigned char *data;
-	brrs8 storage;
-	brrs8 stored;
-	brrs8 consumed;
-	brrs8 list_end;
+	brrsz storage;
+	brrsz stored;
+	brrsz consumed;
+	brrsz list_end;
 
 	riff_copierT cpy_cc;
 	riff_copierT cpy_data;
@@ -142,10 +150,11 @@ typedef struct riff_chunk_info {
 typedef struct riff {
 	riff_basic_chunkT *basics; /* Array of basic chunks */
 	riff_list_chunkT *lists;   /* Array of LIST chunks */
-	brru4 n_basics;            /* Number of chunks in the basics array */
-	brru4 n_lists;             /* Number of LISTs in the lists array */
+	brrsz n_basics;            /* Number of chunks in the basics array */
+	brrsz n_lists;             /* Number of LISTs in the lists array */
 
 	brru4 total_size;          /* Total size of the RIFF structure */
+	riff_rootT root;           /* Type of RIFF file root chunk */
 	riff_formatT format;       /* Format specification of the RIFF file/data */
 } riffT;
 
@@ -157,24 +166,33 @@ riff_copierT BRRCALL riff_copier_data(riff_byteorderT byteorder);
 #define RIFF_CHUNK_CONSUMED 1
 #define RIFF_CHUNK_INCOMPLETE 0
 #define RIFF_ERROR -1
-#define RIFF_NOT_RIFF -2
-#define RIFF_CONSUME_MORE -3
+#define RIFF_CONSUME_MORE -2
+#define RIFF_NOT_RIFF -3
 #define RIFF_CORRUPTED -4
 
 void BRRCALL riff_chunk_info_clear(riff_chunk_infoT *const sc);
 
 void BRRCALL riff_data_sync_clear(riff_data_syncT *const ds);
-/* -1 : invalid/broken data_sync
+/* -1 : invalid/broken data sync
  *  0 : valid data_sync
  * */
 int BRRCALL riff_data_sync_check(const riff_data_syncT *const ds);
+/* -1 : invalid arguments/data sync
+ *  0 : success
+ * */
+int BRRCALL riff_data_sync_from_buffer(riff_data_syncT *const ds,
+    unsigned char *const buffer, brrsz buffer_size);
+/* -1 : invalid offset/data sync
+ *  0 : success
+ * */
+int BRRCALL riff_data_sync_seek(riff_data_syncT *const ds, brrof offset);
 /* NULL : error
  * */
-char *BRRCALL riff_data_sync_buffer(riff_data_syncT *const ds, brru4 size);
+char *BRRCALL riff_data_sync_buffer(riff_data_syncT *const ds, brrsz size);
 /* -1 : error
  *  0 : success
  * */
-int BRRCALL riff_data_sync_apply(riff_data_syncT *const ds, brru4 size);
+int BRRCALL riff_data_sync_apply(riff_data_syncT *const ds, brrsz size);
 
 void BRRCALL riff_clear(riffT *const rf);
 /* -1 : error
@@ -185,9 +203,14 @@ int BRRCALL riff_init(riffT *const rf);
  *  0 : valid riff
  * */
 int BRRCALL riff_check(const riffT *const rf);
-/* -1 : error
+/*
+ * -4 : data corrupted
+ * -3 : not riff
+ * -2 : need to consume again
+ * -1 : error
  *  0 : not enough data
  *  1 : chunk consumed successfully
+ *  2 : chunk unrecognized
  * */
 int BRRCALL riff_consume_chunk(riffT *const rf, riff_chunk_infoT *const sc, riff_data_syncT *const ds);
 

@@ -1,4 +1,4 @@
-# NieR:Automata extraction Precept
+# NieR:Automata extraction Precept0.0.0
 
 ## Table of Contents
 0. [Table of Contents](#table-of-contents)
@@ -29,29 +29,21 @@ differently, depending on the state of what other options are passed.
 
 ## Capabilities
 What the program can/will be able to do:
-1. &#9744; WSP Extraction:  
-   * &#9744; Extract all WEMs embedded in arguments to separate, individual
+1. &#9746; WSP Extraction:  
+   * &#9746; Extract all WEMs embedded in arguments to separate, individual
      files (`..._XX.wem`).  
-   * &#9744; All extracted WEMs can be converted to oggs as if passed on the
-     command-line.  
-
-     And potentially:
-   * &#9744; Convert all embedded WEMs to ogg files directly, without
-     extracting them to separate files.  
-2. &#9744; BNK Extraction:  
+   * &#9746; Option to convert all embedded WEMs to ogg files directly.  
+2. &#9746; BNK Extraction:  
     Same capabilities as WSP extraction, with one addition:  
    * &#9744; Recursive extraction: search each passed BNK for WEMs
      referenced in other BNK/WSP files passed on command-line.  
 3. &#9746; WEM-to-ogg Conversion:  
    * &#9746; All passed WEMs are converted to ogg, either in-place or to
      separate files (`.ogg`).  
-   * &#9744; All WEMs extracted from BNKs or WSPs can be similarly converted.  
+   * &#9746; All WEMs extracted from BNKs or WSPs can be similarly converted.  
 4. &#9746; Ogg Regranularization:  
     * &#9746; All passed oggs are regranularized, either in-place or to
       separate files (`..._rvb.ogg`).  
-    * &#9746; ~All converted WEMs can be similarly revorbed automatically.~  
-      Regranularization need-not be done separately from WEM conversion, it
-      would be an error to have incorrect granule positions in the output oggs.
 5. &#9746; Logging:  
    Not really a focused 'feature' of the program, but logging options.  
     * &#9746; Option for successively quieter output.  
@@ -59,8 +51,9 @@ What the program can/will be able to do:
       messages at all.  
     * &#9746; Option for debug output, turning on all possible logs.  
     * &#9746; Option for turning off color/stylized output.  
+
+### Maybe
 * &#9744; Videos:  
-    Maybe? If so then:  
    * &#9744; Video extraction.  
    * &#9744; Audio rip from videos, either embedded or from extracted.  
 

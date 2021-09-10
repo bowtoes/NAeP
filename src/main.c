@@ -27,6 +27,7 @@ limitations under the License.
 #include "common_lib.h"
 #include "errors.h"
 #include "process_files.h"
+#include "riff.h"
 
 /*
  * TODO
@@ -95,25 +96,58 @@ print_help(void)
 static int BRRCALL
 print_numbers(const global_optionsT *const global, const numbersT *const numbers)
 {
-	brrsz input_count_digits = brrlib_ndigits(numbers->n_inputs, 0, 10);
+	brrsz input_count_digits = 1 + brrlib_ndigits(numbers->n_inputs, 0, 10);
 	brrsz total_success =
-	    numbers->oggs_regrained
+	      numbers->oggs_regrained
 	    + numbers->wems_converted
 	    + numbers->wsps_processed
-	    + numbers->bnks_processed
-	    - numbers->wems_extracted_converted;
+	    + numbers->bnks_processed;
 	brrsz total_failure =
-	    numbers->oggs_failed
+	      numbers->oggs_failed
 	    + numbers->wems_failed
 	    + numbers->wsps_failed
-	    + numbers->bnks_failed
-	    - numbers->wems_extracted_failed;
+	    + numbers->bnks_failed;
 	BRRLOG_NORN("Successfully processed a total of ");
 	BRRLOG_FORENP(LOG_COLOR_INFO, "%*i / %*i",
-	    input_count_digits + 1, total_success, input_count_digits, numbers->n_inputs);
+	    input_count_digits, total_success, input_count_digits, numbers->n_inputs);
 	BRRLOG_NORP(" inputs");
 	if (global->full_report) {
-		BRRLOG_NOR("Imagine there's a full report");
+		if (numbers->oggs_to_regrain) {
+			BRRLOG_NORN("    ");
+			BRRLOG_FORENP(LOG_COLOR_INFO, "%*i / %*i",
+				input_count_digits, numbers->oggs_regrained, input_count_digits, numbers->oggs_to_regrain);
+			BRRLOG_MESSAGETP(gbrrlog_level_last, LOG_FORMAT_OGG, " Regrained Oggs");
+		}
+		if (numbers->wems_to_convert) {
+			BRRLOG_NORN("    ");
+			BRRLOG_FORENP(LOG_COLOR_INFO, "%*i / %*i",
+				input_count_digits, numbers->wems_converted, input_count_digits, numbers->wems_to_convert);
+			BRRLOG_MESSAGETP(gbrrlog_level_last, LOG_FORMAT_WEM, " Converted WEMs");
+		}
+		if (numbers->wsps_to_process) {
+			BRRLOG_NORN("    ");
+			BRRLOG_FORENP(LOG_COLOR_INFO, "%*i / %*i",
+				input_count_digits, numbers->wsps_processed, input_count_digits, numbers->wsps_to_process);
+			BRRLOG_MESSAGETP(gbrrlog_level_last, LOG_FORMAT_WSP, " Processed WSPs");
+		}
+		if (numbers->bnks_to_process) {
+			BRRLOG_NORN("    ");
+			BRRLOG_FORENP(LOG_COLOR_INFO, "%*i / %*i",
+				input_count_digits, numbers->bnks_processed, input_count_digits, numbers->bnks_to_process);
+			BRRLOG_MESSAGETP(gbrrlog_level_last, LOG_FORMAT_BNK, " Processed BNKs");
+		}
+		if (numbers->wems_to_extract) {
+			BRRLOG_NORN("    ");
+			BRRLOG_FORENP(LOG_COLOR_INFO, "%*i / %*i",
+				input_count_digits, numbers->wems_extracted, input_count_digits, numbers->wems_to_extract);
+			BRRLOG_MESSAGETP(gbrrlog_level_last, LOG_FORMAT_WEM, " Extracted WEMs");
+		}
+		if (numbers->wems_to_convert_extract) {
+			BRRLOG_NORN("    ");
+			BRRLOG_FORENP(LOG_COLOR_INFO, "%*i / %*i",
+				input_count_digits, numbers->wems_convert_extracted, input_count_digits, numbers->wems_to_convert_extract);
+			BRRLOG_MESSAGETP(gbrrlog_level_last, LOG_FORMAT_OGG, " Auto-converted WEMs");
+		}
 	}
 	return 0;
 }
@@ -147,9 +181,8 @@ i_find_input(const char *const arg, const inputT *const inputs, brrsz input_coun
 static int BRRCALL
 i_determine_input_type(inputT *const input, const char *const extension)
 {
-	static const fourccT oggfcc = FCC_INIT("OggS");
-	static const fourccT wemfcc = FCC_INIT("RIFF");
-	static const fourccT bnkfcc = FCC_INIT("BKHD");
+	static const brru4 oggcc = FCC_GET_INT("OggS");
+	static const brru4 bnkcc = FCC_GET_INT("BKHD");
 
 	int err = 0;
 	fourccT input_fcc = {0};
@@ -180,16 +213,14 @@ i_determine_input_type(inputT *const input, const char *const extension)
 	}
 	fclose(fp);
 	if (!err) {
-		if (input_fcc.integer == oggfcc.integer) {
+		if (input_fcc.integer == oggcc) {
 			input->options.type = input_type_ogg;
-		} else if (input_fcc.integer == wemfcc.integer) {
+		} else if (riff_cc_root(input_fcc.integer)) {
 			if (!brrstg_cstr_compare(extension, 0, "wem", NULL))
 				input->options.type = input_type_wem;
-			else if (!brrstg_cstr_compare(extension, 0, "wsp", NULL))
-				input->options.type = input_type_wsp;
 			else
-				err = I_UNRECOGNIZED_DATA;
-		} else if (input_fcc.integer == bnkfcc.integer) {
+				input->options.type = input_type_wsp; /* Default to wsp */
+		} else if (input_fcc.integer == bnkcc) {
 			input->options.type = input_type_bnk;
 		} else {
 			err = I_UNRECOGNIZED_DATA;
