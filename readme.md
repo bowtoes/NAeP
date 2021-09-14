@@ -1,4 +1,4 @@
-# NieR:Automata extraction Precept0.0.0
+# NieR:Automata extraction Preceptv0.0.0
 
 ## Table of Contents
 0. [Table of Contents](#table-of-contents)

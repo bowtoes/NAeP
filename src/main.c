@@ -36,7 +36,9 @@ limitations under the License.
  * processed twice; this'll be something for brrpath to help with eventually.
  * */
 
-#define USAGE "Usage: NAeP [[OPTION ...] FILE ...] ..."
+#define USAGE "Usage: NAeP [[OPTION ...] FILE ...] ..." \
+"\nNAeP - NieR:Automata extraction Preceptv"NeVERSION"" \
+"\nCompiled on "__DATE__", " __TIME__"\n"
 #define HELP \
 "Most options take affect on all files following and can be toggled." \
 "\nSome options are global, and apply to the meta-process itself, marked with (g)." \
@@ -78,8 +80,6 @@ limitations under the License.
 static int BRRCALL
 print_usage(void)
 {
-	fprintf(stdout, "NAeP - NieR:Automata extraction Precept\n");
-	fprintf(stdout, "Compiled on "__DATE__", " __TIME__"\n");
 	fprintf(stdout, USAGE"\n""    -h, -help, -v . . . . . . . . . . . .Print help.""\n");
 	exit(0);
 	return 0;
@@ -87,8 +87,6 @@ print_usage(void)
 static int BRRCALL
 print_help(void)
 {
-	fprintf(stdout, "NAeP - NieR:Automata extraction Precept\n");
-	fprintf(stdout, "Compiled on "__DATE__", " __TIME__"\n");
 	fprintf(stdout, USAGE"\n"HELP"\n");
 	exit(0);
 	return 0;

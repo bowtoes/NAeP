@@ -75,7 +75,7 @@ obj: setup options $(OBJ) ;
 aio: setup options $(ASS) $(INT) $(OBJ) ;
 
 install: all
-	@cp -fv $(PROJECT) $(prefix)/bin
+	@cp -fuv $(OUTDIR)/$(TARGETNAME) $(prefix)/bin
 uninstall:
 	@rm -fv $(prefix)/bin/$(PROJECT)
 
