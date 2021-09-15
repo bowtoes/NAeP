@@ -291,8 +291,10 @@ $(PROJECT)_LDFLAGS=$(LNK) $(PRF) $(LDFLAGS)
 SRC:=\
 	src/main.c\
 	src/codebook_library.c\
-	src/common_input.c\
+	src/input.c\
 	src/common_lib.c\
+	src/packer.c\
+	src/process.c\
 	src/process_ogg.c\
 	src/process_wem.c\
 	src/process_wsp.c\
@@ -304,10 +306,11 @@ SRC:=\
 
 HDR:=\
 	src/codebook_library.h\
-	src/common_input.h\
+	src/input.h\
 	src/common_lib.h\
 	src/errors.h\
-	src/process_files.h\
+	src/packer.h\
+	src/process.h\
 	src/riff.h\
 	src/riff_extension.h\
 	src/wspbnk.h\
