@@ -82,6 +82,7 @@ i_count_wems(FILE *const file, wspT *const wsp)
 				wsp_clear(wsp);
 				return I_IO_ERROR;
 			}
+			BRRLOG_DEBUG("Found WEM %zu at offset 0x%016X, %lu bytes", wsp->wem_count, current.offset, current.size);
 		}
 	}
 	if (ferror(file)) {
@@ -138,6 +139,7 @@ i_extract_wems(FILE *const file, wspT *const wsp, codebook_libraryT *const libra
 	for (brrsz i = 0; i < wsp->wem_count; ++i) {
 		wem_geomT *const wem = &wsp->wems[i];
 		if (fseek(file, wem->offset, SEEK_SET)) {
+			err = I_IO_ERROR;
 			break;
 		}
 		if (wem->size > maxsize) {

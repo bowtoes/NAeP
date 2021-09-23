@@ -37,7 +37,7 @@ limitations under the License.
  * */
 
 #define USAGE "Usage: NAeP [[OPTION ...] FILE ...] ..." \
-"\nNAeP - NieR:Automata extraction Preceptv"NeVERSION"" \
+"\nNAeP - NieR:Automated extraction Preceptv"NeVERSION"" \
 "\nCompiled on "__DATE__", " __TIME__"\n"
 #define HELP \
 "Most options take affect on all files following and can be toggled." \
@@ -433,7 +433,7 @@ i_process_input(inputT *const input, input_libraryT *const libraries,
 	}
 	BRRLOG_NORNP(" "); /* Reset last log format and level */
 	if (err) {
-		BRRLOG_ERR("Failed to determine filetype : %s", (err));
+		BRRLOG_ERR("Failed to determine filetype : %s", lib_strerr(err));
 	} else {
 		input_libraryT *library = NULL;
 		if (input->options.library_index != -1)
