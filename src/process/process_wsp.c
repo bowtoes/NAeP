@@ -14,20 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "process_files.h"
+#include "process.h"
 
 #include <brrtools/brrlib.h>
 
 #include "common_lib.h"
+#include "errors.h"
+#include "print.h"
 #include "wspbnk.h"
 
 int BRRCALL
-extract_wsp(numbersT *const numbers, const char *const input, brrsz input_length,
-    const input_optionsT *const options, input_libraryT *const library)
+extract_wsp(nestateT *const state, neinput_libraryT *const libraries, const neinputT *const input)
 {
 	int err = 0;
-	numbers->wsps_to_process++;
-	if (options->dry_run) {
+	state->wsps_to_process++;
+	if (input->dry_run) {
 		BRRLOG_FORENP(LOG_COLOR_DRY, " Extract WSP (dry)");
 	} else {
 		codebook_libraryT *cbl = NULL;
@@ -41,13 +42,13 @@ extract_wsp(numbersT *const numbers, const char *const input, brrsz input_length
 			}
 			cbl = &library->library;
 		}
-		err = wspbnk_extract(numbers, input, input_length, options, cbl);
+		err = wspbnk_extract(state, input, input_length, options, cbl);
 	}
 	if (!err) {
-		numbers->wsps_processed++;
+		state->wsps_processed++;
 		BRRLOG_MESSAGETP(gbrrlog_level_normal, LOG_FORMAT_SUCCESS, "Success!");
 	} else {
-		numbers->wsps_failed++;
+		state->wsps_failed++;
 		BRRLOG_MESSAGETP(gbrrlog_level_normal, LOG_FORMAT_FAILURE, "Failure! (%d)", err);
 	}
 	return err;

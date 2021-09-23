@@ -14,38 +14,42 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "process_files.h"
+#include "process.h"
 
 #include <errno.h>
 #include <string.h>
 
 #include <ogg/ogg.h>
 
+#include <brrtools/brrpath.h>
+
 #include "common_lib.h"
+#include "errors.h"
+#include "print.h"
 
 int BRRCALL
-convert_wem(numbersT *const numbers, const char *const input, brrsz input_length,
-    const input_optionsT *const options, input_libraryT *const library)
+convert_wem(nestateT *const state, neinput_libraryT *const libraries, const neinputT *const input)
 {
 	static char output[BRRPATH_MAX_PATH + 1] = {0};
 	int err = 0;
-	numbers->wems_to_convert++;
-	if (options->dry_run) {
-		BRRLOG_FORENP(LOG_COLOR_DRY, "Convert WEM (dry) ");
+	state->wems_to_convert++;
+	if (input->dry_run) {
+		LOG_FORMAT(LOG_PARAMS_DRY, "Convert WEM (dry) ");
 	} else {
-		BRRLOG_FORENP(LOG_COLOR_WET, "Converting WEM... ");
-		if (options->inplace_ogg) {
-			snprintf(output, sizeof(output), "%s", input);
+		LOG_FORMAT(LOG_PARAMS_WET, "Converting WEM... ");
+		if (input->inplace_ogg) {
+			snprintf(output, sizeof(output), "%s", input->path);
 		} else {
-			lib_replace_ext(input, input_length, output, NULL, ".ogg");
+			lib_replace_ext(input->path, strlen(input->path), output, NULL, ".ogg");
 		}
+		err = I_BAD_ERROR;
 	}
 	if (!err) {
-		numbers->wems_converted++;
-		BRRLOG_MESSAGETP(gbrrlog_level_normal, LOG_FORMAT_SUCCESS, "Success!");
+		state->wems_converted++;
+		LOG_FORMAT(LOG_PARAMS_SUCCESS, "Success!");
 	} else {
-		numbers->wems_failed++;
-		BRRLOG_MESSAGETP(gbrrlog_level_normal, LOG_FORMAT_FAILURE, " Failure! (%d)", err);
+		state->wems_failed++;
+		LOG_FORMAT(LOG_PARAMS_SUCCESS, " Failure! (%d)", err);
 	}
 	return err;
 }

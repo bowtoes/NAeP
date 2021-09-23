@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "process_files.h"
+#include "process.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -22,10 +22,12 @@ limitations under the License.
 
 #include <vorbis/vorbisenc.h>
 
+#include <brrtools/brrpath.h>
+
 #include "common_lib.h"
 #include "errors.h"
+#include "print.h"
 
-static const input_optionsT *goptions = NULL;
 static const char *ginput_name = NULL;
 static char goutput_name[BRRPATH_MAX_PATH + 1] = {0};
 
@@ -228,29 +230,28 @@ i_regrain(void)
 }
 
 int BRRCALL
-regrain_ogg(numbersT *const numbers, const char *const input, brrsz input_length,
-    const input_optionsT *const options)
+neregrain_ogg(nestateT *const state, const neinputT *const input)
 {
 	int err = 0;
-	numbers->oggs_to_regrain++;
-	if (options->dry_run) {
-		BRRLOG_FORENP(LOG_COLOR_DRY, "Regranularize OGG ");
+	state->oggs_to_regrain++;
+	if (input->dry_run) {
+		LOG_FORMAT(LOG_PARAMS_DRY, "Regranularize OGG ");
 	} else {
-		BRRLOG_FORENP(LOG_COLOR_WET, "Regranularizing OGG... ");
-		ginput_name = input;
-		if (options->inplace_regrain) {
+		LOG_FORMAT(LOG_PARAMS_WET, "Regranularizing OGG... ");
+		ginput_name = input->path;
+		if (input->inplace_regrain) {
 			snprintf(goutput_name, sizeof(goutput_name), "%s", input);
 		} else {
-			lib_replace_ext(ginput_name, input_length, goutput_name, NULL, "_rvb.ogg");
+			lib_replace_ext(ginput_name, strlen(input->path), goutput_name, NULL, "_rvb.ogg");
 		}
 		err = i_regrain();
 	}
 	if (!err) {
-		numbers->oggs_regrained++;
-		BRRLOG_MESSAGETP(gbrrlog_level_normal, LOG_FORMAT_SUCCESS, "Success!");
+		state->oggs_regrained++;
+		LOG_FORMAT(LOG_PARAMS_SUCCESS, "Success!");
 	} else {
-		numbers->oggs_failed++;
-		BRRLOG_MESSAGETP(gbrrlog_level_normal, LOG_FORMAT_FAILURE, " Failure! (%d)", err);
+		state->oggs_failed++;
+		LOG_FORMAT(LOG_PARAMS_SUCCESS, " Failure! (%d)", err);
 	}
 	return err;
 }
