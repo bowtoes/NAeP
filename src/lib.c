@@ -14,13 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "common_lib.h"
+#include "lib.h"
 
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 
+#include <brrtools/brrlib.h>
 #include <brrtools/brrlog.h>
 #include <brrtools/brrmem.h>
 #include <brrtools/brrpath.h>
@@ -53,7 +55,7 @@ lib_strerr(int err)
 	}
 }
 
-int BRRCALL
+int
 lib_count_set(unsigned long v)
 {
 	int r = 0;
@@ -63,7 +65,7 @@ lib_count_set(unsigned long v)
 	}
 	return r;
 }
-int BRRCALL
+int
 lib_count_bits(long number)
 {
 	int res = 0;
@@ -73,7 +75,7 @@ lib_count_bits(long number)
 	}
 	return res;
 }
-long BRRCALL
+long
 lib_lookup1_values(long entries, long dimensions)
 {
   /* totally ripped from tremor */
@@ -100,7 +102,7 @@ lib_lookup1_values(long entries, long dimensions)
   }
 }
 
-int BRRCALL
+int
 lib_write_ogg_out(ogg_stream_state *const streamer, const char *const destination)
 {
 	FILE *out = NULL;
@@ -123,50 +125,7 @@ lib_write_ogg_out(ogg_stream_state *const streamer, const char *const destinatio
 	fclose(out);
 	return I_SUCCESS;
 }
-static int BRRCALL
-i_consume_next_chunk(FILE *const file, riffT *const rf, riff_chunk_infoT *const sc, riff_data_syncT *const ds)
-{
-	#define RIFF_BUFFER_INCREMENT 4096
-	int err = 0;
-	char *buffer = NULL;
-	brrsz increment = RIFF_BUFFER_INCREMENT;
-	brrsz bytes_read = 0;
-	while (RIFF_CHUNK_CONSUMED != (err = riff_consume_chunk(rf, sc, ds))) {
-		if (err == RIFF_CONSUME_MORE) {
-			continue;
-		} else if (err == RIFF_CHUNK_UNRECOGNIZED) {
-			riff_data_sync_seek(ds, 1);
-			continue;
-		} else if (err != RIFF_CHUNK_INCOMPLETE) {
-			if (err == RIFF_ERROR)
-				return I_BUFFER_ERROR;
-			else if (err == RIFF_NOT_RIFF)
-				return I_NOT_RIFF;
-			else if (err == RIFF_CORRUPTED)
-				return I_CORRUPT;
-			else
-				return I_BAD_ERROR - err;
-		} else if (feof(file)) {
-			if (sc->chunksize)
-				return I_FILE_TRUNCATED;
-			break;
-		} else {
-			increment = sc->chunksize?sc->chunksize:RIFF_BUFFER_INCREMENT;
-			if (!(buffer = riff_data_sync_buffer(ds, increment))) {
-				return I_BUFFER_ERROR;
-			}
-		}
-		bytes_read = fread(buffer, 1, increment, file);
-		if (ferror(file)) {
-			return I_IO_ERROR;
-		} else if (RIFF_BUFFER_APPLY_SUCCESS != riff_data_sync_apply(ds, bytes_read)) {
-			return I_BUFFER_ERROR;
-		}
-	}
-	return I_SUCCESS;
-	#undef RIFF_BUFFER_INCREMENT
-}
-static int BRRCALL
+static int
 i_consume_next_buffer_chunk(riffT *const rf, riff_chunk_infoT *const sc, riff_data_syncT *const ds)
 {
 	int err = 0;
@@ -191,8 +150,8 @@ i_consume_next_buffer_chunk(riffT *const rf, riff_chunk_infoT *const sc, riff_da
 	}
 	return I_SUCCESS;
 }
-int BRRCALL
-lib_read_riff_from_buffer(riffT *const rf, unsigned char *const buffer, brrsz buffer_size)
+int
+lib_parse_buffer_as_riff(riffT *const rf, void *const buffer, brrsz buffer_size)
 {
 	int err = I_SUCCESS;
 	riff_chunk_infoT sync_chunk = {0};
@@ -207,20 +166,38 @@ lib_read_riff_from_buffer(riffT *const rf, unsigned char *const buffer, brrsz bu
 		return I_SUCCESS;
 	return err;
 }
-int BRRCALL
-lib_read_riff_chunks(FILE *const file, riffT *const rf)
+
+int
+lib_read_entire_file(const char *const path, void **const buffer, brrsz *const buffer_size)
 {
-	int err = I_SUCCESS;
-	riff_chunk_infoT sync_chunk = {0};
-	riff_data_syncT sync_data = {0};
-	while (I_SUCCESS == (err = i_consume_next_chunk(file, rf, &sync_chunk, &sync_data)) && (sync_chunk.is_basic || sync_chunk.is_list)) {
-		riff_chunk_info_clear(&sync_chunk);
+	int err = 0;
+	FILE *file;
+	brrpath_stat_resultT st;
+	if (!path || !buffer || !buffer_size)
+		return I_GENERIC_ERROR;
+	if ((err = brrpath_stat(&st, path))) {
+		return I_IO_ERROR;
+	} else if (!st.exists || st.type != brrpath_type_file) {
+		return I_IO_ERROR;
+	} else if (brrlib_alloc(buffer, st.size, 0)) {
+		return I_BUFFER_ERROR;
 	}
-	riff_data_sync_clear(&sync_data);
+
+	if (!(file = fopen(path, "rb"))) {
+		err = I_IO_ERROR;
+	} else if (st.size > fread(*buffer, 1, st.size, file)) {
+		err = feof(file)?I_FILE_TRUNCATED:I_IO_ERROR;
+	}
+	fclose(file);
+	if (!err) {
+		*buffer_size = st.size;
+	} else {
+		free(*buffer);
+		*buffer = NULL;
+	}
 	return err;
 }
-
-int BRRCALL
+int
 lib_replace_ext(const char *const input, brrsz inlen,
     char *const output, brrsz *const outlen,
 	const char *const replacement)
@@ -238,7 +215,7 @@ lib_replace_ext(const char *const input, brrsz inlen,
 		*outlen = olen;
 	return 0;
 }
-int BRRCALL
+int
 lib_cstr_compare(const char *const a, const char *const b,
     brrsz max_length, int case_sensitive)
 {

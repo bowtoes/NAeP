@@ -55,7 +55,7 @@ void codebook_library_clear(codebook_libraryT *const cb);
  * -1 : error (allocation/argument)
  *  0 : success
  * */
-int codebook_library_deserialize_deprecated(codebook_libraryT *const cb,
+int codebook_library_deserialize_old(codebook_libraryT *const cb,
     const void *const data, brru8 data_size);
 /* -2 : corruption
  * -1 : error (allocation/argument)
@@ -66,7 +66,7 @@ int codebook_library_deserialize(codebook_libraryT *const cb,
 /* -1 : error (allocation/argument)
  *  0 : success
  * */
-int codebook_library_serialize_deprecated(const codebook_libraryT *const cb,
+int codebook_library_serialize_old(const codebook_libraryT *const cb,
     void **const data, brru8 *const data_size);
 /* -1 : error (allocation/argument)
  *  0 : success

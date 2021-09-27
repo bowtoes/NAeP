@@ -25,7 +25,7 @@ limitations under the License.
 #include <brrtools/brrmem.h>
 #include <brrtools/brrplatform.h>
 
-#include "common_lib.h"
+#include "lib.h"
 
 #define RIFF_BUFF_EXTRA 4096
 #define RIFF_BUFF_MAX INT_MAX

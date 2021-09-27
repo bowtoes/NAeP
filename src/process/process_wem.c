@@ -17,20 +17,51 @@ limitations under the License.
 #include "process.h"
 
 #include <errno.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <ogg/ogg.h>
 
 #include <brrtools/brrpath.h>
 
-#include "common_lib.h"
+#include "lib.h"
 #include "errors.h"
 #include "print.h"
 
+static char goutput_name[BRRPATH_MAX_PATH + 1] = {0};
+
+static int
+i_convert_wem(neinput_libraryT *const libraries, const neinputT *const input)
+{
+	int err = 0;
+	ogg_stream_state streamer;
+	riffT rf;
+	char *buffer = NULL;
+	brrsz bufsize = 0;
+	neinput_libraryT *library = NULL;
+	if ((err = lib_read_entire_file(input->path, (void **)&buffer, &bufsize))) {
+		return err;
+	}
+
+	err = lib_parse_buffer_as_riff(&rf, buffer, bufsize);
+	free(buffer);
+	if (err) {
+		riff_clear(&rf);
+		return err;
+	}
+	if (input->library_index != -1)
+		library = &libraries[input->library_index];
+	if (!(err = lib_convert_wwriff(&rf, &streamer, library)))
+		err = lib_write_ogg_out(&streamer, goutput_name);
+	riff_clear(&rf);
+	ogg_stream_clear(&streamer);
+	return err;
+}
+
+// Unimplemented
 int BRRCALL
 convert_wem(nestateT *const state, neinput_libraryT *const libraries, const neinputT *const input)
 {
-	static char output[BRRPATH_MAX_PATH + 1] = {0};
 	int err = 0;
 	state->wems_to_convert++;
 	if (input->dry_run) {
@@ -38,9 +69,9 @@ convert_wem(nestateT *const state, neinput_libraryT *const libraries, const nein
 	} else {
 		LOG_FORMAT(LOG_PARAMS_WET, "Converting WEM... ");
 		if (input->inplace_ogg) {
-			snprintf(output, sizeof(output), "%s", input->path);
+			snprintf(goutput_name, sizeof(goutput_name), "%s", input->path);
 		} else {
-			lib_replace_ext(input->path, strlen(input->path), output, NULL, ".ogg");
+			lib_replace_ext(input->path, strlen(input->path), goutput_name, NULL, ".ogg");
 		}
 		err = I_BAD_ERROR;
 	}
