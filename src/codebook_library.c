@@ -146,7 +146,7 @@ packed_codebook_unpack(packed_codebookT *const pc)
 }
 
 int BRRCALL
-codebook_library_deserialize_deprecated(codebook_libraryT *const cb,
+codebook_library_deserialize_old(codebook_libraryT *const cb,
     const void *const data, brru8 data_size)
 {
 	const unsigned char *dt = data;
@@ -213,7 +213,7 @@ codebook_library_deserialize(codebook_libraryT *const cb,
 	return CODEBOOK_SUCCESS;
 }
 int BRRCALL
-codebook_library_serialize_deprecated(const codebook_libraryT *const cb,
+codebook_library_serialize_old(const codebook_libraryT *const cb,
     void **const data, brru8 *const data_size)
 {
 	brru4 *offset_table = NULL;

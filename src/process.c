@@ -23,7 +23,7 @@ limitations under the License.
 #include <brrtools/brrlog.h>
 #include <brrtools/brrpath.h>
 
-#include "common_lib.h"
+#include "lib.h"
 #include "errors.h"
 #include "print.h"
 

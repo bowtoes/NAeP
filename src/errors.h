@@ -3,16 +3,17 @@
 
 /* Common internal return codes */
 #define I_SUCCESS 0
-#define I_BUFFER_ERROR -1
-#define I_IO_ERROR -2
-#define I_FILE_TRUNCATED -3
-#define I_INIT_ERROR -4
-#define I_NOT_VORBIS -5
-#define I_DESYNC -6
-#define I_CORRUPT -7
-#define I_NOT_RIFF -8
-#define I_UNRECOGNIZED_DATA -9
-#define I_INSUFFICIENT_DATA -10
+#define I_GENERIC_ERROR -1
+#define I_BUFFER_ERROR -2
+#define I_IO_ERROR -3
+#define I_FILE_TRUNCATED -4
+#define I_INIT_ERROR -5
+#define I_NOT_VORBIS -6
+#define I_DESYNC -7
+#define I_CORRUPT -8
+#define I_NOT_RIFF -9
+#define I_UNRECOGNIZED_DATA -10
+#define I_INSUFFICIENT_DATA -11
 #define I_BAD_ERROR -99
 
 /* Ogg/Vorbis function return codes */

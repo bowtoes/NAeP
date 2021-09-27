@@ -55,9 +55,9 @@ typedef struct neinput_library {
 	const char *library_path;
 	codebook_libraryT library;
 
-	brru1 loaded:1; /* Whether the library is valid and ready for use */
-	brru1 old:1;    /* Whether to use the old form of deserialization */
-	int load_error; /* Whether the library failed to be initialized */
+	int loaded; /* Whether the library is valid and ready for use */
+	int old;    /* Whether to use the old form of deserialization */
+	int load_error; /* If non-zero, the library failed to be loaded */
 } neinput_libraryT;
 typedef struct nestate {
 	brrsz n_inputs;
@@ -92,6 +92,7 @@ int neinput_take_inputs(nestateT *const state, neinput_libraryT **const librarie
 
 void neinput_clear(neinputT *const input);
 
+int neinput_library_load(neinput_libraryT *const library);
 void neinput_library_clear(neinput_libraryT *const library);
 
 void neinput_clear_all(const nestateT *const state, neinput_libraryT **const libraries, neinputT **const inputs);
