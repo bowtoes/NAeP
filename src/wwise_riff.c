@@ -297,7 +297,7 @@ i_build_id_header(oggpack_buffer *const packer, const wwise_wemT *const wem)
 static int BRRCALL
 i_build_comments_header(oggpack_buffer *const packer)
 {
-	static const char vendor_string[] = "NieR:Automated extraction Preceptv"NeVERSION;
+	static const char vendor_string[] = "NieR Automated extraction Preceptv"NeVERSION;
 
 	packer_pack(packer, 3, 8);                            /* OUT Packet type */
 	for (int i = 0; i < 6; ++i)                             /* OUT Vorbis string */
