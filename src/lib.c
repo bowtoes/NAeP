@@ -22,6 +22,8 @@ limitations under the License.
 #include <string.h>
 #include <strings.h>
 
+#include <vorbis/vorbisenc.h>
+
 #include <brrtools/brrlib.h>
 #include <brrtools/brrlog.h>
 #include <brrtools/brrmem.h>
@@ -103,71 +105,6 @@ lib_lookup1_values(long entries, long dimensions)
 }
 
 int
-lib_write_ogg_out(ogg_stream_state *const streamer, const char *const destination)
-{
-	FILE *out = NULL;
-	ogg_page pager;
-	if (!(out = fopen(destination, "wb"))) {
-		BRRLOG_ERRN("Failed to open wem conversion output '%s' : %s", destination, strerror(errno));
-		return I_IO_ERROR;
-	}
-	while (ogg_stream_pageout(streamer, &pager) || ogg_stream_flush(streamer, &pager)) {
-		if (pager.header_len != fwrite(pager.header, 1, pager.header_len, out)) {
-			fclose(out);
-			BRRLOG_ERRN("Failed to write ogg page header to output '%s' : %s", destination, strerror(errno));
-			return I_IO_ERROR;
-		} else if (pager.body_len != fwrite(pager.body, 1, pager.body_len, out)) {
-			fclose(out);
-			BRRLOG_ERRN("Failed to write ogg page body to output '%s' : %s", destination, strerror(errno));
-			return I_IO_ERROR;
-		}
-	}
-	fclose(out);
-	return I_SUCCESS;
-}
-static int
-i_consume_next_buffer_chunk(riffT *const rf, riff_chunk_infoT *const sc, riff_data_syncT *const ds)
-{
-	int err = 0;
-	while (RIFF_CHUNK_CONSUMED != (err = riff_consume_chunk(rf, sc, ds))) {
-		if (err == RIFF_CONSUME_MORE) {
-			continue;
-		} else if (err == RIFF_CHUNK_UNRECOGNIZED) {
-			riff_data_sync_seek(ds, 1);
-			continue;
-		} else if (err != RIFF_CHUNK_INCOMPLETE) {
-			if (err == RIFF_ERROR)
-				return I_BUFFER_ERROR;
-			else if (err == RIFF_NOT_RIFF)
-				return I_NOT_RIFF;
-			else if (err == RIFF_CORRUPTED)
-				return I_CORRUPT;
-			else
-				return I_BAD_ERROR - err;
-		} else { /* RIFF_CHUNK_INCOMPLETE */
-			return I_INSUFFICIENT_DATA;
-		}
-	}
-	return I_SUCCESS;
-}
-int
-lib_parse_buffer_as_riff(riffT *const rf, void *const buffer, brrsz buffer_size)
-{
-	int err = I_SUCCESS;
-	riff_chunk_infoT sync_chunk = {0};
-	riff_data_syncT sync_data = {0};
-	if ((err = riff_data_sync_from_buffer(&sync_data, buffer, buffer_size))) {
-		return I_INIT_ERROR;
-	}
-	while (I_SUCCESS == (err = i_consume_next_buffer_chunk(rf, &sync_chunk, &sync_data))) {
-		riff_chunk_info_clear(&sync_chunk);
-	}
-	if (err == I_INSUFFICIENT_DATA)
-		return I_SUCCESS;
-	return err;
-}
-
-int
 lib_read_entire_file(const char *const path, void **const buffer, brrsz *const buffer_size)
 {
 	int err = 0;
@@ -197,6 +134,74 @@ lib_read_entire_file(const char *const path, void **const buffer, brrsz *const b
 	}
 	return err;
 }
+static int
+i_consume_next_buffer_chunk(riffT *const rf, riff_chunk_infoT *const sc, riff_data_syncT *const ds)
+{
+	int err = 0;
+	while (RIFF_CHUNK_CONSUMED != (err = riff_consume_chunk(rf, sc, ds))) {
+		if (err == RIFF_CONSUME_MORE) {
+			continue;
+		} else if (err == RIFF_CHUNK_UNRECOGNIZED) {
+			riff_data_sync_seek(ds, 1);
+			continue;
+		} else if (err != RIFF_CHUNK_INCOMPLETE) {
+			if (err == RIFF_ERROR)
+				return I_BUFFER_ERROR;
+			else if (err == RIFF_NOT_RIFF)
+				return I_NOT_RIFF;
+			else if (err == RIFF_CORRUPTED)
+				return I_CORRUPT;
+			else
+				return I_BAD_ERROR - err;
+		} else { /* RIFF_CHUNK_INCOMPLETE */
+			return I_INSUFFICIENT_DATA;
+		}
+	}
+	return I_SUCCESS;
+}
+int
+lib_parse_buffer_as_riff(riffT *const rf, const void *const buffer, brrsz buffer_size)
+{
+	int err = I_SUCCESS;
+	riff_chunk_infoT sync_chunk = {0};
+	riff_data_syncT sync_data = {0};
+	if ((err = riff_data_sync_from_buffer(&sync_data, (void *)buffer, buffer_size))) {
+		return I_INIT_ERROR;
+	}
+	while (I_SUCCESS == (err = i_consume_next_buffer_chunk(rf, &sync_chunk, &sync_data))) {
+#if defined(NeEXTRA_DEBUG)
+		BRRLOG_DEBUG("Found chunk %s", FCC_GET_CODE(sync_chunk.chunkcc));
+#endif
+		riff_chunk_info_clear(&sync_chunk);
+	}
+	if (err == I_INSUFFICIENT_DATA)
+		return I_SUCCESS;
+	return err;
+}
+int
+lib_write_ogg_out(ogg_stream_state *const streamer, const char *const destination)
+{
+	FILE *out = NULL;
+	ogg_page pager;
+	if (!(out = fopen(destination, "wb"))) {
+		BRRLOG_ERRN("Failed to open wem conversion output '%s' : %s", destination, strerror(errno));
+		return I_IO_ERROR;
+	}
+	while (ogg_stream_pageout(streamer, &pager) || ogg_stream_flush(streamer, &pager)) {
+		if (pager.header_len != fwrite(pager.header, 1, pager.header_len, out)) {
+			fclose(out);
+			BRRLOG_ERRN("Failed to write ogg page header to output '%s' : %s", destination, strerror(errno));
+			return I_IO_ERROR;
+		} else if (pager.body_len != fwrite(pager.body, 1, pager.body_len, out)) {
+			fclose(out);
+			BRRLOG_ERRN("Failed to write ogg page body to output '%s' : %s", destination, strerror(errno));
+			return I_IO_ERROR;
+		}
+	}
+	fclose(out);
+	return I_SUCCESS;
+}
+
 int
 lib_replace_ext(const char *const input, brrsz inlen,
     char *const output, brrsz *const outlen,

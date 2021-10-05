@@ -313,3 +313,21 @@ neinput_clear_all(const nestateT *const state, neinput_libraryT **const librarie
 		*libraries = NULL;
 	}
 }
+
+int
+neinput_load_index(neinput_libraryT *const libraries,
+    const codebook_libraryT **const library, brrsz index)
+{
+	if (!library)
+		return I_GENERIC_ERROR;
+	*library = NULL;
+	if (libraries && index != -1) {
+		int err = 0;
+		neinput_libraryT *inlib = &libraries[index];
+		if ((err = neinput_library_load(inlib))) {
+			return err;
+		}
+		*library = &inlib->library;
+	}
+	return I_SUCCESS;
+}

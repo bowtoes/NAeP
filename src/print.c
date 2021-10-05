@@ -6,7 +6,7 @@
 #include <brrtools/brrlib.h>
 
 #define USAGE "Usage: NAeP [[OPTION ...] FILE ...] ..." \
-"\nNAeP - NieR Automated extraction Preceptv"NeVERSION"" \
+"\nNAeP - NieR:Automated extraction Precept_v"NeVERSION"" \
 "\nCompiled on "__DATE__", " __TIME__"\n"
 #define HELP \
 "Most options take affect on all files following and can be toggled." \
