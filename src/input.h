@@ -95,6 +95,10 @@ void neinput_clear(neinputT *const input);
 int neinput_library_load(neinput_libraryT *const library);
 void neinput_library_clear(neinput_libraryT *const library);
 
-void neinput_clear_all(const nestateT *const state, neinput_libraryT **const libraries, neinputT **const inputs);
+void neinput_clear_all(const nestateT *const state, neinput_libraryT **const libraries,
+    neinputT **const inputs);
+
+int neinput_load_index(neinput_libraryT *const libraries,
+    const codebook_libraryT **const library, brrsz index);
 
 #endif /* INPUT_H */

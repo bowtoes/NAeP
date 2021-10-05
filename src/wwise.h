@@ -17,9 +17,12 @@ limitations under the License.
 #ifndef WWISE_H
 #define WWISE_H
 
+#include <ogg/ogg.h>
+
 #include <brrtools/brrapi.h>
 #include <brrtools/brrtypes.h>
 
+#include "input.h"
 #include "riff.h"
 
 BRRCPPSTART
@@ -53,13 +56,6 @@ typedef struct wwise_fmt {
 		brru1 data4[8];
 	} guid;
 } wwise_fmtT;
-typedef struct wwise_packet {
-	brru8 payload_size:16;
-	brru8 granule:32;
-	brru8 unused:16;
-	unsigned char *payload;
-	int header_length;
-} wwise_packetT;
 typedef struct wwise_wem {
 	brru1 fmt_initialized:1;
 	brru1 vorb_initialized:1;
@@ -76,12 +72,22 @@ typedef struct wwise_wem {
 	wwise_vorbT vorb;
 	wwise_fmtT fmt;
 } wwise_wemT;
+typedef struct wwise_packet {
+	brru8 payload_size:16;
+	brru8 granule:32;
+	brru8 unused:16;
+	unsigned char *payload;
+	int header_length;
+} wwise_packetT;
 
 #define WWISE_SUCCESS 1
 #define WWISE_INCOMPLETE 0
 #define WWISE_ERROR -1
 #define WWISE_DUPLICATE -2
 #define WWISE_CORRUPT -3
+
+#define VORBIS_STR "vorbis"
+#define CODEBOOK_SYNC "BCV"
 
 /* -3 : corrupted stream
  * -2 : duplicate data
@@ -99,6 +105,9 @@ void BRRCALL wwise_wem_clear(wwise_wemT *const wem);
 int BRRCALL wwise_packet_init(wwise_packetT *const packet,
     const wwise_wemT *const wem, const unsigned char *const data, brrsz data_size);
 void BRRCALL wwise_packet_clear(wwise_packetT *const packet);
+
+int wwise_convert_wwriff(riffT *const rf, ogg_stream_state *const streamer,
+    const codebook_libraryT *const library, const neinputT *const input);
 
 BRRCPPEND
 
