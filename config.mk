@@ -112,10 +112,18 @@ endif
 
 # # EXECUTABLE OUTPUT
 ifndef UNINAME
-UNINAME:=$(PROJECT)
+ ifeq ($(BITS),32)
+  UNINAME:=$(PROJECT)x86
+ else
+  UNINAME:=$(PROJECT)
+ endif
 endif
 ifndef WINNAME
-WINNAME:=$(PROJECT).exe
+ ifeq ($(BITS),32)
+  WINNAME:=$(PROJECT)x86.exe
+ else
+  WINNAME:=$(PROJECT).exe
+ endif
 endif
 
 # # # COMPILATION SETTINGS
