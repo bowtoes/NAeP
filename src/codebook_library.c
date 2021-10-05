@@ -22,7 +22,7 @@ limitations under the License.
 #include <brrtools/brrlib.h>
 #include <brrtools/brrlog.h>
 
-#include "common_lib.h"
+#include "lib.h"
 #include "packer.h"
 
 /* TODO Same issue as elsewhere, I can't verify how big-endian systems will

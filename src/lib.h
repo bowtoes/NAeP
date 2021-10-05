@@ -64,12 +64,12 @@ int lib_count_bits(long number);
 /* definitely not ripped from tremor */
 long lib_lookup1_values(long entries, long dimensions);
 
-int lib_write_ogg_out(ogg_stream_state *const stream,
+int lib_read_entire_file(const char *const path, void **const buffer, brrsz *const buffer_size);
+int lib_parse_buffer_as_riff(riffT *const rf, const void *const buffer, brrsz buffer_size);
+int lib_write_ogg_out(ogg_stream_state *const streamer,
     const char *const destination);
 
-int lib_parse_buffer_as_riff(riffT *const rf, void *const buffer, brrsz buffer_size);
-
-int lib_read_entire_file(const char *const path, void **const buffer, brrsz *const buffer_size);
+/* Replaces everything at and after the last dot */
 int lib_replace_ext(const char *const input, brrsz inlen,
     char *const output, brrsz *const outlen,
 	const char *const replacement);
