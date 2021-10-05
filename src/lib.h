@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef COMMON_LIB_H
-#define COMMON_LIB_H
+#ifndef LIB_H
+#define LIB_H
 
 #include <ogg/ogg.h>
 
@@ -55,32 +55,27 @@ typedef union fourcc {
 	0, \
 })
 
-const char *BRRCALL lib_strerr(int err);
+const char *lib_strerr(int err);
 
 /* Counts number of set bits in number */
-int BRRCALL lib_count_set(unsigned long number);
+int lib_count_set(unsigned long number);
 /* Counts number of bits needed to store number (log base 2) */
-int BRRCALL lib_count_bits(long number);
+int lib_count_bits(long number);
 /* definitely not ripped from tremor */
-long BRRCALL lib_lookup1_values(long entries, long dimensions);
+long lib_lookup1_values(long entries, long dimensions);
 
-long BRRCALL lib_packer_transfer(oggpack_buffer *const unpacker, int in_bits,
-    oggpack_buffer *const packer, int out_bits);
-long BRRCALL lib_packer_transfer_remaining(oggpack_buffer *const unpacker, oggpack_buffer *const packer);
-long BRRCALL lib_packer_write_lots(oggpack_buffer *const unpacker, oggpack_buffer *const packer, long data_bits);
-
-int BRRCALL lib_write_ogg_out(ogg_stream_state *const stream,
+int lib_read_entire_file(const char *const path, void **const buffer, brrsz *const buffer_size);
+int lib_parse_buffer_as_riff(riffT *const rf, const void *const buffer, brrsz buffer_size);
+int lib_write_ogg_out(ogg_stream_state *const streamer,
     const char *const destination);
 
-int BRRCALL lib_read_riff_from_buffer(riffT *const rf, unsigned char *const buffer, brrsz buffer_size);
-int BRRCALL lib_read_riff_chunks(FILE *const file, riffT *const rf);
-
-int BRRCALL lib_replace_ext(const char *const input, brrsz inlen,
+/* Replaces everything at and after the last dot */
+int lib_replace_ext(const char *const input, brrsz inlen,
     char *const output, brrsz *const outlen,
 	const char *const replacement);
-int BRRCALL lib_cstr_compare(const char *const a, const char *const b,
+int lib_cstr_compare(const char *const a, const char *const b,
     brrsz max_length, int case_sensitive);
 
 BRRCPPEND
 
-#endif /* COMMON_LIB_H */
+#endif /* LIB_H */

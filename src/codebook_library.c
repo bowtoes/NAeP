@@ -22,7 +22,8 @@ limitations under the License.
 #include <brrtools/brrlib.h>
 #include <brrtools/brrlog.h>
 
-#include "common_lib.h"
+#include "lib.h"
+#include "packer.h"
 
 /* TODO Same issue as elsewhere, I can't verify how big-endian systems will
  * work with this, or if any modification is necessary */
@@ -57,19 +58,19 @@ packed_codebook_unpack_raw(oggpack_buffer *const unpacker, oggpack_buffer *const
 	if (!unpacker)
 		return -1;
 
-	oggpack_write(packer, 'B', 8); /* OUT Sync */
-	oggpack_write(packer, 'C', 8); /* OUT Sync */
-	oggpack_write(packer, 'V', 8); /* OUT Sync */
+	packer_pack(packer, 'B', 8); /* OUT Sync */
+	packer_pack(packer, 'C', 8); /* OUT Sync */
+	packer_pack(packer, 'V', 8); /* OUT Sync */
 
-	dimensions = lib_packer_transfer(unpacker,  4, packer, 16); /* IN/OUT Dimensions */
-	entries = lib_packer_transfer(unpacker, 14, packer, 24);    /* IN/OUT Entries */
-	ordered = lib_packer_transfer(unpacker, 1, packer, 1);      /* IN/OUT Ordered flag */
+	dimensions = packer_transfer(unpacker,  4, packer, 16); /* IN/OUT Dimensions */
+	entries = packer_transfer(unpacker, 14, packer, 24);    /* IN/OUT Entries */
+	ordered = packer_transfer(unpacker, 1, packer, 1);      /* IN/OUT Ordered flag */
 	if (ordered) { /* Ordered codeword decode identical to spec */
-		int current_length = 1 + lib_packer_transfer(unpacker, 5, packer, 5); /* IN/OUT Start length */
+		int current_length = 1 + packer_transfer(unpacker, 5, packer, 5); /* IN/OUT Start length */
 		long current_entry = 0;
 		while (current_entry < entries) {
 			int number_bits = lib_count_bits(entries - current_entry);
-			long number = lib_packer_transfer(unpacker, number_bits, packer, number_bits); /* IN/OUT Magic number */
+			long number = packer_transfer(unpacker, number_bits, packer, number_bits); /* IN/OUT Magic number */
 			current_entry += number;
 			current_length++;
 		}
@@ -77,35 +78,35 @@ packed_codebook_unpack_raw(oggpack_buffer *const unpacker, oggpack_buffer *const
 			return CODEBOOK_CORRUPT;
 	} else {
 		int codeword_length_bits, sparse;
-		codeword_length_bits = oggpack_read(unpacker, 3);     /* IN Codeword length bits */
+		codeword_length_bits = packer_unpack(unpacker, 3);     /* IN Codeword length bits */
 		if (codeword_length_bits < 0 || codeword_length_bits > 5)
 			return CODEBOOK_CORRUPT;
-		sparse = lib_packer_transfer(unpacker, 1, packer, 1);   /* IN/OUT Sparse flag */
+		sparse = packer_transfer(unpacker, 1, packer, 1);   /* IN/OUT Sparse flag */
 		if (!sparse) { /* IN/OUT Nonsparse codeword lengths */
 			for (int i = 0; i < entries; ++i) {
-				int length = lib_packer_transfer(unpacker, codeword_length_bits, packer, 5);
+				int length = packer_transfer(unpacker, codeword_length_bits, packer, 5);
 			}
 		} else { /* IN/OUT Sparse codeword lengths */
 			for (int i = 0; i < entries; ++i) {
-				int used = lib_packer_transfer(unpacker, 1, packer, 1); /* IN/OUT Used flag */
+				int used = packer_transfer(unpacker, 1, packer, 1); /* IN/OUT Used flag */
 				if (used) {
-					int length = lib_packer_transfer(unpacker, codeword_length_bits, packer, 5); /* IN/OUT Codeword length */
+					int length = packer_transfer(unpacker, codeword_length_bits, packer, 5); /* IN/OUT Codeword length */
 				}
 			}
 		}
 	}
 
-	lookup = lib_packer_transfer(unpacker, 1, packer, 4); /* IN/OUT Lookup type */
+	lookup = packer_transfer(unpacker, 1, packer, 4); /* IN/OUT Lookup type */
 	if (lookup == 1) { /* Lookup 1 decode identical to spec */
-		long minval_packed = lib_packer_transfer(unpacker, 32, packer, 32); /* IN/OUT Minimum value */
-		long delval_packed = lib_packer_transfer(unpacker, 32, packer, 32); /* IN/OUT Delta value */
-		int value_bits = 1 + lib_packer_transfer(unpacker, 4, packer, 4);   /* IN/OUT Value bits */
-		int sequence_flag  = lib_packer_transfer(unpacker, 1, packer, 1);   /* IN/OUT Sequence flag */
+		long minval_packed = packer_transfer(unpacker, 32, packer, 32); /* IN/OUT Minimum value */
+		long delval_packed = packer_transfer(unpacker, 32, packer, 32); /* IN/OUT Delta value */
+		int value_bits = 1 + packer_transfer(unpacker, 4, packer, 4);   /* IN/OUT Value bits */
+		int sequence_flag  = packer_transfer(unpacker, 1, packer, 1);   /* IN/OUT Sequence flag */
 
 		long lookup_values = lib_lookup1_values(entries, dimensions);
 
 		for (long i = 0; i < lookup_values; ++i) { /* IN/OUT Codebook multiplicands */
-			long multiplicand = lib_packer_transfer(unpacker, value_bits, packer, value_bits);
+			long multiplicand = packer_transfer(unpacker, value_bits, packer, value_bits);
 		}
 	} else if (lookup) {
 		BRRLOG_ERR("LOOKUP FAILED");
@@ -145,7 +146,7 @@ packed_codebook_unpack(packed_codebookT *const pc)
 }
 
 int BRRCALL
-codebook_library_deserialize_deprecated(codebook_libraryT *const cb,
+codebook_library_deserialize_old(codebook_libraryT *const cb,
     const void *const data, brru8 data_size)
 {
 	const unsigned char *dt = data;
@@ -212,7 +213,7 @@ codebook_library_deserialize(codebook_libraryT *const cb,
 	return CODEBOOK_SUCCESS;
 }
 int BRRCALL
-codebook_library_serialize_deprecated(const codebook_libraryT *const cb,
+codebook_library_serialize_old(const codebook_libraryT *const cb,
     void **const data, brru8 *const data_size)
 {
 	brru4 *offset_table = NULL;

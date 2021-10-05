@@ -23,9 +23,9 @@ limitations under the License.
 
 #include <brrtools/brrlib.h>
 #include <brrtools/brrmem.h>
-#include <brrtools/brrplatform.h>
+#include <brrtools/brrendian.h>
 
-#include "common_lib.h"
+#include "lib.h"
 
 #define RIFF_BUFF_EXTRA 4096
 #define RIFF_BUFF_MAX INT_MAX
@@ -50,8 +50,7 @@ _riff_boiler_gen(_getter_boiler)
 riff_byteorderT BRRCALL
 riff_cc_byteorder(brru4 cc)
 {
-	riff_byteorderT t = 0;
-	for (;t < 4; ++t) {
+	for (riff_byteorderT t = 0;t < 4; ++t) {
 		if (cc == riff_root_ccs[t])
 			return 1 + t;
 	}
@@ -186,11 +185,11 @@ riff_clear(riffT *const rf)
 	if (rf) {
 		if (rf->basics) {
 			for (brrsz i = 0; i < rf->n_basics; ++i)
-				brrlib_alloc((void **)&rf->basics[i].data, 0, 0);
-			brrlib_alloc((void **)&rf->basics, 0, 0);
+				free(rf->basics[i].data);
+			free(rf->basics);
 		}
 		if (rf->lists)
-			brrlib_alloc((void **)&rf->lists, 0, 0);
+			free(rf->lists);
 		memset(rf, 0, sizeof(*rf));
 	}
 }

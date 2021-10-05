@@ -245,6 +245,7 @@ DEFS:=-D$(UPROJECT)MAJOR=$($(PROJECT)_MAJOR)\
       -D$(UPROJECT)REVIS=$($(PROJECT)_REVIS)\
       -D$(UPROJECT)VERSION='"$($(PROJECT)_MAJOR).$($(PROJECT)_MINOR).$($(PROJECT)_REVIS)"'\
 	  -DRIFF_EXTENDED='"riff_extension.h"'\
+	  -DPEDANTIC\
 
 ifdef DEBUG
  DEFS:=$(DEFS) -D$(UPROJECT)DEBUG
@@ -255,6 +256,10 @@ ifdef DEBUG
   VENDEFS:=$(VENDEFS) -D$(UPROJECT)VENDEBUG
   # Enables debug logging in my copy of libogg/libvorbis, for my sanity
  endif
+endif
+
+ifdef EXTRA_DEBUG
+ DEFS:=$(DEFS) -D$(UPROJECT)EXTRA_DEBUG
 endif
 
 # PRF: Performance options (applied at compile & link-time)
@@ -291,25 +296,28 @@ $(PROJECT)_LDFLAGS=$(LNK) $(PRF) $(LDFLAGS)
 SRC:=\
 	src/main.c\
 	src/codebook_library.c\
-	src/common_input.c\
-	src/common_lib.c\
-	src/process_ogg.c\
-	src/process_wem.c\
-	src/process_wsp.c\
-	src/process_bnk.c\
+	src/input.c\
+	src/lib.c\
+	src/packer.c\
+	src/print.c\
+	src/process.c\
+	src/process/ogg.c\
+	src/process/wem.c\
+	src/process/wsp.c\
+	src/process/bnk.c\
 	src/riff.c\
-	src/wspbnk.c\
+	src/wsp_meta.c\
 	src/wwise.c\
-	src/wwise_riff.c\
 
 HDR:=\
 	src/codebook_library.h\
-	src/common_input.h\
-	src/common_lib.h\
 	src/errors.h\
-	src/process_files.h\
+	src/input.h\
+	src/lib.h\
+	src/packer.h\
+	src/print.h\
+	src/process.h\
 	src/riff.h\
 	src/riff_extension.h\
-	src/wspbnk.h\
+	src/wsp_meta.h\
 	src/wwise.h\
-	src/wwise_riff.h\
