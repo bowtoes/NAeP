@@ -18,7 +18,7 @@ endif
 # Project version
 $(PROJECT)_MAJOR=0
 $(PROJECT)_MINOR=0
-$(PROJECT)_REVIS=0
+$(PROJECT)_REVIS=1
 
 # Default c-standard to used
 ifndef STD
