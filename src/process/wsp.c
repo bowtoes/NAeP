@@ -43,7 +43,7 @@ i_extract_wsp(nestateT *const state, neinput_libraryT *const libraries, const ne
 	if ((err = lib_read_entire_file(input->path, (void **)&buffer, &bufsize)))
 		return err;
 	if (!(err = wsp_meta_init(&meta, buffer, bufsize))) {
-		if (!(err = neinput_load_index(libraries, &library, input->library_index))) {
+		if (!(err = neinput_load_codebooks(libraries, &library, input->library_index))) {
 			if (input->auto_ogg)
 				err = wsp_meta_convert_wems(&meta, buffer, state, input, library, goutput_root);
 			else
@@ -60,13 +60,15 @@ neextract_wsp(nestateT *const state, neinput_libraryT *const libraries, const ne
 {
 	int err = 0;
 	state->wsps_to_process++;
+	gbrrlog_level_last = gbrrlog_level_normal;
 	if (input->dry_run) {
 		LOG_FORMAT(LOG_PARAMS_DRY, "Extract WSP (dry) ");
 	} else {
-		BRRLOG_FORENP(LOG_COLOR_WET, "Extracting WSP...");
+		LOG_FORMAT(LOG_PARAMS_WET, "Extracting WSP... ");
 		lib_replace_ext(input->path, strlen(input->path) - 1, goutput_root, NULL, "");
 		err = i_extract_wsp(state, libraries, input);
 	}
+	gbrrlog_level_last = gbrrlog_level_normal;
 	if (!err) {
 		state->wsps_processed++;
 		LOG_FORMAT(LOG_PARAMS_SUCCESS, "Success!\n");

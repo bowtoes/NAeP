@@ -69,6 +69,8 @@ int lib_parse_buffer_as_riff(riffT *const rf, const void *const buffer, brrsz bu
 int lib_write_ogg_out(ogg_stream_state *const streamer,
     const char *const destination);
 
+/* -1 : Not found */
+int lib_cmp_ext(const char *const arg, int arglen, int case_sensitive, ...);
 /* Replaces everything at and after the last dot */
 int lib_replace_ext(const char *const input, brrsz inlen,
     char *const output, brrsz *const outlen,

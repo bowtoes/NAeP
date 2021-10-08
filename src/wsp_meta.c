@@ -85,17 +85,24 @@ wsp_meta_convert_wems(const wsp_metaT *const wsp, const char *const buffer,
     const char *const output_root)
 {
 	int err = 0;
-	brrsz digits = 0, success = 0;
+	brrsz digits = 0;
 	if (!buffer)
 		return I_INSUFFICIENT_DATA;
 	if (!wsp || !state || !input || !output_root)
 		return I_GENERIC_ERROR;
 	digits = brrlib_ndigits(wsp->wem_count, 0, 10);
-	state->wems_to_convert_extract += wsp->wem_count;
 	for (brrsz i = 0; i < wsp->wem_count; ++i) {
 		const wem_geometryT *const wem = &wsp->wems[i];
 		ogg_stream_state streamer;
 		riffT rf = {0};
+		if (input->list.count) {
+			int contained = neinput_list_contains(&input->list, i);
+			if ((contained && input->list.type) || (!contained && !input->list.type)) {
+				BRRLOG_DEBUG("WEM %zu was filtered due to %slist", i, input->list.type?"black":"white");
+				continue;
+			}
+		}
+		state->wems_to_convert_extract++;
 		if ((err = lib_parse_buffer_as_riff(&rf, buffer + wem->offset, wem->size))) {
 			BRRLOG_ERRN("Failed to parse wem ");
 			LOG_FORMAT(LOG_PARAMS_INFO, "#%*zu", digits, i);
@@ -114,14 +121,11 @@ wsp_meta_convert_wems(const wsp_metaT *const wsp, const char *const buffer,
 				BRRLOG_ERRP(" skipping : %s", lib_strerr(err));
 			} else {
 				state->wems_convert_extracted++;
-				success++;
 			}
 			ogg_stream_clear(&streamer);
 		}
 		riff_clear(&rf);
 	}
-	if (!success)
-		return I_GENERIC_ERROR;
 	return I_SUCCESS;
 }
 int
@@ -130,17 +134,25 @@ wsp_meta_extract_wems(const wsp_metaT *const wsp, const char *const buffer,
     const char *const output_root)
 {
 	int err = 0;
-	brrsz digits = 0, success = 0;
+	brrsz digits = 0;
 	if (!buffer)
 		return I_INSUFFICIENT_DATA;
 	if (!wsp || !state || !input || !output_root)
 		return I_GENERIC_ERROR;
 	digits = brrlib_ndigits(wsp->wem_count, 0, 10);
-	state->wems_to_extract += wsp->wem_count;
 	for (brrsz i = 0; i < wsp->wem_count; ++i) {
 		const wem_geometryT *const wem = &wsp->wems[i];
 		brrsz wrote = 0;
 		FILE *output = NULL;
+		if (input->list.count) {
+			int contained = neinput_list_contains(&input->list, i);
+			if ((contained && input->list.type) || (!contained && !input->list.type)) {
+				BRRLOG_DEBUG("WEM %zu was filtered due to %slist", i, input->list.type?"black":"white");
+				continue;
+			}
+		}
+		state->wems_to_extract++;
+		BRRLOG_DEBUG("Extracting WEM %zu, %lu bytes", i, wem->size);
 		snprintf(goutput_path, sizeof(goutput_path), "%s"OUTPUT_FORMAT".wem", output_root, digits, i);
 		if (!(output = fopen(goutput_path, "wb"))) {
 			BRRLOG_ERRN("Failed to open output wem ");
@@ -153,12 +165,9 @@ wsp_meta_extract_wems(const wsp_metaT *const wsp, const char *const buffer,
 			LOG_FORMAT(LOG_PARAMS_INFO, "#%*zu", digits, i);
 			BRRLOG_ERRP(" (%s) skipping : %s", goutput_path, strerror(errno));
 		} else {
-			success++;
 			state->wems_extracted++;
 		}
 		fclose(output);
 	}
-	if (!success)
-		return I_GENERIC_ERROR;
 	return I_SUCCESS;
 }

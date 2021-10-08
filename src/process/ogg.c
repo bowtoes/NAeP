@@ -28,6 +28,7 @@ limitations under the License.
 #include "lib.h"
 #include "print.h"
 
+/* TODO remove ginput_name and all references to it */
 static const char *ginput_name = NULL;
 static char goutput_name[BRRPATH_MAX_PATH + 1] = {0};
 
@@ -261,11 +262,10 @@ neregrain_ogg(nestateT *const state, const neinputT *const input)
 	} else {
 		LOG_FORMAT(LOG_PARAMS_WET, "Regranularizing OGG... ");
 		ginput_name = input->path;
-		if (input->inplace_regrain) {
+		if (input->inplace_regrain)
 			snprintf(goutput_name, sizeof(goutput_name), "%s", input->path);
-		} else {
+		else
 			lib_replace_ext(ginput_name, strlen(input->path), goutput_name, NULL, "_rvb.ogg");
-		}
 		err = i_regrain();
 	}
 	if (!err) {
@@ -273,7 +273,7 @@ neregrain_ogg(nestateT *const state, const neinputT *const input)
 		LOG_FORMAT(LOG_PARAMS_SUCCESS, "Success!");
 	} else {
 		state->oggs_failed++;
-		LOG_FORMAT(LOG_PARAMS_SUCCESS, " Failure! (%d)", err);
+		LOG_FORMAT(LOG_PARAMS_FAILURE, " Failure! (%d)", err);
 	}
 	return err;
 }

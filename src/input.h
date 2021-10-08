@@ -27,38 +27,6 @@ limitations under the License.
  * processed twice; this'll be something for brrpath to help with eventually.
  * */
 
-typedef enum neinput_type {
-	neinput_type_auto = 0,
-	neinput_type_ogg,
-	neinput_type_wem,
-	neinput_type_wsp,
-	neinput_type_bnk,
-} neinput_typeT;
-typedef struct neinput {
-	const char *path;
-	neinput_typeT type;
-	brrsz library_index;       /* Which loaded codebook to use; defaults to 0. */
-	int log_priority; /* Priority used if logging for the input is enabled. */
-
-	brru1 auto_ogg:1;          /* Should output weems automatically be converted to ogg? */
-	brru1 inplace_ogg:1;       /* Should weem-to-ogg conversion be done in-place (replace)? */
-	brru1 inplace_regrain:1;   /* Should regranularized oggs replace the original? */
-	brru1 bank_recurse:1;      /* Should input bank files be recursed, searching for referenced bank files? */
-	brru1 stripped_headers:1;  /* Whether the vorbis headers of a given wem are stripped or spec-compliant. */
-	brru1 log_enabled:1;       /* Is output logging enabled? */
-	brru1 log_color_enabled:1; /* Is log coloring enabled? */
-	brru1 log_debug:1;         /* Is debug logging enabled (implies log_enabled)? */
-	/* <byte> */
-	brru1 dry_run:1;           /* Do not process any input or output, just print what would happen. */
-} neinputT;
-typedef struct neinput_library {
-	const char *library_path;
-	codebook_libraryT library;
-
-	int loaded; /* Whether the library is valid and ready for use */
-	int old;    /* Whether to use the old form of deserialization */
-	int load_error; /* If non-zero, the library failed to be loaded */
-} neinput_libraryT;
 typedef struct nestate {
 	brrsz n_inputs;
 	brrsz n_libraries;
@@ -76,29 +44,70 @@ typedef struct nestate {
 	brru1 should_reset:1;
 	brru1 log_style_enabled:1;
 	brru1 next_is_file:1;
-	brru1 always_file:1;
 	brru1 next_is_library:1;
+	brru1 next_is_list:1;
+	brru1 always_file:1;
 	brru1 report_card:1;
 	brru1 full_report:1;
-	brru1 _pad:1;
 	/* < Byte boundary > */
 } nestateT;
+typedef struct neinput_library {
+	const char *path;
+	int path_length;
+	codebook_libraryT library;
 
-/* -1 : Not found */
-int neinput_check_extension(const char *const arg, int case_sensitive, ...);
+	int loaded; /* Whether the library is valid and ready for use */
+	int old;    /* Whether to use the old form of deserialization */
+	int load_error; /* If non-zero, the library failed to be loaded */
+} neinput_libraryT;
 
-int neinput_take_inputs(nestateT *const state, neinput_libraryT **const libraries,
-    neinputT **const inputs, const neinputT default_input, int argc, char **argv);
+typedef enum neinput_type {
+	neinput_type_auto = 0,
+	neinput_type_ogg,
+	neinput_type_wem,
+	neinput_type_wsp,
+	neinput_type_bnk,
+} neinput_typeT;
+typedef struct neinput_list {
+	brru4 *list;
+	brru4 count;
+	int type; /* 0=whitelist, 1=blacklist */
+} neinput_listT;
+typedef struct neinput {
+	const char *path;
+	int path_length;
+	neinput_typeT type;
+	brrsz library_index;       /* Which loaded codebook to use; defaults to 0. */
+	int log_priority;          /* Priority used if logging is enabled. */
+	/* TODO Eventually index white/blackisting can be replaced by a more flexible
+	 * filtering system, similar to in 'countwsp' */
+	neinput_listT list;
 
-void neinput_clear(neinputT *const input);
+	brru1 auto_ogg:1;          /* Should output weems automatically be converted to ogg? */
+	brru1 inplace_ogg:1;       /* Should weem-to-ogg conversion be done in-place (replace)? */
+	brru1 inplace_regrain:1;   /* Should regranularized oggs replace the original? */
+	brru1 stripped_headers:1;  /* Whether the vorbis headers of a given wem are stripped or spec-compliant. */
+	brru1 log_enabled:1;       /* Is output logging enabled? */
+	brru1 log_color_enabled:1; /* Is log coloring enabled? */
+	brru1 log_debug:1;         /* Is debug logging enabled (implies log_enabled)? */
+	brru1 _pad:1;
+	/* <byte> */
+	brru1 dry_run:1;           /* Do not process any input or output, just print what would happen. */
+} neinputT;
 
 int neinput_library_load(neinput_libraryT *const library);
 void neinput_library_clear(neinput_libraryT *const library);
 
+void neinput_list_clear(neinput_listT *const list);
+int neinput_list_contains(const neinput_listT *const list, brru4 index);
+
+void neinput_clear(neinputT *const input);
+
+int neinput_load_codebooks(neinput_libraryT *const libraries,
+    const codebook_libraryT **const library, brrsz index);
+int neinput_take_inputs(nestateT *const state, neinput_libraryT **const libraries,
+    neinputT **const inputs, const neinputT default_input, int argc, char **argv);
 void neinput_clear_all(const nestateT *const state, neinput_libraryT **const libraries,
     neinputT **const inputs);
-
-int neinput_load_index(neinput_libraryT *const libraries,
-    const codebook_libraryT **const library, brrsz index);
 
 #endif /* INPUT_H */

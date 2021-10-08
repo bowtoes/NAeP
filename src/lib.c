@@ -202,19 +202,64 @@ lib_write_ogg_out(ogg_stream_state *const streamer, const char *const destinatio
 	return I_SUCCESS;
 }
 
+/* -1 : Not found */
+static int
+i_find_ext(const char *const arg, int arglen)
+{
+	int dot = arglen;
+	for (int i = arglen; i > 0; --i) {
+		char c = arg[i - 1];
+		if ('.' == c)
+			dot = i - 1;
+		else if (c == BRRPATH_SEP_CHR)
+			break;
+	}
+	if (dot == arglen) /* No dot found */
+		return -1;
+	return dot;
+}
+int
+lib_cmp_ext(const char *const arg, int arglen, int case_sensitive, ...)
+{
+	static char ext[513] = {0};
+	const char *a;
+	va_list lptr;
+	int (*cmp)(const char *const, const char *const);
+	int suc = 0, idx = 0;
+
+	if (-1 == (idx = i_find_ext(arg, arglen)))
+		return -1;
+	snprintf(ext, 513, "%s", arg + idx);
+
+	if (case_sensitive) {
+		cmp = strcmp;
+	} else {
+#if defined(_WIN32)
+		cmp = _stricmp;
+#else
+		cmp = strcasecmp;
+#endif
+	}
+	va_start(lptr, case_sensitive);
+	while ((a = va_arg(lptr, const char *))) {
+		if (0 == cmp(arg, a)) {
+			suc = 1;
+			break;
+		}
+		idx++;
+	}
+	va_end(lptr);
+	return suc?idx:-1;
+}
 int
 lib_replace_ext(const char *const input, brrsz inlen,
     char *const output, brrsz *const outlen,
 	const char *const replacement)
 {
-	brrsz dot = 0, sep = 0;
 	brrsz olen, nlen = 0;
 	if (!input || !output)
 		return 0;
-	for (sep = inlen; sep > 0 && input[sep] != BRRPATH_SEP_CHR; --sep);
-	for (dot = inlen; dot > sep && input[dot] != '.'; --dot);
-	if (dot > sep + 1)
-		nlen = dot;
+	nlen = i_find_ext(input, inlen);
 	olen = snprintf(output, BRRPATH_MAX_PATH + 1, "%*.*s%s", (int)nlen, (int)nlen, input, replacement);
 	if (outlen)
 		*outlen = olen;

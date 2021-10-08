@@ -45,7 +45,7 @@ i_convert_wem(neinput_libraryT *const libraries, const neinputT *const input)
 		return err;
 	err = lib_parse_buffer_as_riff(&rf, buffer, bufsize);
 	free(buffer);
-	if (err || (err = neinput_load_index(libraries, &library, input->library_index))) {
+	if (err || (err = neinput_load_codebooks(libraries, &library, input->library_index))) {
 		riff_clear(&rf);
 		return err;
 	}
@@ -76,7 +76,7 @@ neconvert_wem(nestateT *const state, neinput_libraryT *const libraries, const ne
 		LOG_FORMAT(LOG_PARAMS_SUCCESS, "Success!");
 	} else {
 		state->wems_failed++;
-		LOG_FORMAT(LOG_PARAMS_SUCCESS, "Failure! (%d)", err);
+		LOG_FORMAT(LOG_PARAMS_FAILURE, "Failure! (%d)", err);
 	}
 	return err;
 }

@@ -30,8 +30,15 @@
 "\n        -inline . . . . . . . . . . . . . .  The following WEMs have inline codebooks." \
 "\n        -stripped . . . . . . . . . . . . .  The vorbis headers of the WEM are stripped." \
 "\n    WSP/BNK Processing Options:" \
-"\n        -w2o, -wem2ogg. . . . . . . . . . .  Convert extracted WEMs to OGGs." \
-"\n        -Rbk, -recurse-bank . . . . . . . .  Search passed bank files for all referenced WEMs." \
+"\n        -w2o, -wem2ogg  . . . . . . . . . .  Convert extracted WEMs to OGGs." \
+"\n        -white, -black," \
+"\n        -weiss, -noir . . . . . . . . . . .  Comma-separated list of indices used to determine" \
+"\n                                             what indices to process from the file(s)." \
+"\n                                             Blacklists and whitelists are mutually exclusive; each " \
+"\n                                             overrides the others preceding it." \
+"\n                                             E.g. '-black 3,9' would process every index except 3 and 9," \
+"\n                                             but  '+white 3,9' would process only indices 3 and 9." \
+"\n        -rubrum . . . . . . . . . . . . . .  Toggle the list to between being a whitelist/blacklist." \
 "\n    Miscellaneous options:" \
 "\n        -!  . . . . . . . . . . . . . . . .  The following argument is a file path, not an option." \
 "\n        --  . . . . . . . . . . . . . . . .  All following arguments are file paths, not options." \

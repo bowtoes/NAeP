@@ -65,7 +65,7 @@ i_determine_input_type(neinputT *const input)
 {
 	FILE *fp = NULL;
 	long ext = 0;
-	if (-1 != (ext = neinput_check_extension(input->path, 0, "ogg", "wem", "wsp", "bnk", NULL))) {
+	if (-1 != (ext = lib_cmp_ext(input->path, input->path_length, 0, "ogg", "wem", "wsp", "bnk", NULL))) {
 		switch (ext) {
 			case 0: input->type = neinput_type_ogg; break;
 			case 1: input->type = neinput_type_wem; break;
@@ -133,6 +133,11 @@ neprocess_inputs(nestateT *const state, neinput_libraryT *const libraries, neinp
 		i_set_log_state(state, input);
 		if (i_check_input(input))
 			continue;
+		BRRLOG_DEBUGN("%sLIST : ", input->list.type?"BLACK":"WHITE");
+		for (brru4 i = 0; i < input->list.count; ++i) {
+			BRRLOG_DEBUGNP("%zu ", input->list.list[i]);
+		}
+		BRRLOG_DEBUGP("");
 		i_process_input(state, libraries, input, i);
 	}
 	return 0;
