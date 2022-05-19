@@ -1,7 +1,8 @@
-# NieR:Automated extraction Precept_v0.0.1
+# NieR:Automated extraction Precept_v0.0.2a
+C11 device with the goal of extracting and converting NieR:Automata and
+Replicant audio data into useable [Ogg][oggvorbis] files.
 
 ## Table of Contents
-0. [Table of Contents](#table-of-contents)
 1. [Goal](#goal)
 2. [Present](#present)
    1. [Usage](#usage)
@@ -17,10 +18,7 @@ Originally, this was inspired by another precept called [NME2][NME2], however I
 thought it could be done better and more cross platform; this is an attempt at
 that.
 
-## Present  
-List of features, planned and implemented, is at [Capabilities](#capabilities).
-
-### Usage  
+## Usage  
 All command-line options are viewable by passing any of `-h`, `-help`, or
 `-version`.  Most options are toggleable; for example, passing `-w` before a
 bunch of files, all those files will be parsed as WEMs. Passing `-w` again
@@ -58,6 +56,9 @@ What the program can/will be able to do:
    * &#9744; Audio rip from videos, either embedded or from extracted.  
 
 ## Build  
+**NOTE:** This section is out of date; run `make help` to see accurate
+information.
+
 After cloning, be sure to run `git submodule init` and `git submodule update`.  
 Then issue one of the following commands (take note of the notice after the
 table):  
@@ -83,22 +84,22 @@ Other environment variables can be set; most ones that are safe to change and
 their defaults are listed in `config.mk`.  
 
 **Note:** `libogg` and `libvorbis` are provided and built as submodules; they
-need-not be installed on the host/target system to compile/run.  
+need-not be installed on the host/target system to compile or run.  
 
-**DISCLAIMER:** I only have a linux distribution, so I can't/am too lazy to
+**DISCLAIMER:** I only have a Linux distribution, so I can't/am too lazy to
 test building on Windows.  
-
-## Todo  
-Eventually, some (hopefully) neat and understandable documentation on the
-different formats of data storage (WSP, WEM, BNK, ...) used in NieR:Automata.
 
 ## References  
 * Ogg regranularization is done as a custom re-implementation of
   [revorb][revorb]; previously revorb was used directly.
-* WEM-to-ogg conversion is currently being implemented, with heavy reference
-  (though not duplication) from [ww2ogg][ww2ogg].
+* WEM-to-ogg conversion was implemented with heavy reference
+  (though not duplication) to [ww2ogg][ww2ogg].
+* Of course, the official [ogg vorbis][oggvorbis] documentation was also
+  referenced (a heavily edited (prettified) version of the HTML docs, to be
+  precise).
 
 [NME2]:https://github.com/TypeA2/NME2
 [ww2ogg]:https://github.com/hcs64/ww2ogg
 [revorbc]:https://github.com/bowtoes/revorbc
 [revorb]:http://yirkha.fud.cz/progs/foobar2000/revorb.cpp
+[oggvorbis]:https://xiph.org/vorbis/doc/

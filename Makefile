@@ -1,171 +1,263 @@
 .POSIX:
 .SUFFIXES:
+all:
 
 include config.mk
+include help.mk
 
-ASS:=$(addprefix $(OUTDIR)/$(ASSDIR)/,$(patsubst $(SRCDIR)/%,%,$(SRC:.c=.s)))
-INT:=$(addprefix $(OUTDIR)/$(INTDIR)/,$(patsubst $(SRCDIR)/%,%,$(SRC:.c=.e)))
-OBJ:=$(addprefix $(OUTDIR)/$(OBJDIR)/,$(patsubst $(SRCDIR)/%,%,$(SRC:.c=.o)))
+ass_dir ?= ass
+ass_out_dir ?= $(output_directory)/$(ass_dir)
+ass_out := $(addprefix $(ass_out_dir)/,$(srcs:.c=.s))
 
-all: $(PROJECT)
+int_dir ?= int
+int_out_dir ?= $(output_directory)/$(int_dir)
+int_out := $(addprefix $(int_out_dir)/,$(srcs:.c=.e))
+
+obj_dir ?= obj
+obj_out_dir ?= $(output_directory)/$(obj_dir)
+obj_out := $(addprefix $(obj_out_dir)/,$(srcs:.c=.o))
+
+build_directories := $(sort $(dir $(output_file) $(ass_out) $(int_out) $(obj_out)))
+
+all: info setup $(project)
+info:
+	@$(echo) '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
+	@$(echo) ''
+	@$(echo) '$(project) v$(project_version)$(if $(project_date), - last commit $(project_date))'
+	@$(echo) 'Build Name  . . . . .  $(build_name)'
+	@$(echo) 'Final Destination . .  $(output_file)'
+	@$(echo) ''
+	@$(echo) 'Build Host  . . . . .  $(host_bit)-bit $(host)$(if $(cross_compilation),; $(host_string))'
+	@$(echo) 'Build Target  . . . .  $(target_bit)-bit $(target)$(if $(cross_compilation),; $(target_string))'
+#@$(echo) 'Build Mode         :$(target_mode)'
+	@$(echo) 'Build Tree. . . . . .  $(build_tree)'
+	@$(echo) 'Debug Build . . . . .  $(if $(debug:0=),On,Off)'
+	@$(echo) 'Memcheck Flags  . . .  $(if $(debug:0=),$(if $(memcheck:0=),On,Off),Off)'
+	@$(echo) ''
+	@$(echo) '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
+build_info:
+	@$(echo) '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
+	@$(echo) ''
+	@$(echo) 'C Compiler (CC) . . . . .  $(cc_custom)'
+	@$(echo) 'Archiver (AR) . . . . . .  $(ar_custom)'
+	@$(echo) $(if $(target:unix=),\
+	         'DllTool . . . . . . . . .  $(dlltool_custom)','')
+	@$(echo) 'Includes  . . . . . . . .  $(c_includes) $(vnd_includes)'
+	@$(echo) 'Warnings  . . . . . . . .  $(c_warnings) $(vnd_warnings)'
+	@$(echo) 'Defines . . . . . . . . .  $(c_defines) $(vnd_defines)'
+	@$(echo) 'Links . . . . . . . . . .  $(c_links) $(vnd_links)'
+	@$(echo) ''
+	@$(echo) 'Optimization Flags  . . .  $(c_optimization)'
+	@$(echo) 'Performance Flags . . . .  $(c_performance)'
+	@$(echo) ''
+	@$(echo) 'C Flags   . . . . . . . .  $(project_cflags)'
+	@$(echo) 'CPP Flags . . . . . . . .  $(project_cppflags)'
+	@$(echo) 'LD Flags  . . . . . . . .  $(project_ldflags)'
+	@$(echo) ''
+	@$(echo) 'Vendor Binaries . . . . .  $(vnd_bins)'
+	@$(echo) 'libbrrtools . . . . . . .  $(brrtools_flags)'
+	@$(echo) 'libogg Configure  . . . .  $(ogg_configure_flags)'
+	@$(echo) 'libvorbis Configure . . .  $(vorbis_configure_flags)'
+	@$(echo) ''
+	@$(echo) '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
+output_info:
+	@$(echo) '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
+	@$(echo) ''
+	@$(echo) 'Output Base Name  . . . . $(output_base_name)'
+	@$(echo) 'Output Extension  . . . . $(output_ext)'
+	@$(echo) ''
+	@$(echo) 'Build Root  . . . . . . . $(build_root)'
+	@$(echo) 'Build Tree  . . . . . . . $(build_tree)'
+	@$(echo) 'Output Directory  . . . . $(output_directory)'
+	@$(echo) 'Output File . . . . . . . $(output_file)'
+	@$(echo) ''
+	@$(echo) 'Build Directories . . . . $(build_directories)'
+	@$(echo) ''
+	@$(echo) 'Sources:'
+	@$(echo) '    $(srcs)'
+	@$(echo) 'Headers:'
+	@$(echo) '    $(hdrs)'
+	@$(echo) ''
+	@$(echo) 'Assemblies:'
+	@$(echo) '    $(ass_out)'
+	@$(echo) 'Intermediates:'
+	@$(echo) '    $(int_out)'
+	@$(echo) 'Objects:'
+	@$(echo) '    $(obj_out)'
+	@$(echo) ''
+	@$(echo) '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
 setup:
-	@mkdir -pv $(dir $(ASS)) 2>/dev/null || :
-	@mkdir -pv $(dir $(INT)) 2>/dev/null || :
-	@mkdir -pv $(dir $(OBJ)) 2>/dev/null || :
-options:
-	@echo "<------------------------------------->"
-	@echo ""
-	@echo "$(PROJECT) BUILD options:"
-	@echo "TARGETNAME : $(TARGETNAME)"
-	@echo "HOST       : $(HOST)"
-	@echo "TARGET     : $(TARGET)"
-	@echo "CC         : $(CC)"
-	@echo "OUTDIR     : $(OUTDIR)"
-	@echo "PREFIX     : $(prefix)"
-ifdef DEBUG
-	@echo "DEBUG      : ON"
- ifdef MEMCHECK
-	@echo "MEMCHECK   : ON"
- else
-	@echo "MEMCHECK   : OFF"
- endif
-else
-	@echo "DEBUG      : OFF"
-endif
-ifdef LIBRECONFIG
-	@echo "LIBRECONFIG: ON"
-else
-	@echo "LIBRECONFIG: OFF"
-endif
-	@echo ""
-	@echo "$(PROJECT)_CFLAGS   =$($(PROJECT)_CFLAGS)"
-	@echo "$(PROJECT)_CPPFLAGS =$($(PROJECT)_CPPFLAGS)"
-	@echo "$(PROJECT)_LDFLAGS  =$($(PROJECT)_LDFLAGS)"
-	@echo "CFLAGS            =$(CFLAGS)"
-	@echo "CPPFLAGS          =$(CPPFLAGS)"
-	@echo "LDFLAGS           =$(LDFLAGS)"
-	@echo ""
-	@echo "<------------------------------------->"
+	@$(mk_dir_tree) $(build_directories) 2>$(null) ||:
+.PHONY: all info setup
 
-$(OUTDIR)/$(ASSDIR)/%.s: $(SRCDIR)/%.c
-	$(CC) $($(PROJECT)_CPPFLAGS) $($(PROJECT)_CFLAGS) -S $< -o $@
-$(OUTDIR)/$(INTDIR)/%.e: $(SRCDIR)/%.c
-	$(CC) $($(PROJECT)_CPPFLAGS) $($(PROJECT)_CFLAGS) -E $< -o $@
-$(OUTDIR)/$(OBJDIR)/%.o: $(SRCDIR)/%.c
-	$(CC) $($(PROJECT)_CPPFLAGS) $($(PROJECT)_CFLAGS) -c $< -o $@
+$(ass_out_dir)/%.s: $(src_dir)/%.c ; $(cc_custom) $(project_cppflags) $(project_cflags) -S $< -o $@
+$(int_out_dir)/%.e: $(src_dir)/%.c ; $(cc_custom) $(project_cppflags) $(project_cflags) -E $< -o $@
+$(obj_out_dir)/%.o: $(src_dir)/%.c ; $(cc_custom) $(project_cppflags) $(project_cflags) -c $< -o $@
+$(ass_out) $(int_out) $(obj_out): $(addprefix $(src_dir)/,$(hdrs)) $(makefiles)
 
-$(ASS): $(HDR) Makefile config.mk
-$(INT): $(HDR) Makefile config.mk
-$(OBJ): $(HDR) Makefile config.mk
+ass: info setup $(ass_out)
+int: info setup $(int_out)
+obj: info setup $(obj_out)
+aio: ass int obj
+.PHONY: ass int obj aio
 
-$(PROJECT): libs setup options $(OBJ)
-ifeq ($(TARGET),UNIX)
-	$(CC) -o $(OUTDIR)/$(TARGETNAME) $(OBJ) ./vendor/brrtools/$(OUTDIR)/static/libbrrtools.a \
-	    ./vendor/vorbis/lib/.libs/libvorbis.a ./vendor/ogg/src/.libs/libogg.a \
-	    $($(PROJECT)_LDFLAGS)
-else
-	$(CC) -o $(OUTDIR)/$(TARGETNAME) $(OBJ) ./vendor/brrtools/$(OUTDIR)/static/libbrrtools.lib \
-	    ./vendor/vorbis/lib/.libs/libvorbis.a ./vendor/ogg/src/.libs/libogg.a \
-	    $($(PROJECT)_LDFLAGS)
-endif
+$(output_file): vnd $(obj_out) $(makefiles) $(addprefix $(src_dir)/,$(hdrs))
+	$(cc_custom) -o $@ $(obj_out) $(vnd_bins) $(project_ldflags)
+$(project): $(output_file)
 
-ass: setup options $(ASS) ;
-int: setup options $(INT) ;
-obj: setup options $(OBJ) ;
-aio: setup options $(ASS) $(INT) $(OBJ) ;
+clean:
+	@$(rm_file) $(output_file) $(ass_out) $(int_out) $(obj_out) 2>$(null) ||:
+	@$(rm_recurse) $(build_directories) 2>$(null) ||:
+
+again: clean $(project)
+
+CLEAN: vnd-clean clean
+AGAIN: CLEAN all
 
 install: all
-	@cp -fuv $(OUTDIR)/$(TARGETNAME) $(prefix)/bin
+	@$(copy_file) $(output_file) $(prefix)/bin
 uninstall:
-	@rm -fv $(prefix)/bin/$(PROJECT)
+	@$(rm_file) $(prefix)/bin/$(output_name)
 
-brrtools:
-	make -C vendor/brrtools PEDANTIC=1 SRCDIR=src HDRDIR=src MODE=STATIC \
-	    UNISTANAME=libbrrtools.a WINSTANAME=libbrrtools.lib
-ogg:
-ifdef LIBRECONFIG
-	cd vendor/ogg && make maintainer-clean 2>/dev/null || :
-	cd vendor/ogg && ./autogen.sh
- ifeq ($(TARGET),UNIX)
-	# Unix-compile probably needs 32-,64-bit compilation options as well.
-  ifeq ($(BITS),32)
-	cd vendor/ogg && ./configure --disable-shared --build=i686-pc-linux
-  else
-	cd vendor/ogg && ./configure --disable-shared --build=x86_64-pc-linux
-  endif
- else
-  ifeq ($(BITS),32)
-	cd vendor/ogg && ./configure --disable-shared \
-	    --host=i686-w64-mingw32 --target=i686-w64-mingw32 --build=i686-pc-linux
-  else
-	cd vendor/ogg && ./configure --disable-shared \
-	    --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32 --build=x86_64-pc-linux
-  endif
+### Vendor shit
+vnd:
+vnd-clean:
+vnd-again: vnd-clean vnd
+.PHONY: vnd vnd-clean vnd-again
+
+## Brrtools
+brrtools_dir := $(vnd_dir)/brrtools
+brrtools_out_dir := $(output_directory)/$(brrtools_dir)
+brrtools_bin := $(brrtools_out_dir)/lib/libbrrtools.a
+
+vnd_includes += '$(brrtools_out_dir)/include'
+vnd_bins += '$(brrtools_bin)'
+
+brrtools_flags :=\
+	prefix='$(brrtools_out_dir)'\
+	PEDANTIC=1\
+	DO_STRIP=1\
+	DO_LDCONFIG=0\
+	PIC=$(PIC)\
+	HOST=$(if $($(host):unix=),WINDOWS,UNIX)\
+	HOST_BIT=$(host_bit)\
+	TARGET=$(if $($(target):unix=),WINDOWS,UNIX)\
+	TARGET_BIT=$(target_bit)\
+	TARGET_MODE=STATIC\
+	TARGET_PART_WINDOWS_STATIC='.a'
+ifneq ($(debug),0)
+ brrtools_flags += DEBUG=$(debug)
+ ifneq ($(memcheck),0)
+  brrtools_flags += MEMCHECK=$(memcheck)
  endif
 endif
-	make -C vendor/ogg
-vorbis:
+
+$(brrtools_bin): $(makefiles)
+	cd '$(brrtools_dir)' && \
+		$(MAKE) install $(brrtools_flags)
+brrtools: $(brrtools_bin)
+brrtools-clean:
+	cd '$(brrtools_dir)' && \
+		$(MAKE) clean uninstall $(brrtools_flags) ||:
+brrtools-again: brrtools-clean brrtools
+
+vnd: brrtools
+vnd-clean: brrtools-clean
+.PHONY: brrtools brrtools-clean brrtools-again
+
+## OGG
+ogg_dir := $(vnd_dir)/ogg
+ogg_out_dir := $(output_directory)/$(ogg_dir)
+ogg_bin := $(ogg_out_dir)/lib/libogg.a
+ogg_makefile := $(ogg_dir)/Makefile
+
+vnd_includes += '$(ogg_out_dir)/include'
+vnd_bins += '$(ogg_bin)'
+
+ogg_build_str := $(target_architecture)-pc-linux
+ifeq ($(target),windows)
+ ogg_host_str := $(target_string)
+ ogg_target_str := $(target_string)
+endif
+ogg_configure_flags :=\
+	--disable-dependency-tracking\
+	--prefix='$(ogg_out_dir)'\
+	--disable-shared\
+	$(if $(ogg_build_str),--build=$(ogg_build_str))\
+	$(if $(ogg_host_str),--host=$(ogg_host_str))\
+	$(if $(ogg_target_str),--target=$(ogg_target_str))\
+
 ifdef LIBRECONFIG
-	cd vendor/vorbis && make maintainer-clean 2>/dev/null || :
-	cd vendor/vorbis && ./autogen.sh
- ifeq ($(TARGET),UNIX)
-	# Unix-compile probably needs 32-,64-bit compilation options as well.
-	cd vendor/vorbis && ./configure --with-ogg-libs=../ogg/src/.libs \
-	    --with-ogg-includes=../ogg/include --disable-shared --disable-docs --disable-examples \
-	    --disable-oggtest
- else
-  ifeq ($(BITS),32)
-	cd vendor/vorbis && ./configure --with-ogg-libs=../ogg/src/.libs \
-	    --with-ogg-includes=../ogg/include --disable-shared --disable-docs --disable-examples \
-	    --disable-oggtest \
-	    --host=i686-w64-mingw32 --target=i686-w64-mingw32 --build=i686-linux
-  else
-	cd vendor/vorbis && ./configure --with-ogg-libs=../ogg/src/.libs \
-	    --with-ogg-includes=../ogg/include --disable-shared --disable-docs --disable-examples \
-	    --disable-oggtest \
-	    --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32 --build=x86_64-linux
-
-  endif
- endif
-endif
-	make -C vendor/vorbis CFLAGS="$$CFLAGS -I$(VENDIR)/brrtools/src $(VENDEFS)"
-libs: brrtools ogg vorbis
-
-clean-brrtools: ; make -C vendor/brrtools clean
-clean-ogg: ; make -C vendor/ogg distclean
-clean-vorbis: ; make -C vendor/vorbis distclean
-clean-libs: clean-brrtools clean-ogg clean-vorbis
-clean-all: clean-libs clean
-clean:
-	$(RM) $(ASS)
-	$(RM) $(INT)
-	$(RM) $(OBJ)
-	$(RM) $(OUTDIR)/$(TARGETNAME)
-ifeq ($(TARGET),WINDOWS)
-	$(RM) $(OUTDIR)/$(WINNAME)
+ ogg_reconfig_target := ogg_reconfig
+.PHONY: ogg_reconfig
 else
-	$(RM) $(OUTDIR)/$(UNINAME)
+ ogg_reconfig_target := $(ogg_makefile)
 endif
-ifeq ($(HOST),UNIX)
-	@find $(OUTDIR)/$(ASSDIR) -type d -exec rmdir -v --ignore-fail-on-non-empty {} + 2>/dev/null || :
-	@find $(OUTDIR)/$(INTDIR) -type d -exec rmdir -v --ignore-fail-on-non-empty {} + 2>/dev/null || :
-	@find $(OUTDIR)/$(OBJDIR) -type d -exec rmdir -v --ignore-fail-on-non-empty {} + 2>/dev/null || :
-	@find $(OUTDIR) -type d -exec rmdir -v --ignore-fail-on-non-empty {} + 2>/dev/null || :
+
+$(ogg_reconfig_target):
+	cd '$(ogg_dir)' && $(MAKE) maintainer-clean 2>$(null)||:
+	cd '$(ogg_dir)' && ./autogen.sh
+	cd '$(ogg_dir)' && ./configure $(ogg_configure_flags)
+$(ogg_bin): $(ogg_reconfig_target)
+	cd '$(ogg_dir)' && $(MAKE) install
+ogg: $(ogg_bin)
+ogg-clean:
+	cd '$(ogg_dir)' && $(MAKE) uninstall clean 2>$(null)||:
+	$(rm_recurse) '$(ogg_out_dir)' 2>$(null)||:
+ogg-again: ogg-clean ogg
+
+vnd: ogg
+vnd-clean: ogg-clean
+.PHONY: ogg ogg-clean ogg-again
+
+## Vorbis
+vnd_links += -lm
+ifeq ($(target),unix)
+ vnd_links += -lmvec
+endif
+
+vorbis_dir := $(vnd_dir)/vorbis
+vorbis_out_dir := $(output_directory)/$(vorbis_dir)
+vorbis_bin := $(vorbis_out_dir)/lib/libvorbis.a
+vorbis_makefile := $(vorbis_dir)/Makefile
+
+vnd_include += '$(vorbis_out_dir)/include'
+vnd_bins += '$(vorbis_bin)'
+
+ifeq ($(target),windows)
+ vorbis_build_str := $(target_architecture)-linux
+ vorbis_host_str := $(target_string)
+ vorbis_target_str := $(target_string)
+endif
+vorbis_configure_flags :=\
+	--disable-dependency-tracking\
+	--enable-silent-rules\
+	--prefix='$(vorbis_out_dir)'\
+	--with-ogg='$(abspath $(ogg_out_dir))'\
+	--disable-shared --disable-docs --disable-examples --disable-oggtest\
+	$(if $(vorbis_host_str),--host=$(vorbis_host_str))\
+	$(if $(vorbis_host_str),--target=$(vorbis_target_str))\
+	$(if $(vorbis_host_str),--build=$(vorbis_build_str))\
+
+ifdef LIBRECONFIG
+ vorbis_reconfig_target := vorbis_reconfig
+.PHONY: vorbis_reconfig
 else
-	$(RMDIR) $(OUTDIR)/$(ASSDIR) 2>$(NULL) || :
-	$(RMDIR) $(OUTDIR)/$(OBJDIR) 2>$(NULL) || :
-	$(RMDIR) $(OUTDIR)/$(INTDIR) 2>$(NULL) || :
-	$(RMDIR) $(OUTDIR) 2>$(NULL) || :
+ vorbis_reconfig_target := $(vorbis_makefile)
 endif
+$(vorbis_reconfig_target):
+	cd '$(vorbis_dir)' && $(MAKE) maintainer-clean 2>$(null)||:
+	cd '$(vorbis_dir)' && ./autogen.sh
+	cd '$(vorbis_dir)' && ./configure $(vorbis_configure_flags)
 
-again: clean all
-again-brrtools: clean-brrtools brrtools
-again-ogg: clean-ogg ogg
-again-vorbis: clean-vorbis vorbis
-again-libs: again-brrtools
-again-all: again-libs again
+$(vorbis_bin): $(ogg_bin) $(vorbis_reconfig_target)
+	cd '$(vorbis_dir)' && $(MAKE) install
+vorbis: $(vorbis_bin)
+vorbis-clean:
+	cd '$(vorbis_dir)' && $(MAKE) uninstall clean 2>$(null)||:
+	$(rm_recurse) '$(vorbis_out_dir)' 2>$(null)||:
+vorbis-again: vorbis-clean vorbis
 
-.PHONY: brrtools ogg vorbis libs
-.PHONY: clean clean-brrtools clean-ogg clean-vorbis clean-libs clean-all
-.PHONY: again again-brrtools again-ogg again-vorbis again-libs again-all
-.PHONY: setup options ass int obj aio install uninstall
+vnd: vorbis
+vnd-clean: vorbis-clean
+.PHONY: vorbis vorbis-clean vorbis-again
