@@ -1,8 +1,6 @@
 ## Ctags/vimtags/othertags files
 tags
 *.types
-*.xcf
-*.tmp
 
 ## Build files
 *.o
@@ -15,6 +13,7 @@ NAeP
 .cache/
 .stor/
 .old/
+.old*/
 build/
 test/
 codebooks/
@@ -22,6 +21,9 @@ src/bnkextr/
 src/revorbc/
 src/_*
 swp.sh
+*.xcf
+*.tmp
+*.ign
 
 compile_commands.json
 compile_commands_win.json

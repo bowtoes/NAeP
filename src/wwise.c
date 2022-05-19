@@ -1,5 +1,5 @@
 /*
-Copyright 2021 BowToes (bow.toes@mailfence.com)
+Copyright 2021-2022 BowToes (bow.toes@mailfence.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ limitations under the License.
 
 #include <vorbis/vorbisenc.h>
 
-#include <brrtools/brrlib.h>
+#include <brrtools/brrnum.h>
 #include <brrtools/brrlog.h>
 #include <brrtools/brrpath.h>
 
@@ -56,7 +56,7 @@ typedef struct wwise_vorb_extra {
 	brru1 unknown[2];
 } wwise_vorb_extraT;
 
-static void BRRCALL
+static void
 i_init_vorb(wwise_wemT *const wem, const unsigned char *const data, brru4 data_size)
 {
 	if (data_size == 42) { /* Implicit type */
@@ -80,7 +80,7 @@ i_init_vorb(wwise_wemT *const wem, const unsigned char *const data, brru4 data_s
 		wem->all_headers_present = 0;
 	} else { /* Explicit type */
 		wwise_vorb_extraT e = {0};
-		memcpy(&e, data, brrlib_umin(data_size, sizeof(e)));
+		memcpy(&e, data, brrnum_umin(data_size, sizeof(e)));
 		wem->vorb.sample_count = e.sample_count;
 		wem->vorb.header_packets_offset = e.header_packets_offset;
 		wem->vorb.audio_start_offset = e.audio_start_offset;
@@ -93,12 +93,12 @@ i_init_vorb(wwise_wemT *const wem, const unsigned char *const data, brru4 data_s
 		wem->all_headers_present = (data_size <= 44);
 	}
 }
-static void BRRCALL
+static void
 i_init_fmt(wwise_fmtT *const fmt, const unsigned char *const data, brru4 data_size)
 {
-	memcpy(fmt, data, brrlib_umin(data_size, sizeof(*fmt)));
+	memcpy(fmt, data, brrnum_umin(data_size, sizeof(*fmt)));
 }
-int BRRCALL
+int
 wwise_wem_init(wwise_wemT *const wem, const riffT *const rf)
 {
 	if (!wem || !rf)
@@ -137,7 +137,7 @@ wwise_wem_init(wwise_wemT *const wem, const riffT *const rf)
 		return WWISE_CORRUPT;
 	return WWISE_SUCCESS;
 }
-void BRRCALL
+void
 wwise_wem_clear(wwise_wemT *const wem)
 {
 	if (wem) {
@@ -145,7 +145,7 @@ wwise_wem_clear(wwise_wemT *const wem)
 	}
 }
 
-int BRRCALL
+int
 wwise_packet_init(wwise_packetT *const packet,
     const wwise_wemT *const wem, const unsigned char *const data, brrsz data_size)
 {
@@ -178,7 +178,7 @@ wwise_packet_init(wwise_packetT *const packet,
 	packet->header_length = ofs;
 	return WWISE_SUCCESS;
 }
-void BRRCALL
+void
 wwise_packet_clear(wwise_packetT *const packet)
 {
 	if (packet) {
@@ -190,7 +190,7 @@ static const codebook_libraryT *glibrary = NULL;
 static const neinputT *ginput = NULL;
 
 /* State init/input reading */
-static int BRRCALL
+static int
 i_init_state(ogg_stream_state *const streamer, const wwise_wemT *const wem,
     vorbis_info *const vi, vorbis_comment *const vc)
 {
@@ -204,7 +204,7 @@ i_init_state(ogg_stream_state *const streamer, const wwise_wemT *const wem,
 	return I_SUCCESS;
 }
 
-static int BRRCALL
+static int
 i_build_packet(ogg_packet *const packet, oggpack_buffer *const packer, brru8 packetno, brru8 granule, int end_of_stream)
 {
 	packet->packet = oggpack_get_buffer(packer);
@@ -215,7 +215,7 @@ i_build_packet(ogg_packet *const packet, oggpack_buffer *const packer, brru8 pac
 	packet->packetno = packetno;
 	return 0;
 }
-static int BRRCALL
+static int
 i_insert_packet(ogg_stream_state *const streamer, ogg_packet *const packet, vorbis_info *const vi, vorbis_comment *const vc)
 {
 	if (ogg_stream_packetin(streamer, packet)) {
@@ -225,7 +225,7 @@ i_insert_packet(ogg_stream_state *const streamer, ogg_packet *const packet, vorb
 		if (!vi || !vc) {
 			return I_BAD_ERROR;
 		} else if ((err = vorbis_synthesis_headerin(vi, vc, packet))) {
-#if defined(NeEXTRA_DEBUG)
+#if defined(Ne_extra_debug)
 			BRRLOG_ERRN("Failed to synthesize header %d : ", packet->packetno);
 			if (err == OV_ENOTVORBIS)
 				BRRLOG_ERRNP("NOT VORBIS");
@@ -241,7 +241,7 @@ i_insert_packet(ogg_stream_state *const streamer, ogg_packet *const packet, vorb
 }
 
 /* COPY */
-static int BRRCALL
+static int
 i_copy_id_header(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 {
 	brrs4 packet_type = 0, vorbis[6] = {0}, audio_channels, blocksize_0, blocksize_1, frame_flag;
@@ -274,7 +274,7 @@ i_copy_id_header(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 	packer_pack(packer, 1, 1);                    /* OUT Frame flag */
 	return I_SUCCESS;
 }
-static int BRRCALL
+static int
 i_copy_comment_header(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 {
 	brrs4 packet_type = 0, vorbis[6] = {0}, frame_flag = 0;
@@ -303,7 +303,7 @@ i_copy_comment_header(oggpack_buffer *const unpacker, oggpack_buffer *const pack
 	packer_pack(packer, 1, 1);                    /* OUT Frame flag */
 	return I_SUCCESS;
 }
-static int BRRCALL
+static int
 i_copy_next_codebook(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 {
 	long dimensions, entries;
@@ -361,7 +361,7 @@ i_copy_next_codebook(oggpack_buffer *const unpacker, oggpack_buffer *const packe
 	}
 	return I_SUCCESS;
 }
-static int BRRCALL
+static int
 i_copy_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 {
 	int packet_type = 0, vorbis[6] = {0}, codebook_count = 0;
@@ -388,7 +388,7 @@ i_copy_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packer
 	packer_transfer_remaining(unpacker, packer);
 	return I_SUCCESS;
 }
-static int BRRCALL
+static int
 i_copy_headers(ogg_stream_state *const streamer, wwise_wemT *const wem,
     vorbis_info *const vi, vorbis_comment *const vc)
 {
@@ -427,7 +427,7 @@ i_copy_headers(ogg_stream_state *const streamer, wwise_wemT *const wem,
 	return I_SUCCESS;
 }
 /* BUILD */
-static int BRRCALL
+static int
 i_build_id_header(oggpack_buffer *const packer, const wwise_wemT *const wem)
 {
 	packer_pack(packer, 1, 8);                           /* OUT Packet type */
@@ -444,10 +444,10 @@ i_build_id_header(oggpack_buffer *const packer, const wwise_wemT *const wem)
 	packer_pack(packer, 1, 1);                           /* OUT Frame flag */
 	return I_SUCCESS;
 }
-static int BRRCALL
+static int
 i_build_comments_header(oggpack_buffer *const packer)
 {
-	static const char vendor_format[] = "NieR:Automated extraction Precept_v"NeVERSION" - Generator file '%s'";
+	static const char vendor_format[] = "NieR:Automated extraction Precept_v"Ne_version" - Generator file '%s'";
 	static char vendor_string[sizeof(vendor_format) + BRRPATH_MAX_PATH + 1] = "";
 	static long vendor_len = 0;
 
@@ -463,7 +463,7 @@ i_build_comments_header(oggpack_buffer *const packer)
 	packer_pack(packer, 1, 1);                            /* OUT Frame flag */
 	return I_SUCCESS;
 }
-static int BRRCALL
+static int
 i_build_codebook(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 {
 	int dimensions, entries, ordered, lookup;
@@ -517,14 +517,14 @@ i_build_codebook(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 		for (long i = 0; i < lookup_values; ++i) { /* IN/OUT Codebook multiplicands */
 			long multiplicand = packer_transfer(unpacker, value_bits, packer, value_bits);
 		}
-#if defined(NeEXTRA_DEBUG)
+#if defined(Ne_extra_debug)
 	} else {
 		BRRLOG_ERR("LOOKUP FAILED");
 #endif
 	}
 	return I_SUCCESS;
 }
-static int BRRCALL
+static int
 i_build_floors(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 {
 	/* Floor 1 decode mostly identical to spec, except floor type is absent from
@@ -563,7 +563,7 @@ i_build_floors(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 	}
 	return I_SUCCESS;
 }
-static int BRRCALL
+static int
 i_build_residues(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 {
 	/* As far as I can tell, residue decode is identical to spec */
@@ -599,7 +599,7 @@ i_build_residues(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 	}
 	return I_SUCCESS;
 }
-static int BRRCALL
+static int
 i_build_mappings(oggpack_buffer *const unpacker, oggpack_buffer *const packer, int n_channels)
 {
 	int mapping_count = 1 + packer_transfer(unpacker, 6, packer, 6); /* IN/OUT Mapping count */
@@ -640,7 +640,7 @@ i_build_mappings(oggpack_buffer *const unpacker, oggpack_buffer *const packer, i
 	}
 	return I_SUCCESS;
 }
-static int BRRCALL
+static int
 i_build_modes(oggpack_buffer *const unpacker, oggpack_buffer *const packer,
     brru1 *const mode_blockflags, int *const mode_count)
 {
@@ -658,7 +658,7 @@ i_build_modes(oggpack_buffer *const unpacker, oggpack_buffer *const packer,
 	}
 	return I_SUCCESS;
 }
-static int BRRCALL
+static int
 i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packer,
     wwise_wemT *const wem, int stripped)
 {
@@ -671,11 +671,11 @@ i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packe
 	if (!glibrary) { /* Internal codebooks */
 		if (!stripped) { /* Full codebooks, can be copied directly */
 			for (int err = 0, i = 0; i < codebook_count; ++i) {
-#if defined(NeEXTRA_DEBUG)
+#if defined(Ne_extra_debug)
 				BRRLOG_DEBUG("Copying internal codebook %d", i);
 #endif
 				if ((err = i_copy_next_codebook(unpacker, packer))) {
-#if defined(NeEXTRA_DEBUG)
+#if defined(Ne_extra_debug)
 					BRRLOG_ERR("Failed to copy codebook %d", i);
 #endif
 					return err;
@@ -683,11 +683,11 @@ i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packe
 			}
 		} else {
 			for (int err = 0, i = 0; i < codebook_count; ++i) {
-#if defined(NeEXTRA_DEBUG)
+#if defined(Ne_extra_debug)
 				BRRLOG_DEBUG("Rebuilding internal codebook %d", i);
 #endif
 				if ((err = packed_codebook_unpack_raw(unpacker, packer))) {
-#if defined(NeEXTRA_DEBUG)
+#if defined(Ne_extra_debug)
 					BRRLOG_ERR("Failed to build codebook %d", i);
 #endif
 					return err;
@@ -709,12 +709,12 @@ i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packe
 						/* ??? */
 					}
 				}
-#if defined(NeEXTRA_DEBUG)
+#if defined(Ne_extra_debug)
 				BRRLOG_ERR("Codebook index too large %d", cbidx);
 #endif
 				return I_CORRUPT;
 			}
-#if defined(NeEXTRA_DEBUG)
+#if defined(Ne_extra_debug)
 			BRRLOG_DEBUG("Building external codebook %3d: ", cbidx);
 #endif
 			cb = &glibrary->codebooks[cbidx];
@@ -723,7 +723,7 @@ i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packe
 					err = I_BUFFER_ERROR;
 				else if (err == CODEBOOK_CORRUPT)
 					err = I_CORRUPT;
-#if defined(NeEXTRA_DEBUG)
+#if defined(Ne_extra_debug)
 				BRRLOG_ERR("Failed to copy external codebook %d : %s", cbidx, lib_strerr(err));
 #endif
 				return err;
@@ -741,7 +741,7 @@ i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packe
 
 	if (!stripped) { /* Rest of the header in-spec, copy verbatim */
 		if (-1 == (err = packer_transfer_remaining(unpacker, packer))) {
-#if defined(NeEXTRA_DEBUG)
+#if defined(Ne_extra_debug)
 			BRRLOG_ERR("Failed to copy the rest of setup packet");
 #endif
 			err = I_CORRUPT;
@@ -749,22 +749,22 @@ i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packe
 		}
 	} else { /* Need to rebuild the information */
 		if ((err = i_build_floors(unpacker, packer))) {
-#if defined(NeEXTRA_DEBUG)
+#if defined(Ne_extra_debug)
 			BRRLOG_ERR("Failed building floors");
 #endif
 			return err;
 		} else if ((err = i_build_residues(unpacker, packer))) {
-#if defined(NeEXTRA_DEBUG)
+#if defined(Ne_extra_debug)
 			BRRLOG_ERR("Failed building residues");
 #endif
 			return err;
 		} else if ((err = i_build_mappings(unpacker, packer, wem->fmt.n_channels))) {
-#if defined(NeEXTRA_DEBUG)
+#if defined(Ne_extra_debug)
 			BRRLOG_ERR("Failed building mappings");
 #endif
 			return err;
 		} else if ((err = i_build_modes(unpacker, packer, wem->mode_blockflags, &wem->mode_count))) {
-#if defined(NeEXTRA_DEBUG)
+#if defined(Ne_extra_debug)
 			BRRLOG_ERR("Failed building modes");
 #endif
 			return err;
@@ -774,7 +774,7 @@ i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packe
 	packer_pack(packer, 1, 1);                           /* OUT Frame flag */
 	return I_SUCCESS;
 }
-static int BRRCALL
+static int
 i_build_headers(ogg_stream_state *const streamer, wwise_wemT *const wem,
     vorbis_info *const vi, vorbis_comment *const vc)
 {
@@ -792,11 +792,11 @@ i_build_headers(ogg_stream_state *const streamer, wwise_wemT *const wem,
 			unsigned char *packets_start = wem->data + wem->vorb.header_packets_offset;
 			brru4 packets_size = wem->vorb.audio_start_offset - wem->vorb.header_packets_offset;
 			wwise_packetT packeteer = {0};
-#if defined (NeEXTRA_DEBUG)
+#if defined(Ne_extra_debug)
 			BRRLOG_DEBUG("Building setup header");
 #endif
 			if (WWISE_SUCCESS != (err = wwise_packet_init(&packeteer, wem, packets_start, packets_size))) {
-#if defined(NeEXTRA_DEBUG)
+#if defined(Ne_extra_debug)
 				BRRLOG_ERRN("Failed to init setup header packet (%d)", err);
 #endif
 				err = I_INSUFFICIENT_DATA;
@@ -821,7 +821,7 @@ i_build_headers(ogg_stream_state *const streamer, wwise_wemT *const wem,
 }
 
 /* PROCESS */
-static int BRRCALL
+static int
 i_process_headers(ogg_stream_state *const streamer, wwise_wemT *const wem,
 	vorbis_info *const vi, vorbis_comment *const vc)
 {
@@ -831,7 +831,7 @@ i_process_headers(ogg_stream_state *const streamer, wwise_wemT *const wem,
 		return i_build_headers(streamer, wem, vi, vc);
 	}
 }
-static int BRRCALL
+static int
 i_process_audio(ogg_stream_state *const streamer, wwise_wemT *const wem,
 	vorbis_info *const vi, vorbis_comment *const vc)
 {
@@ -903,7 +903,7 @@ i_process_audio(ogg_stream_state *const streamer, wwise_wemT *const wem,
 		packets_start += packeteer.header_length + packeteer.payload_size;
 		packets_size -= packeteer.header_length + packeteer.payload_size;
 	}
-#if defined(NeEXTRA_DEBUG)
+#if defined(Ne_extra_debug)
 	BRRLOG_DEBUG("Packetno : %lld", 3 + packetno);
 #endif
 	return I_SUCCESS;
@@ -918,7 +918,7 @@ wwise_convert_wwriff(riffT *const rf, ogg_stream_state *const streamer,
 	vorbis_comment vc;
 
 	if (WWISE_SUCCESS != (err = wwise_wem_init(&wem, rf))) {
-#if defined(NeEXTRA_DEBUG)
+#if defined(Ne_extra_debug)
 		if (err == WWISE_INCOMPLETE) {
 			BRRLOG_ERRN("WEM missing");
 			if (!wem.fmt_initialized)
@@ -939,7 +939,7 @@ wwise_convert_wwriff(riffT *const rf, ogg_stream_state *const streamer,
 		} else
 #endif
 			if (err == WWISE_CORRUPT) {
-#if defined(NeEXTRA_DEBUG)
+#if defined(Ne_extra_debug)
 			BRRLOG_ERRN("WEM is corrupted or does not contain vorbis data");
 #endif
 			return I_CORRUPT;

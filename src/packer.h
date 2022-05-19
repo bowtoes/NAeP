@@ -8,16 +8,12 @@
 #include <brrtools/brrapi.h>
 #include <brrtools/brrtypes.h>
 
-BRRCPPSTART
-
 #define packer_unpack oggpack_read
 #define packer_pack oggpack_write
 
-long BRRCALL packer_transfer(oggpack_buffer *const unpacker, int unpack_bits,
+long packer_transfer(oggpack_buffer *const unpacker, int unpack_bits,
     oggpack_buffer *const packer, int pack_bits);
-long BRRCALL packer_transfer_remaining(oggpack_buffer *const unpacker, oggpack_buffer *const packer);
-long BRRCALL packer_transfer_lots(oggpack_buffer *const unpacker, oggpack_buffer *const packer, long bits);
-
-BRRCPPEND
+long packer_transfer_remaining(oggpack_buffer *const unpacker, oggpack_buffer *const packer);
+long packer_transfer_lots(oggpack_buffer *const unpacker, oggpack_buffer *const packer, long bits);
 
 #endif /* PACKER_H */

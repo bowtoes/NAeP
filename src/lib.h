@@ -1,5 +1,5 @@
 /*
-Copyright 2021 BowToes (bow.toes@mailfence.com)
+Copyright 2021-2022 BowToes (bow.toes@mailfence.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,8 +23,6 @@ limitations under the License.
 #include <brrtools/brrtypes.h>
 
 #include "riff.h"
-
-BRRCPPSTART
 
 typedef union fourcc {
 	struct {
@@ -77,7 +75,5 @@ int lib_replace_ext(const char *const input, brrsz inlen,
 	const char *const replacement);
 int lib_cstr_compare(const char *const a, const char *const b,
     brrsz max_length, int case_sensitive);
-
-BRRCPPEND
 
 #endif /* LIB_H */

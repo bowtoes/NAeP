@@ -1,5 +1,5 @@
 /*
-Copyright 2021 BowToes (bow.toes@mailfence.com)
+Copyright 2021-2022 BowToes (bow.toes@mailfence.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,8 +24,6 @@ limitations under the License.
 
 #include "input.h"
 #include "riff.h"
-
-BRRCPPSTART
 
 typedef struct wwise_vorb {
 	brru4 sample_count;
@@ -95,20 +93,18 @@ typedef struct wwise_packet {
  *  0 : insufficient data/missing chunks
  *  1 : success
  * */
-int BRRCALL wwise_wem_init(wwise_wemT *const wem, const riffT *const rf);
-void BRRCALL wwise_wem_clear(wwise_wemT *const wem);
+int wwise_wem_init(wwise_wemT *const wem, const riffT *const rf);
+void wwise_wem_clear(wwise_wemT *const wem);
 
 /* -1 : error (input)
  *  0 : insufficient data
  *  1 : success
  * */
-int BRRCALL wwise_packet_init(wwise_packetT *const packet,
+int wwise_packet_init(wwise_packetT *const packet,
     const wwise_wemT *const wem, const unsigned char *const data, brrsz data_size);
-void BRRCALL wwise_packet_clear(wwise_packetT *const packet);
+void wwise_packet_clear(wwise_packetT *const packet);
 
 int wwise_convert_wwriff(riffT *const rf, ogg_stream_state *const streamer,
     const codebook_libraryT *const library, const neinputT *const input);
-
-BRRCPPEND
 
 #endif /* WWISE_H */

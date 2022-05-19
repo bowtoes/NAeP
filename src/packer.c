@@ -1,6 +1,6 @@
 #include "packer.h"
 
-long BRRCALL
+long
 packer_transfer(oggpack_buffer *const unpacker, int unpack_bits,
     oggpack_buffer *const packer, int pack_bits)
 {
@@ -10,7 +10,7 @@ packer_transfer(oggpack_buffer *const unpacker, int unpack_bits,
 	packer_pack(packer, val, pack_bits);
 	return val;
 }
-long BRRCALL
+long
 packer_transfer_remaining(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 {
 	long dwords = 0, left = 0, transferred = 0;
@@ -34,7 +34,7 @@ packer_transfer_remaining(oggpack_buffer *const unpacker, oggpack_buffer *const 
 	}
 	return transferred;
 }
-long BRRCALL
+long
 packer_transfer_lots(oggpack_buffer *const unpacker, oggpack_buffer *const packer, long bits)
 {
 	long dwords = 0;

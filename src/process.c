@@ -1,5 +1,5 @@
 /*
-Copyright 2021 BowToes (bow.toes@mailfence.com)
+Copyright 2021-2022 BowToes (bow.toes@mailfence.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ i_set_log_state(const nestateT *const state, const neinputT *const input)
 {
 	if (state->log_style_enabled)
 		gbrrlogctl.style_enabled = input->log_color_enabled;
-#if defined(NeDEBUG)
+#if defined(Ne_debug)
 	gbrrlogctl.debug_enabled = 1;
 	brrlog_setmaxpriority(brrlog_priority_debug);
 #else
@@ -43,8 +43,9 @@ i_set_log_state(const nestateT *const state, const neinputT *const input)
 static int
 i_check_input(const neinputT *const input)
 {
-	brrpath_stat_resultT stat;
-	if (brrpath_stat(&stat, input->path)) {
+	brrpath_stat_result_t stat;
+	brrstringr_t path_str = brrstringr_cast(input->path);
+	if (brrpath_stat(&stat, &path_str)) {
 		BRRLOG_ERR("Failed to stat input path '%s' : %s", input->path, strerror(errno));
 		return 1;
 	} else if (!stat.exists) {

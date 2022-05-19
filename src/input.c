@@ -1,5 +1,5 @@
 /*
-Copyright 2021 BowToes (bow.toes@mailfence.com)
+Copyright 2021-2022 BowToes (bow.toes@mailfence.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,7 +26,8 @@ limitations under the License.
 #endif
 
 #include <brrtools/brrlib.h>
-#include <brrtools/brrstg.h>
+#include <brrtools/brrnum.h>
+#include <brrtools/brrstringr.h>
 #include <brrtools/brrpath.h>
 
 #include "errors.h"
@@ -59,7 +60,7 @@ i_parse_argument(const char *const arg, nestateT *const state, neinputT *const c
 		       state->always_file) {
 		return 0;
 	}
-#define IF_CHECK_ARG(_cse_, ...) if (-1 != brrstg_cstr_compare(arg, _cse_, __VA_ARGS__, NULL))
+#define IF_CHECK_ARG(_cse_, ...) if (brrstringr_cstr_compare(arg, _cse_, __VA_ARGS__, NULL))
 #define CHECK_TOGGLE_ARG(_c_, _a_, ...) IF_CHECK_ARG((_c_), __VA_ARGS__) { (_a_) = !(_a_); return 1; }
 #define CHECK_SET_ARG(_c_, _a_, _v_, ...) IF_CHECK_ARG((_c_), __VA_ARGS__) { (_a_) = (_v_); return 1; }
 #define CHECK_RUN_ARG(_c_, _a_, ...) IF_CHECK_ARG((_c_), __VA_ARGS__) { _a_; }
@@ -282,7 +283,7 @@ neinput_take_inputs(nestateT *const state, neinput_libraryT **const libraries,
 				current = default_input;
 		}
 	}
-	state->n_input_digits = brrlib_ndigits(state->n_inputs, 0, 10);
+	state->n_input_digits = brrnum_ndigits(state->n_inputs, 0, 10);
 	return 0;
 }
 

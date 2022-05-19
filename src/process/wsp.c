@@ -19,7 +19,6 @@ limitations under the License.
 #include <stdlib.h>
 #include <string.h>
 
-#include <brrtools/brrlib.h>
 #include <brrtools/brrlog.h>
 #include <brrtools/brrpath.h>
 

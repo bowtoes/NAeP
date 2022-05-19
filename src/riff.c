@@ -1,5 +1,5 @@
 /*
-Copyright 2021 BowToes (bow.toes@mailfence.com)
+Copyright 2021-2022 BowToes (bow.toes@mailfence.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ limitations under the License.
 #include <string.h>
 
 #include <brrtools/brrlib.h>
-#include <brrtools/brrmem.h>
+#include <brrtools/brrdata.h>
 #include <brrtools/brrendian.h>
 
 #include "lib.h"
@@ -34,7 +34,7 @@ limitations under the License.
 #define _arrlen(_k_) (sizeof(_k_)/sizeof((_k_)[0]))
 #define _getter_boiler(_t_,_t2_) \
 	const brru4 riff_##_t_##_ccs[riff_##_t_##_count - 1] = { _riff_##_t_##s_gen(_array_processor) }; \
-    riff_##_t_##_t2_##T BRRCALL \
+    riff_##_t_##_t2_##T \
     riff_cc_##_t_##_t2_(brru4 cc) { \
     	riff_##_t_##_t2_##T t = 0; \
     	for (;t < _arrlen(riff_##_t_##_ccs); ++t) { \
@@ -47,7 +47,7 @@ _riff_boiler_gen(_getter_boiler)
 #undef _getter_boiler
 #undef _array_processor
 
-riff_byteorderT BRRCALL
+riff_byteorderT
 riff_cc_byteorder(brru4 cc)
 {
 	for (riff_byteorderT t = 0;t < 4; ++t) {
@@ -61,14 +61,14 @@ static void*
 cpy_rvs(void *restrict const dst, const void *restrict const src, size_t size)
 {
 	memcpy(dst, src, size);
-	_brrmem_reverse(dst, size);
+	brrdata_reverse_bytes(dst, size);
 	return dst;
 }
 static void*
 move_rvs(void *const dst, const void *const src, size_t size)
 {
 	memmove(dst, src, size);
-	_brrmem_reverse(dst, size);
+	brrdata_reverse_bytes(dst, size);
 	return dst;
 }
 
@@ -82,14 +82,14 @@ static void *(*const _riff_copy_table[8])(void *const, const void *const, size_t
 	memcpy, memcpy,  cpy_rvs, cpy_rvs,
 	memcpy, cpy_rvs, memcpy,  cpy_rvs,
 };
-riff_copierT BRRCALL
+riff_copierT
 riff_copier_cc(riff_byteorderT byteorder)
 {
 	if (!byteorder)
 		return _riff_copy_table[0];
 	return _riff_copy_table[0 + _riff_copier_idx(byteorder)];
 }
-riff_copierT BRRCALL
+riff_copierT
 riff_copier_data(riff_byteorderT byteorder)
 {
 	if (!byteorder)
@@ -97,7 +97,7 @@ riff_copier_data(riff_byteorderT byteorder)
 	return _riff_copy_table[4 + _riff_copier_idx(byteorder)];
 }
 
-void BRRCALL
+void
 riff_chunk_info_clear(riff_chunk_infoT *const sc)
 {
 	if (sc) {
@@ -105,7 +105,7 @@ riff_chunk_info_clear(riff_chunk_infoT *const sc)
 	}
 }
 
-void BRRCALL
+void
 riff_data_sync_clear(riff_data_syncT *const ds)
 {
 	if (ds) {
@@ -114,14 +114,14 @@ riff_data_sync_clear(riff_data_syncT *const ds)
 		memset(ds, 0, sizeof(*ds));
 	}
 }
-int BRRCALL
+int
 riff_data_sync_check(const riff_data_syncT *const ds)
 {
 	if (!ds || ds->consumed > ds->stored || ds->stored > ds->storage)
 		return -1;
 	return 0;
 }
-int BRRCALL
+int
 riff_data_sync_from_buffer(riff_data_syncT *const ds,
     unsigned char *const buffer, brrsz buffer_size)
 {
@@ -133,7 +133,7 @@ riff_data_sync_from_buffer(riff_data_syncT *const ds,
 	ds->stored = ds->storage = buffer_size;
 	return 0;
 }
-int BRRCALL
+int
 riff_data_sync_seek(riff_data_syncT *const ds, brrof offset)
 {
 	if (riff_data_sync_check(ds))
@@ -145,7 +145,7 @@ riff_data_sync_seek(riff_data_syncT *const ds, brrof offset)
 	ds->consumed += offset;
 	return 0;
 }
-char *BRRCALL
+char *
 riff_data_sync_buffer(riff_data_syncT *const ds, brrsz size)
 {
 	if (riff_data_sync_check(ds))
@@ -168,7 +168,7 @@ riff_data_sync_buffer(riff_data_syncT *const ds, brrsz size)
 	}
 	return (char *)ds->data + ds->stored;
 }
-int BRRCALL
+int
 riff_data_sync_apply(riff_data_syncT *const ds, brrsz size)
 {
 	if (riff_data_sync_check(ds))
@@ -179,7 +179,7 @@ riff_data_sync_apply(riff_data_syncT *const ds, brrsz size)
 	return 0;
 }
 
-void BRRCALL
+void
 riff_clear(riffT *const rf)
 {
 	if (rf) {
@@ -193,14 +193,14 @@ riff_clear(riffT *const rf)
 		memset(rf, 0, sizeof(*rf));
 	}
 }
-int BRRCALL
+int
 riff_init(riffT *const rf)
 {
 	if (rf)
 		memset(rf, 0, sizeof(*rf));
 	return 0;
 }
-int BRRCALL
+int
 riff_check(const riffT *const rf)
 {
 	if (!rf)
@@ -208,7 +208,7 @@ riff_check(const riffT *const rf)
 	return 0;
 }
 
-static int BRRCALL
+static int
 i_setup_riff(riffT *const rf, riff_data_syncT *const ds)
 {
 	unsigned char *ckdata = ds->data + ds->consumed;
@@ -233,7 +233,7 @@ i_setup_riff(riffT *const rf, riff_data_syncT *const ds)
 	rf->format = riff_cc_format(formatcc);
 	return RIFF_CONSUME_MORE;
 }
-static int BRRCALL
+static int
 i_add_basic_type(riffT *const rf, riff_data_syncT *const ds, riff_basic_typeT cktype, brru4 cksize)
 {
 	unsigned char *ckdata = ds->data + ds->consumed;
@@ -261,7 +261,7 @@ i_add_basic_type(riffT *const rf, riff_data_syncT *const ds, riff_basic_typeT ck
 	}
 	return RIFF_CHUNK_CONSUMED;
 }
-static int BRRCALL
+static int
 i_add_list_type(riffT *const rf, riff_data_syncT *const ds, brru4 cksize)
 {
 	unsigned char *ckdata = ds->data + ds->consumed;
@@ -280,7 +280,7 @@ i_add_list_type(riffT *const rf, riff_data_syncT *const ds, brru4 cksize)
 	rf->lists[rf->n_lists++] = list;
 	return RIFF_CHUNK_CONSUMED;
 }
-int BRRCALL
+int
 riff_consume_chunk(riffT *const rf, riff_chunk_infoT *const sc, riff_data_syncT *const ds)
 {
 	unsigned char *ckdata = ds->data + ds->consumed;

@@ -1,5 +1,5 @@
 /*
-Copyright 2021 BowToes (bow.toes@mailfence.com)
+Copyright 2021-2022 BowToes (bow.toes@mailfence.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -51,6 +51,7 @@ typedef struct nestate {
 	brru1 full_report:1;
 	/* < Byte boundary > */
 } nestateT;
+
 typedef struct neinput_library {
 	const char *path;
 	int path_length;
@@ -68,11 +69,13 @@ typedef enum neinput_type {
 	neinput_type_wsp,
 	neinput_type_bnk,
 } neinput_typeT;
+
 typedef struct neinput_list {
 	brru4 *list;
 	brru4 count;
 	int type; /* 0=whitelist, 1=blacklist */
 } neinput_listT;
+
 typedef struct neinput {
 	const char *path;
 	int path_length;

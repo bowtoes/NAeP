@@ -1,5 +1,5 @@
 /*
-Copyright 2021 BowToes (bow.toes@mailfence.com)
+Copyright 2021-2022 BowToes (bow.toes@mailfence.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ limitations under the License.
 #include <string.h>
 
 #include <brrtools/brrlib.h>
+#include <brrtools/brrnum.h>
 #include <brrtools/brrlog.h>
 #include <brrtools/brrpath.h>
 
@@ -90,7 +91,7 @@ wsp_meta_convert_wems(const wsp_metaT *const wsp, const char *const buffer,
 		return I_INSUFFICIENT_DATA;
 	if (!wsp || !state || !input || !output_root)
 		return I_GENERIC_ERROR;
-	digits = brrlib_ndigits(wsp->wem_count, 0, 10);
+	digits = brrnum_ndigits(wsp->wem_count, 0, 10);
 	for (brrsz i = 0; i < wsp->wem_count; ++i) {
 		const wem_geometryT *const wem = &wsp->wems[i];
 		ogg_stream_state streamer;
@@ -139,7 +140,7 @@ wsp_meta_extract_wems(const wsp_metaT *const wsp, const char *const buffer,
 		return I_INSUFFICIENT_DATA;
 	if (!wsp || !state || !input || !output_root)
 		return I_GENERIC_ERROR;
-	digits = brrlib_ndigits(wsp->wem_count, 0, 10);
+	digits = brrnum_ndigits(wsp->wem_count, 0, 10);
 	for (brrsz i = 0; i < wsp->wem_count; ++i) {
 		const wem_geometryT *const wem = &wsp->wems[i];
 		brrsz wrote = 0;

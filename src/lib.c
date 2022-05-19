@@ -1,5 +1,5 @@
 /*
-Copyright 2021 BowToes (bow.toes@mailfence.com)
+Copyright 2021-2022 BowToes (bow.toes@mailfence.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,14 +26,13 @@ limitations under the License.
 
 #include <brrtools/brrlib.h>
 #include <brrtools/brrlog.h>
-#include <brrtools/brrmem.h>
 #include <brrtools/brrpath.h>
 
 #include "errors.h"
 
 static char i_strerr_str[256] = "";
 #define i_strerr_max sizeof(i_strerr_str)
-const char *BRRCALL
+const char *
 lib_strerr(int err)
 {
 	switch (err) {
@@ -109,10 +108,12 @@ lib_read_entire_file(const char *const path, void **const buffer, brrsz *const b
 {
 	int err = 0;
 	FILE *file;
-	brrpath_stat_resultT st;
+	brrpath_stat_result_t st;
 	if (!path || !buffer || !buffer_size)
 		return I_GENERIC_ERROR;
-	if ((err = brrpath_stat(&st, path))) {
+
+	brrstringr_t path_str = brrstringr_cast(path);
+	if ((err = brrpath_stat(&st, &path_str))) {
 		return I_IO_ERROR;
 	} else if (!st.exists || st.type != brrpath_type_file) {
 		return I_IO_ERROR;

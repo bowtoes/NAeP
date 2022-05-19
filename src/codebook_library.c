@@ -1,5 +1,5 @@
 /*
-Copyright 2021 BowToes (bow.toes@mailfence.com)
+Copyright 2021-2022 BowToes (bow.toes@mailfence.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ limitations under the License.
 /* TODO Same issue as elsewhere, I can't verify how big-endian systems will
  * work with this, or if any modification is necessary */
 
-void BRRCALL
+void
 packed_codebook_clear(packed_codebookT *const pc)
 {
 	if (pc) {
@@ -39,7 +39,7 @@ packed_codebook_clear(packed_codebookT *const pc)
 		memset(pc, 0, sizeof(*pc));
 	}
 }
-void BRRCALL
+void
 packed_codebook_clear_unpacked(packed_codebookT *const pc)
 {
 	if (pc) {
@@ -50,7 +50,7 @@ packed_codebook_clear_unpacked(packed_codebookT *const pc)
 		pc->did_unpack = 0;
 	}
 }
-int BRRCALL
+int
 packed_codebook_unpack_raw(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 {
 	int dimensions, entries, ordered, lookup;
@@ -115,7 +115,7 @@ packed_codebook_unpack_raw(oggpack_buffer *const unpacker, oggpack_buffer *const
 
 	return CODEBOOK_SUCCESS;
 }
-int BRRCALL
+int
 packed_codebook_unpack(packed_codebookT *const pc)
 {
 	int err = CODEBOOK_SUCCESS;
@@ -145,7 +145,7 @@ packed_codebook_unpack(packed_codebookT *const pc)
 	return err;
 }
 
-int BRRCALL
+int
 codebook_library_deserialize_old(codebook_libraryT *const cb,
     const void *const data, brru8 data_size)
 {
@@ -180,7 +180,7 @@ codebook_library_deserialize_old(codebook_libraryT *const cb,
 	}
 	return CODEBOOK_SUCCESS;
 }
-int BRRCALL
+int
 codebook_library_deserialize(codebook_libraryT *const cb,
     const void *const data, brru8 data_size)
 {
@@ -212,7 +212,7 @@ codebook_library_deserialize(codebook_libraryT *const cb,
 	}
 	return CODEBOOK_SUCCESS;
 }
-int BRRCALL
+int
 codebook_library_serialize_old(const codebook_libraryT *const cb,
     void **const data, brru8 *const data_size)
 {
@@ -237,7 +237,7 @@ codebook_library_serialize_old(const codebook_libraryT *const cb,
 		*data_size = ds;
 	return CODEBOOK_SUCCESS;
 }
-int BRRCALL
+int
 codebook_library_serialize(const codebook_libraryT *const cb,
     void **const data, brru8 *const data_size)
 {
@@ -262,7 +262,7 @@ codebook_library_serialize(const codebook_libraryT *const cb,
 		*data_size = ds;
 	return CODEBOOK_SUCCESS;
 }
-void BRRCALL
+void
 codebook_library_clear(codebook_libraryT *const cb)
 {
 	if (cb) {

@@ -3,10 +3,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <brrtools/brrlib.h>
+#include <brrtools/brrnum.h>
 
 #define USAGE "Usage: NAeP [[OPTION ...] FILE ...] ..." \
-"\nNAeP - NieR:Automated extraction Precept_v"NeVERSION"" \
+"\nNAeP - NieR:Automated extraction Precept_v"Ne_version"" \
 "\nCompiled on "__DATE__", " __TIME__"\n"
 #define HELP \
 "Most options take affect on all files following and can be toggled." \
@@ -56,7 +56,7 @@
 int /* Returns non-void so that 'return print_usage()' is valid */
 print_usage(void)
 {
-	fprintf(stdout, USAGE"\n""    -h, -help, -v . . . . . . . . . . . .Print help.""\n");
+	fprintf(stdout, USAGE"\n""    -h, -help, -v . . . . . . . . . . .  Print help.""\n");
 	exit(0);
 	return 0;
 }
@@ -70,7 +70,7 @@ print_help(void)
 int
 print_report(const nestateT *const state)
 {
-	brrsz input_count_digits = 1 + brrlib_ndigits(state->n_inputs, 0, 10);
+	brrsz input_count_digits = 1 + brrnum_ndigits(state->n_inputs, 0, 10);
 	brrsz total_success =
 	      state->oggs_regrained
 	    + state->wems_converted
