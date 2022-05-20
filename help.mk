@@ -110,3 +110,65 @@ help:
 	#   Compiling on 64-bit Windows for 32-bit Windows, after already compiling for
 	#   64-bit Windows, or any Linux:
 	#     make host=windows target=windows target_bit=32 LIBRECONFIG=1
+
+_delim_1:
+	@$(echo) '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
+	@$(echo) ''
+_delim_2:
+	@$(echo) ''
+	@$(echo) '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
+_info:
+	@$(echo) '$(project) v$(project_version)$(if $(project_date), - last commit $(project_date))'
+	@$(echo) 'Build Name  . . . . . . .  $(build_name)'
+	@$(echo) 'Final Destination . . . .  $(output_file)'
+	@$(echo) ''
+	@$(echo) 'Build Host  . . . . . . .  $(host_bit)-bit $(host)$(if $(cross_compilation),; $(host_string))'
+	@$(echo) 'Build Target  . . . . . .  $(target_bit)-bit $(target)$(if $(cross_compilation),; $(target_string))'
+#@$(echo) 'Build Mode         :$(target_mode)'
+	@$(echo) 'Build Tree. . . . . . . .  $(build_tree)'
+	@$(echo) 'Debug Build . . . . . . .  $(if $(debug:0=),On,Off)'
+	@$(echo) 'Memcheck Flags  . . . . .  $(if $(debug:0=),$(if $(memcheck:0=),On,Off),Off)'
+_build_info:
+	@$(echo) 'C Compiler (CC) . . . . .  $(cc_custom)'
+	@$(echo) 'Archiver (AR) . . . . . .  $(ar_custom)'
+	@$(echo) $(if $(target:unix=),\
+	         'DllTool . . . . . . . . .  $(dlltool_custom)','')
+	@$(echo) 'Includes  . . . . . . . .  $(c_includes) $(vnd_includes)'
+	@$(echo) 'Warnings  . . . . . . . .  $(c_warnings) $(vnd_warnings)'
+	@$(echo) 'Defines . . . . . . . . .  $(c_defines) $(vnd_defines)'
+	@$(echo) 'Links . . . . . . . . . .  $(c_links) $(vnd_links)'
+	@$(echo) ''
+	@$(echo) 'Optimization Flags  . . .  $(c_optimization)'
+	@$(echo) 'Performance Flags . . . .  $(c_performance)'
+	@$(echo) ''
+	@$(echo) 'C Flags   . . . . . . . .  $(project_cflags)'
+	@$(echo) 'CPP Flags . . . . . . . .  $(project_cppflags)'
+	@$(echo) 'LD Flags  . . . . . . . .  $(project_ldflags)'
+	@$(echo) ''
+	@$(echo) 'Vendor Binaries . . . . .  $(vnd_bins)'
+	@$(echo) 'libbrrtools . . . . . . .  $(brrtools_flags)'
+	@$(echo) 'libogg Configure  . . . .  $(ogg_configure_flags)'
+	@$(echo) 'libvorbis Configure . . .  $(vorbis_configure_flags)'
+_output_info:
+	@$(echo) 'Output Base Name  . . . . $(output_base_name)'
+	@$(echo) 'Output Extension  . . . . $(output_ext)'
+	@$(echo) ''
+	@$(echo) 'Build Root  . . . . . . . $(build_root)'
+	@$(echo) 'Build Tree  . . . . . . . $(build_tree)'
+	@$(echo) 'Output Directory  . . . . $(output_directory)'
+	@$(echo) 'Output File . . . . . . . $(output_file)'
+	@$(echo) ''
+	@$(echo) 'Build Directories . . . . $(build_directories)'
+	@$(echo) ''
+	@$(echo) 'Sources:'
+	@$(echo) '    $(srcs)'
+	@$(echo) 'Headers:'
+	@$(echo) '    $(hdrs)'
+	@$(echo) ''
+	@$(echo) 'Assemblies:'
+	@$(echo) '    $(ass_out)'
+	@$(echo) 'Intermediates:'
+	@$(echo) '    $(int_out)'
+	@$(echo) 'Objects:'
+	@$(echo) '    $(obj_out)'
+.PHONY: help _delim_1 _delim_2 _info _build_info _output_info

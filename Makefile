@@ -20,72 +20,12 @@ obj_out := $(addprefix $(obj_out_dir)/,$(srcs:.c=.o))
 build_directories := $(sort $(dir $(output_file) $(ass_out) $(int_out) $(obj_out)))
 
 all: info setup $(project)
-info:
-	@$(echo) '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
-	@$(echo) ''
-	@$(echo) '$(project) v$(project_version)$(if $(project_date), - last commit $(project_date))'
-	@$(echo) 'Build Name  . . . . .  $(build_name)'
-	@$(echo) 'Final Destination . .  $(output_file)'
-	@$(echo) ''
-	@$(echo) 'Build Host  . . . . .  $(host_bit)-bit $(host)$(if $(cross_compilation),; $(host_string))'
-	@$(echo) 'Build Target  . . . .  $(target_bit)-bit $(target)$(if $(cross_compilation),; $(target_string))'
-#@$(echo) 'Build Mode         :$(target_mode)'
-	@$(echo) 'Build Tree. . . . . .  $(build_tree)'
-	@$(echo) 'Debug Build . . . . .  $(if $(debug:0=),On,Off)'
-	@$(echo) 'Memcheck Flags  . . .  $(if $(debug:0=),$(if $(memcheck:0=),On,Off),Off)'
-	@$(echo) ''
-	@$(echo) '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
-build_info:
-	@$(echo) '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
-	@$(echo) ''
-	@$(echo) 'C Compiler (CC) . . . . .  $(cc_custom)'
-	@$(echo) 'Archiver (AR) . . . . . .  $(ar_custom)'
-	@$(echo) $(if $(target:unix=),\
-	         'DllTool . . . . . . . . .  $(dlltool_custom)','')
-	@$(echo) 'Includes  . . . . . . . .  $(c_includes) $(vnd_includes)'
-	@$(echo) 'Warnings  . . . . . . . .  $(c_warnings) $(vnd_warnings)'
-	@$(echo) 'Defines . . . . . . . . .  $(c_defines) $(vnd_defines)'
-	@$(echo) 'Links . . . . . . . . . .  $(c_links) $(vnd_links)'
-	@$(echo) ''
-	@$(echo) 'Optimization Flags  . . .  $(c_optimization)'
-	@$(echo) 'Performance Flags . . . .  $(c_performance)'
-	@$(echo) ''
-	@$(echo) 'C Flags   . . . . . . . .  $(project_cflags)'
-	@$(echo) 'CPP Flags . . . . . . . .  $(project_cppflags)'
-	@$(echo) 'LD Flags  . . . . . . . .  $(project_ldflags)'
-	@$(echo) ''
-	@$(echo) 'Vendor Binaries . . . . .  $(vnd_bins)'
-	@$(echo) 'libbrrtools . . . . . . .  $(brrtools_flags)'
-	@$(echo) 'libogg Configure  . . . .  $(ogg_configure_flags)'
-	@$(echo) 'libvorbis Configure . . .  $(vorbis_configure_flags)'
-	@$(echo) ''
-	@$(echo) '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
-output_info:
-	@$(echo) '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
-	@$(echo) ''
-	@$(echo) 'Output Base Name  . . . . $(output_base_name)'
-	@$(echo) 'Output Extension  . . . . $(output_ext)'
-	@$(echo) ''
-	@$(echo) 'Build Root  . . . . . . . $(build_root)'
-	@$(echo) 'Build Tree  . . . . . . . $(build_tree)'
-	@$(echo) 'Output Directory  . . . . $(output_directory)'
-	@$(echo) 'Output File . . . . . . . $(output_file)'
-	@$(echo) ''
-	@$(echo) 'Build Directories . . . . $(build_directories)'
-	@$(echo) ''
-	@$(echo) 'Sources:'
-	@$(echo) '    $(srcs)'
-	@$(echo) 'Headers:'
-	@$(echo) '    $(hdrs)'
-	@$(echo) ''
-	@$(echo) 'Assemblies:'
-	@$(echo) '    $(ass_out)'
-	@$(echo) 'Intermediates:'
-	@$(echo) '    $(int_out)'
-	@$(echo) 'Objects:'
-	@$(echo) '    $(obj_out)'
-	@$(echo) ''
-	@$(echo) '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
+
+info: _delim_1 _info _delim_2
+build_info: _delim_1 _build_info _delim_2
+output_info: _delim_1 _output_info _delim_2
+all_info: _delim_1 _info _build_info _output_info _delim_2
+
 setup:
 	@$(mk_dir_tree) $(build_directories) 2>$(null) ||:
 .PHONY: all info setup
@@ -139,9 +79,9 @@ brrtools_flags :=\
 	DO_STRIP=1\
 	DO_LDCONFIG=0\
 	PIC=$(PIC)\
-	HOST=$(if $($(host):unix=),WINDOWS,UNIX)\
+	HOST=$(if $(host:unix=),WINDOWS,UNIX)\
 	HOST_BIT=$(host_bit)\
-	TARGET=$(if $($(target):unix=),WINDOWS,UNIX)\
+	TARGET=$(if $(target:unix=),WINDOWS,UNIX)\
 	TARGET_BIT=$(target_bit)\
 	TARGET_MODE=STATIC\
 	TARGET_PART_WINDOWS_STATIC='.a'
@@ -203,6 +143,9 @@ $(ogg_bin): $(ogg_reconfig_target)
 ogg: $(ogg_bin)
 ogg-clean:
 	cd '$(ogg_dir)' && $(MAKE) uninstall clean 2>$(null)||:
+ifdef LIBRECONFIG
+	cd '$(ogg_dir)' && $(MAKE) maintainer-clean 2>$(null)||:
+endif
 	$(rm_recurse) '$(ogg_out_dir)' 2>$(null)||:
 ogg-again: ogg-clean ogg
 
@@ -221,7 +164,7 @@ vorbis_out_dir := $(output_directory)/$(vorbis_dir)
 vorbis_bin := $(vorbis_out_dir)/lib/libvorbis.a
 vorbis_makefile := $(vorbis_dir)/Makefile
 
-vnd_include += '$(vorbis_out_dir)/include'
+vnd_includes += '$(vorbis_out_dir)/include'
 vnd_bins += '$(vorbis_bin)'
 
 ifeq ($(target),windows)
@@ -255,6 +198,9 @@ $(vorbis_bin): $(ogg_bin) $(vorbis_reconfig_target)
 vorbis: $(vorbis_bin)
 vorbis-clean:
 	cd '$(vorbis_dir)' && $(MAKE) uninstall clean 2>$(null)||:
+ifdef LIBRECONFIG
+	cd '$(vorbis_dir)' && $(MAKE) maintainer-clean 2>$(null)||:
+endif
 	$(rm_recurse) '$(vorbis_out_dir)' 2>$(null)||:
 vorbis-again: vorbis-clean vorbis
 
