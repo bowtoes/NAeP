@@ -14,7 +14,7 @@ override makefiles := platform.mk config.mk Makefile
 override project_major := 0
 override project_minor := 0
 override project_revis := 2
-override project_letter := a
+override project_letter := b
 override project_version := $(project_major).$(project_minor).$(project_revis)$(project_letter)
 override project_date := $(shell git show -s --date=format:'%Y/%m/%d %l:%M%p' --format=%ad)
 

@@ -68,7 +68,7 @@ print_help(void)
 	return 0;
 }
 int
-print_report(const nestateT *const state)
+print_report(const nestate_t *const state)
 {
 	brrsz input_count_digits = 1 + brrnum_ndigits(state->n_inputs, 0, 10);
 	brrsz total_success =

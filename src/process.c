@@ -28,20 +28,20 @@ limitations under the License.
 #include "print.h"
 
 static void
-i_set_log_state(const nestateT *const state, const neinputT *const input)
+i_set_log_state(const nestate_t *const state, const neinput_t *const input)
 {
 	if (state->settings.log_style_enabled)
 		gbrrlogctl.style_disabled = !input->flag.log_color_enabled;
 #if defined(Ne_debug)
 	gbrrlogctl.debug_enabled = 1;
-	brrlog_setmaxpriority(brrlog_priority_debug);
+	brrlog_set_max_priority(brrlog_priority_debug);
 #else
 	gbrrlogctl.debug_enabled = input->flag.log_debug;
 	brrlog_set_max_priority(input->log_priority);
 #endif
 }
 static int
-i_check_input(const neinputT *const input)
+i_check_input(const neinput_t *const input)
 {
 	brrpath_stat_result_t stat;
 	brrstringr_t path_str = brrstringr_cast(input->path);
@@ -62,7 +62,7 @@ i_check_input(const neinputT *const input)
 	return 0;
 }
 static int
-i_determine_input_type(neinputT *const input)
+i_determine_input_type(neinput_t *const input)
 {
 	FILE *fp = NULL;
 	long ext = 0;
@@ -98,7 +98,7 @@ i_determine_input_type(neinputT *const input)
 }
 
 static int
-i_process_input(nestateT *const state, neinput_libraryT *const libraries, neinputT *const input, brrsz idx)
+i_process_input(nestate_t *const state, neinput_library_t *const libraries, neinput_t *const input, brrsz idx)
 {
 	int err = 0;
 	BRRLOG_NORN("Processing input ");
@@ -127,10 +127,10 @@ i_process_input(nestateT *const state, neinput_libraryT *const libraries, neinpu
 }
 
 int
-neprocess_inputs(nestateT *const state, neinput_libraryT *const libraries, neinputT *const inputs)
+neprocess_inputs(nestate_t *const state, neinput_library_t *const libraries, neinput_t *const inputs)
 {
 	for (brrsz i = 0; i < state->n_inputs; ++i) {
-		neinputT *const input = &inputs[i];
+		neinput_t *const input = &inputs[i];
 		i_set_log_state(state, input);
 		if (i_check_input(input))
 			continue;

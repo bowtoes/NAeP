@@ -29,7 +29,7 @@ limitations under the License.
  * work with this, or if any modification is necessary */
 
 void
-packed_codebook_clear(packed_codebookT *const pc)
+packed_codebook_clear(packed_codebook_t *const pc)
 {
 	if (pc) {
 		if (pc->data)
@@ -40,7 +40,7 @@ packed_codebook_clear(packed_codebookT *const pc)
 	}
 }
 void
-packed_codebook_clear_unpacked(packed_codebookT *const pc)
+packed_codebook_clear_unpacked(packed_codebook_t *const pc)
 {
 	if (pc) {
 		if (pc->unpacked_data)
@@ -116,7 +116,7 @@ packed_codebook_unpack_raw(oggpack_buffer *const unpacker, oggpack_buffer *const
 	return CODEBOOK_SUCCESS;
 }
 int
-packed_codebook_unpack(packed_codebookT *const pc)
+packed_codebook_unpack(packed_codebook_t *const pc)
 {
 	int err = CODEBOOK_SUCCESS;
 	oggpack_buffer unpacker, packer;
@@ -146,7 +146,7 @@ packed_codebook_unpack(packed_codebookT *const pc)
 }
 
 int
-codebook_library_deserialize_old(codebook_libraryT *const cb,
+codebook_library_deserialize_old(codebook_library_t *const cb,
     const void *const data, brru8 data_size)
 {
 	const unsigned char *dt = data;
@@ -165,7 +165,7 @@ codebook_library_deserialize_old(codebook_libraryT *const cb,
 	}
 	for (brru4 i = 0, start = 0; i < count; ++i, ++cb->codebook_count) {
 		brru4 end = offset_table[i];
-		packed_codebookT *pc = &cb->codebooks[i];
+		packed_codebook_t *pc = &cb->codebooks[i];
 
 		if (end < start || end > data_size)
 			return CODEBOOK_CORRUPT;
@@ -181,7 +181,7 @@ codebook_library_deserialize_old(codebook_libraryT *const cb,
 	return CODEBOOK_SUCCESS;
 }
 int
-codebook_library_deserialize(codebook_libraryT *const cb,
+codebook_library_deserialize(codebook_library_t *const cb,
     const void *const data, brru8 data_size)
 {
 	const unsigned char *dt = data;
@@ -199,7 +199,7 @@ codebook_library_deserialize(codebook_libraryT *const cb,
 	cb->codebook_count = count;
 	for (brru4 i = count, end = data_size; i > 0; --i) {
 		brru4 start = offset_table[i - 1];
-		packed_codebookT *pc = &cb->codebooks[i - 1];
+		packed_codebook_t *pc = &cb->codebooks[i - 1];
 		if (end < start || start > data_size)
 			return CODEBOOK_CORRUPT;
 		pc->size = end - start;
@@ -213,7 +213,7 @@ codebook_library_deserialize(codebook_libraryT *const cb,
 	return CODEBOOK_SUCCESS;
 }
 int
-codebook_library_serialize_old(const codebook_libraryT *const cb,
+codebook_library_serialize_old(const codebook_library_t *const cb,
     void **const data, brru8 *const data_size)
 {
 	brru4 *offset_table = NULL;
@@ -228,7 +228,7 @@ codebook_library_serialize_old(const codebook_libraryT *const cb,
 		return CODEBOOK_ERROR;
 	offset_table = (brru4 *)((unsigned char *)(*data) + ds - 4 * cb->codebook_count);
 	for (brru4 i = 0; i < cb->codebook_count; ++i) {
-		packed_codebookT *pc = &cb->codebooks[i];
+		packed_codebook_t *pc = &cb->codebooks[i];
 		memcpy((unsigned char *)*data + ofs, pc->data, pc->size);
 		ofs += pc->size;
 		offset_table[i] = ofs;
@@ -238,7 +238,7 @@ codebook_library_serialize_old(const codebook_libraryT *const cb,
 	return CODEBOOK_SUCCESS;
 }
 int
-codebook_library_serialize(const codebook_libraryT *const cb,
+codebook_library_serialize(const codebook_library_t *const cb,
     void **const data, brru8 *const data_size)
 {
 	brru4 *offset_table = NULL;
@@ -253,7 +253,7 @@ codebook_library_serialize(const codebook_libraryT *const cb,
 		return CODEBOOK_ERROR;
 	offset_table = (brru4 *)*data;
 	for (brru4 i = 0; i < cb->codebook_count; ++i) {
-		packed_codebookT *pc = &cb->codebooks[i];
+		packed_codebook_t *pc = &cb->codebooks[i];
 		offset_table[i] = ofs;
 		memcpy((unsigned char *)*data + ofs, pc->data, pc->size);
 		ofs += pc->size;
@@ -263,12 +263,12 @@ codebook_library_serialize(const codebook_libraryT *const cb,
 	return CODEBOOK_SUCCESS;
 }
 void
-codebook_library_clear(codebook_libraryT *const cb)
+codebook_library_clear(codebook_library_t *const cb)
 {
 	if (cb) {
 		if (cb->codebooks) {
 			for (brru4 i = 0; i < cb->codebook_count; ++i) {
-				packed_codebookT *pc = &cb->codebooks[i];
+				packed_codebook_t *pc = &cb->codebooks[i];
 				packed_codebook_clear(pc);
 			}
 			free(cb->codebooks);

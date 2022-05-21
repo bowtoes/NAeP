@@ -32,7 +32,7 @@ typedef union fourcc {
 		brru1 _3;
 	} bytes;
 	brru4 integer;
-} fourccT;
+} fourcc_t;
 
 #define _fcc_full(_a_, _b_, _c_, _d_) {.bytes={(_a_), (_b_), (_c_), (_d_)}}
 #define _fcc_lit(_l_) _fcc_full((_l_)[0], (_l_)[1], (_l_)[2], (_l_)[3])
@@ -63,7 +63,7 @@ int lib_count_bits(long number);
 long lib_lookup1_values(long entries, long dimensions);
 
 int lib_read_entire_file(const char *const path, void **const buffer, brrsz *const buffer_size);
-int lib_parse_buffer_as_riff(riffT *const rf, const void *const buffer, brrsz buffer_size);
+int lib_parse_buffer_as_riff(riff_t *const rf, const void *const buffer, brrsz buffer_size);
 int lib_write_ogg_out(ogg_stream_state *const streamer,
     const char *const destination);
 

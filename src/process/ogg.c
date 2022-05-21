@@ -253,7 +253,7 @@ i_regrain(void)
 }
 
 int
-neregrain_ogg(nestateT *const state, const neinputT *const input)
+neregrain_ogg(nestate_t *const state, const neinput_t *const input)
 {
 	int err = 0;
 	state->stats.oggs.assigned++;

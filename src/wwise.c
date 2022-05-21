@@ -57,7 +57,7 @@ typedef struct wwise_vorb_extra {
 } wwise_vorb_extraT;
 
 static void
-i_init_vorb(wwise_wemT *const wem, const unsigned char *const data, brru4 data_size)
+i_init_vorb(wwise_wem_t *const wem, const unsigned char *const data, brru4 data_size)
 {
 	if (data_size == 42) { /* Implicit type */
 		wwise_vorb_implicitT i = {0};
@@ -94,18 +94,18 @@ i_init_vorb(wwise_wemT *const wem, const unsigned char *const data, brru4 data_s
 	}
 }
 static void
-i_init_fmt(wwise_fmtT *const fmt, const unsigned char *const data, brru4 data_size)
+i_init_fmt(wwise_fmt_t *const fmt, const unsigned char *const data, brru4 data_size)
 {
 	memcpy(fmt, data, brrnum_umin(data_size, sizeof(*fmt)));
 }
 int
-wwise_wem_init(wwise_wemT *const wem, const riffT *const rf)
+wwise_wem_init(wwise_wem_t *const wem, const riff_t *const rf)
 {
 	if (!wem || !rf)
 		return WWISE_ERROR;
 	memset(wem, 0, sizeof(*wem));
 	for (brru8 i = 0; i < rf->n_basics; ++i) {
-		riff_basic_chunkT *basic = &rf->basics[i];
+		riff_basic_chunk_t *basic = &rf->basics[i];
 		if (basic->type == riff_basic_fmt) {
 			if (wem->fmt_initialized)
 				return WWISE_DUPLICATE;
@@ -138,7 +138,7 @@ wwise_wem_init(wwise_wemT *const wem, const riffT *const rf)
 	return WWISE_SUCCESS;
 }
 void
-wwise_wem_clear(wwise_wemT *const wem)
+wwise_wem_clear(wwise_wem_t *const wem)
 {
 	if (wem) {
 		memset(wem, 0, sizeof(*wem));
@@ -146,8 +146,8 @@ wwise_wem_clear(wwise_wemT *const wem)
 }
 
 int
-wwise_packet_init(wwise_packetT *const packet,
-    const wwise_wemT *const wem, const unsigned char *const data, brrsz data_size)
+wwise_packet_init(wwise_packet_t *const packet,
+    const wwise_wem_t *const wem, const unsigned char *const data, brrsz data_size)
 {
 	brru1 ofs = 2;
 	if (!packet || !wem || !data)
@@ -179,19 +179,19 @@ wwise_packet_init(wwise_packetT *const packet,
 	return WWISE_SUCCESS;
 }
 void
-wwise_packet_clear(wwise_packetT *const packet)
+wwise_packet_clear(wwise_packet_t *const packet)
 {
 	if (packet) {
 		memset(packet, 0, sizeof(*packet));
 	}
 }
 
-static const codebook_libraryT *glibrary = NULL;
-static const neinputT *ginput = NULL;
+static const codebook_library_t *glibrary = NULL;
+static const neinput_t *ginput = NULL;
 
 /* State init/input reading */
 static int
-i_init_state(ogg_stream_state *const streamer, const wwise_wemT *const wem,
+i_init_state(ogg_stream_state *const streamer, const wwise_wem_t *const wem,
     vorbis_info *const vi, vorbis_comment *const vc)
 {
 	int serialno = 0;
@@ -389,13 +389,13 @@ i_copy_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packer
 	return I_SUCCESS;
 }
 static int
-i_copy_headers(ogg_stream_state *const streamer, wwise_wemT *const wem,
+i_copy_headers(ogg_stream_state *const streamer, wwise_wem_t *const wem,
     vorbis_info *const vi, vorbis_comment *const vc)
 {
 	int err = 0;
 	unsigned char *packets_start = wem->data + wem->vorb.header_packets_offset;
 	brru4 packets_size = wem->vorb.audio_start_offset - wem->vorb.header_packets_offset;
-	wwise_packetT packeteer = {0};
+	wwise_packet_t packeteer = {0};
 
 	/* Should check for WWISE_INCOMPLETE? */
 	for (int current_header = 0; current_header < 3; ++current_header) {
@@ -428,7 +428,7 @@ i_copy_headers(ogg_stream_state *const streamer, wwise_wemT *const wem,
 }
 /* BUILD */
 static int
-i_build_id_header(oggpack_buffer *const packer, const wwise_wemT *const wem)
+i_build_id_header(oggpack_buffer *const packer, const wwise_wem_t *const wem)
 {
 	packer_pack(packer, 1, 8);                           /* OUT Packet type */
 	for (int i = 0; i < 6; ++i)                            /* OUT Vorbis string */
@@ -660,7 +660,7 @@ i_build_modes(oggpack_buffer *const unpacker, oggpack_buffer *const packer,
 }
 static int
 i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packer,
-    wwise_wemT *const wem, int stripped)
+    wwise_wem_t *const wem, int stripped)
 {
 	int codebook_count, err = 0;
 	packer_pack(packer, 5, 8);                            /* OUT Packet type */
@@ -696,7 +696,7 @@ i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packe
 		}
 	} else { /* External codebooks */
 		for (int i = 0, err = 0; i < codebook_count; ++i) {
-			packed_codebookT *cb = NULL;
+			packed_codebook_t *cb = NULL;
 			int cbidx = 1 + packer_unpack(unpacker, 10);      /* IN Codebook index */
 			/* I don't know why it's off by 1; ww2ogg just sorta rolls with it
 			 * without too much checking (specifically in get_codebook_size) and
@@ -775,7 +775,7 @@ i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packe
 	return I_SUCCESS;
 }
 static int
-i_build_headers(ogg_stream_state *const streamer, wwise_wemT *const wem,
+i_build_headers(ogg_stream_state *const streamer, wwise_wem_t *const wem,
     vorbis_info *const vi, vorbis_comment *const vc)
 {
 	int err = 0;
@@ -791,7 +791,7 @@ i_build_headers(ogg_stream_state *const streamer, wwise_wemT *const wem,
 			oggpack_buffer unpacker;
 			unsigned char *packets_start = wem->data + wem->vorb.header_packets_offset;
 			brru4 packets_size = wem->vorb.audio_start_offset - wem->vorb.header_packets_offset;
-			wwise_packetT packeteer = {0};
+			wwise_packet_t packeteer = {0};
 #if defined(Ne_extra_debug)
 			BRRLOG_DEBUG("Building setup header");
 #endif
@@ -822,7 +822,7 @@ i_build_headers(ogg_stream_state *const streamer, wwise_wemT *const wem,
 
 /* PROCESS */
 static int
-i_process_headers(ogg_stream_state *const streamer, wwise_wemT *const wem,
+i_process_headers(ogg_stream_state *const streamer, wwise_wem_t *const wem,
 	vorbis_info *const vi, vorbis_comment *const vc)
 {
 	if (wem->all_headers_present) {
@@ -832,13 +832,13 @@ i_process_headers(ogg_stream_state *const streamer, wwise_wemT *const wem,
 	}
 }
 static int
-i_process_audio(ogg_stream_state *const streamer, wwise_wemT *const wem,
+i_process_audio(ogg_stream_state *const streamer, wwise_wem_t *const wem,
 	vorbis_info *const vi, vorbis_comment *const vc)
 {
 	int err = 0;
 	brru4 packets_start = wem->vorb.audio_start_offset,
 	      packets_size = wem->data_size - wem->vorb.audio_start_offset;
-	wwise_packetT packeteer = {0};
+	wwise_packet_t packeteer = {0};
 	int prev_blockflag = 0,
 	    mode_count_bits = lib_count_bits(wem->mode_count - 1);
 	brru8 packetno = 0, last_block = 0, total_block = 0;
@@ -860,7 +860,7 @@ i_process_audio(ogg_stream_state *const streamer, wwise_wemT *const wem,
 
 			if (wem->mode_blockflags[mode_number]) {
 				/* Long window */
-				wwise_packetT next_packeteer;
+				wwise_packet_t next_packeteer;
 				brru4 next_start = packets_start + packeteer.header_length + packeteer.payload_size,
 				      next_size = packets_size + packeteer.header_length + packeteer.payload_size;
 				int next_blockflag = 0;
@@ -909,11 +909,11 @@ i_process_audio(ogg_stream_state *const streamer, wwise_wemT *const wem,
 	return I_SUCCESS;
 }
 int
-wwise_convert_wwriff(riffT *const rf, ogg_stream_state *const streamer,
-    const codebook_libraryT *const library, const neinputT *const input)
+wwise_convert_wwriff(riff_t *const rf, ogg_stream_state *const streamer,
+    const codebook_library_t *const library, const neinput_t *const input)
 {
 	int err = 0;
-	wwise_wemT wem;
+	wwise_wem_t wem;
 	vorbis_info vi;
 	vorbis_comment vc;
 

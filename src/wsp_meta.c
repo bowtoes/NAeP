@@ -82,7 +82,7 @@ static char goutput_path[BRRPATH_MAX_PATH + 1] = {0};
 #define OUTPUT_FORMAT "_%0*zu"
 int
 wsp_meta_convert_wems(const wsp_metaT *const wsp, const char *const buffer,
-    nestateT *const state, const neinputT *const input, const codebook_libraryT *const library,
+    nestate_t *const state, const neinput_t *const input, const codebook_library_t *const library,
     const char *const output_root)
 {
 	int err = 0;
@@ -95,7 +95,7 @@ wsp_meta_convert_wems(const wsp_metaT *const wsp, const char *const buffer,
 	for (brrsz i = 0; i < wsp->wem_count; ++i) {
 		const wem_geometryT *const wem = &wsp->wems[i];
 		ogg_stream_state streamer;
-		riffT rf = {0};
+		riff_t rf = {0};
 		if (input->filter.count) {
 			int contained = neinput_filter_contains(&input->filter, i);
 			if ((contained && input->filter.type) || (!contained && !input->filter.type)) {
@@ -135,7 +135,7 @@ wsp_meta_convert_wems(const wsp_metaT *const wsp, const char *const buffer,
 }
 int
 wsp_meta_extract_wems(const wsp_metaT *const wsp, const char *const buffer,
-    nestateT *const state, const neinputT *const input,
+    nestate_t *const state, const neinput_t *const input,
     const char *const output_root)
 {
 	int err = 0;

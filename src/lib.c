@@ -136,7 +136,7 @@ lib_read_entire_file(const char *const path, void **const buffer, brrsz *const b
 	return err;
 }
 static int
-i_consume_next_buffer_chunk(riffT *const rf, riff_chunk_infoT *const sc, riff_data_syncT *const ds)
+i_consume_next_buffer_chunk(riff_t *const rf, riff_chunk_info_t *const sc, riff_data_sync_t *const ds)
 {
 	int err = 0;
 	while (RIFF_CHUNK_CONSUMED != (err = riff_consume_chunk(rf, sc, ds))) {
@@ -161,11 +161,11 @@ i_consume_next_buffer_chunk(riffT *const rf, riff_chunk_infoT *const sc, riff_da
 	return I_SUCCESS;
 }
 int
-lib_parse_buffer_as_riff(riffT *const rf, const void *const buffer, brrsz buffer_size)
+lib_parse_buffer_as_riff(riff_t *const rf, const void *const buffer, brrsz buffer_size)
 {
 	int err = I_SUCCESS;
-	riff_chunk_infoT sync_chunk = {0};
-	riff_data_syncT sync_data = {0};
+	riff_chunk_info_t sync_chunk = {0};
+	riff_data_sync_t sync_data = {0};
 	if ((err = riff_data_sync_from_buffer(&sync_data, (void *)buffer, buffer_size))) {
 		return I_INIT_ERROR;
 	}

@@ -25,7 +25,7 @@ limitations under the License.
 typedef struct wem_geometry {
 	brru4 offset; /* Offset into the data where the RIFF fourcc starts */
 	brru4 size; /* Size of the RIFF chunk including fourcc and size */
-	riff_byteorderT byteorder;
+	riff_byteorder_t byteorder;
 } wem_geometryT;
 typedef struct wsp_meta {
 	wem_geometryT *wems;
@@ -37,10 +37,10 @@ int wsp_meta_init(wsp_metaT *const wsp, const char *const buffer, brrsz buffer_s
 void wsp_meta_clear(wsp_metaT *const wsp);
 
 int wsp_meta_convert_wems(const wsp_metaT *const wsp, const char *const buffer,
-    nestateT *const state, const neinputT *const input, const codebook_libraryT *const library,
+    nestate_t *const state, const neinput_t *const input, const codebook_library_t *const library,
     const char *const output_root);
 int wsp_meta_extract_wems(const wsp_metaT *const wsp, const char *const buffer,
-    nestateT *const state, const neinputT *const input,
+    nestate_t *const state, const neinput_t *const input,
     const char *const output_root);
 
 #endif /* WSP_META_H */

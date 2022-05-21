@@ -34,9 +34,9 @@ limitations under the License.
 #include "print.h"
 
 static int
-i_mod_priority(neinputT *const input, int delta)
+i_mod_priority(neinput_t *const input, int delta)
 {
-	neinputT i = *input;
+	neinput_t i = *input;
 	if (delta < 0) {
 		if (i.log_priority > 0)
 			i.log_priority--;
@@ -50,7 +50,7 @@ i_mod_priority(neinputT *const input, int delta)
 }
 // Retruns 0 when an argument is not parsed, 1 when it is.
 static int
-i_parse_argument(const char *const arg, nestateT *const state, neinputT *const current)
+i_parse_argument(const char *const arg, nestate_t *const state, neinput_t *const current)
 {
 	if (arg[0] == 0) { /* Argument is of 0 length, very bad! */
 		return 1;
@@ -110,7 +110,7 @@ i_parse_argument(const char *const arg, nestateT *const state, neinputT *const c
 	else return 0;
 }
 static int
-i_parse_index(char *const arg, int arglen, neinput_filterT *const list, int *const offset)
+i_parse_index(char *const arg, int arglen, neinput_filter_t *const list, int *const offset)
 {
 	int comma = *offset;
 	for (;comma < arglen && arg[comma] != ','; ++comma);
@@ -136,7 +136,7 @@ i_parse_index(char *const arg, int arglen, neinput_filterT *const list, int *con
 	return 0;
 }
 static int
-i_set_filter(const char *const arg, int arglen, neinput_filterT *const filter)
+i_set_filter(const char *const arg, int arglen, neinput_filter_t *const filter)
 {
 	int offset = 0;
 	while (offset < arglen) {
@@ -147,7 +147,7 @@ i_set_filter(const char *const arg, int arglen, neinput_filterT *const filter)
 }
 
 void
-neinput_filter_clear(neinput_filterT *const filter)
+neinput_filter_clear(neinput_filter_t *const filter)
 {
 	if (filter) {
 		if (filter->list)
@@ -156,7 +156,7 @@ neinput_filter_clear(neinput_filterT *const filter)
 	}
 }
 int
-neinput_filter_contains(const neinput_filterT *const filter, brru4 index)
+neinput_filter_contains(const neinput_filter_t *const filter, brru4 index)
 {
 	if (!filter)
 		return 0;
@@ -170,7 +170,7 @@ neinput_filter_contains(const neinput_filterT *const filter, brru4 index)
 }
 
 void
-neinput_clear(neinputT *const input)
+neinput_clear(neinput_t *const input)
 {
 	if (input) {
 		neinput_filter_clear(&input->filter);
@@ -178,7 +178,7 @@ neinput_clear(neinputT *const input)
 	}
 }
 static int
-i_parse_library_data(neinput_libraryT *const library, const char *const buffer, brrsz buffer_size)
+i_parse_library_data(neinput_library_t *const library, const char *const buffer, brrsz buffer_size)
 {
 	int err = 0;
 	if (library->status.old) {
@@ -208,7 +208,7 @@ i_parse_library_data(neinput_libraryT *const library, const char *const buffer, 
 	return I_SUCCESS;
 }
 int
-neinput_library_load(neinput_libraryT *const library)
+neinput_library_load(neinput_library_t *const library)
 {
 	if (!library)
 		return -1;
@@ -227,7 +227,7 @@ neinput_library_load(neinput_libraryT *const library)
 	return library->status.load_error;
 }
 void
-neinput_library_clear(neinput_libraryT *const library)
+neinput_library_clear(neinput_library_t *const library)
 {
 	if (library) {
 		codebook_library_clear(&library->library);
@@ -235,14 +235,14 @@ neinput_library_clear(neinput_libraryT *const library)
 	}
 }
 int
-neinput_load_codebooks(neinput_libraryT *const libraries, const codebook_libraryT **const library, brrsz index)
+neinput_load_codebooks(neinput_library_t *const libraries, const codebook_library_t **const library, brrsz index)
 {
 	if (!library)
 		return I_GENERIC_ERROR;
 	*library = NULL;
 	if (libraries && index != -1) {
 		int err = 0;
-		neinput_libraryT *inlib = &libraries[index];
+		neinput_library_t *inlib = &libraries[index];
 		if ((err = neinput_library_load(inlib))) {
 			return err;
 		}
@@ -252,15 +252,15 @@ neinput_load_codebooks(neinput_libraryT *const libraries, const codebook_library
 }
 
 static int
-i_add_library(nestateT *const state, neinputT *const current, const char *const arg, int arglen)
+i_add_library(nestate_t *const state, neinput_t *const current, const char *const arg, int arglen)
 {
-	neinput_libraryT next = {.path = arg, .path_length = arglen};
+	neinput_library_t next = {.path = arg, .path_length = arglen};
 	for (current->library_index = 0; current->library_index < state->n_libraries; ++current->library_index) {
 		if (0 == strcmp(state->libraries[current->library_index].path, arg))
 			return 0;
 	}
 	/* Not found, add */
-	if (brrlib_alloc((void **)state->libraries, (state->n_libraries + 1) * sizeof(next), 0))
+	if (brrlib_alloc((void **)&state->libraries, (state->n_libraries + 1) * sizeof(next), 0))
 		return -1;
 	/* TODO add option to specify library type directly */
 	if (-1 != lib_cmp_ext(arg, arglen, 0, "ocbl", NULL))
@@ -269,9 +269,9 @@ i_add_library(nestateT *const state, neinputT *const current, const char *const 
 	return 0;
 }
 static int
-i_add_input(nestateT *const state, neinputT *const current, const char *const arg, int arglen)
+i_add_input(nestate_t *const state, neinput_t *const current, const char *const arg, int arglen)
 {
-	neinputT next = *current;
+	neinput_t next = *current;
 	next.path = arg;
 	next.path_length = arglen;
 	for (brrsz i = 0; i < state->n_inputs; ++i) {
@@ -281,7 +281,7 @@ i_add_input(nestateT *const state, neinputT *const current, const char *const ar
 		}
 	}
 	/* Not found, add */
-	if (brrlib_alloc((void **)state->inputs, (state->n_inputs + 1) * sizeof(next), 0))
+	if (brrlib_alloc((void **)&state->inputs, (state->n_inputs + 1) * sizeof(next), 0))
 		return -1;
 	state->inputs[state->n_inputs++] = next;
 	{
@@ -292,10 +292,10 @@ i_add_input(nestateT *const state, neinputT *const current, const char *const ar
 	return 0;
 }
 int
-nestate_init(nestateT *const state, int argc, char **argv)
+nestate_init(nestate_t *const state, int argc, char **argv)
 {
-	neinputT current = state->default_input;
-	neinput_filterT working_filter = {0};
+	neinput_t current = state->default_input;
+	neinput_filter_t working_filter = {0};
 	for (int i = 0; i < argc; ++i) {
 		char *arg = argv[i];
 		if (i_parse_argument(arg, state, &current)) {
@@ -321,7 +321,7 @@ nestate_init(nestateT *const state, int argc, char **argv)
 				return -1;
 			}
 			state->settings.next_is_file = 0;
-			working_filter = (neinput_filterT){0};
+			working_filter = (neinput_filter_t){0};
 			if (state->settings.should_reset)
 				nestate_clear(state);
 		}
@@ -331,7 +331,7 @@ nestate_init(nestateT *const state, int argc, char **argv)
 }
 
 void
-nestate_clear(nestateT *const state)
+nestate_clear(nestate_t *const state)
 {
 	if (!state)
 		return;

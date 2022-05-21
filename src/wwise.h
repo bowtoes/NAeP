@@ -32,7 +32,7 @@ typedef struct wwise_vorb {
 	brru4 audio_start_offset;
 	brru4 uid;
 	brru1 blocksize[2];
-} wwise_vorbT;
+} wwise_vorb_t;
 typedef struct wwise_fmt {
 	brru2 format_tag;
 	brru2 n_channels;
@@ -53,7 +53,7 @@ typedef struct wwise_fmt {
 		brru2 data3;
 		brru1 data4[8];
 	} guid;
-} wwise_fmtT;
+} wwise_fmt_t;
 typedef struct wwise_wem {
 	brru1 fmt_initialized:1;
 	brru1 vorb_initialized:1;
@@ -67,16 +67,16 @@ typedef struct wwise_wem {
 	int mode_count; /* Storage for audio packet decode */
 	unsigned char *data;
 	brru4 data_size;
-	wwise_vorbT vorb;
-	wwise_fmtT fmt;
-} wwise_wemT;
+	wwise_vorb_t vorb;
+	wwise_fmt_t fmt;
+} wwise_wem_t;
 typedef struct wwise_packet {
 	brru8 payload_size:16;
 	brru8 granule:32;
 	brru8 unused:16;
 	unsigned char *payload;
 	int header_length;
-} wwise_packetT;
+} wwise_packet_t;
 
 #define WWISE_SUCCESS 1
 #define WWISE_INCOMPLETE 0
@@ -93,18 +93,18 @@ typedef struct wwise_packet {
  *  0 : insufficient data/missing chunks
  *  1 : success
  * */
-int wwise_wem_init(wwise_wemT *const wem, const riffT *const rf);
-void wwise_wem_clear(wwise_wemT *const wem);
+int wwise_wem_init(wwise_wem_t *const wem, const riff_t *const rf);
+void wwise_wem_clear(wwise_wem_t *const wem);
 
 /* -1 : error (input)
  *  0 : insufficient data
  *  1 : success
  * */
-int wwise_packet_init(wwise_packetT *const packet,
-    const wwise_wemT *const wem, const unsigned char *const data, brrsz data_size);
-void wwise_packet_clear(wwise_packetT *const packet);
+int wwise_packet_init(wwise_packet_t *const packet,
+    const wwise_wem_t *const wem, const unsigned char *const data, brrsz data_size);
+void wwise_packet_clear(wwise_packet_t *const packet);
 
-int wwise_convert_wwriff(riffT *const rf, ogg_stream_state *const streamer,
-    const codebook_libraryT *const library, const neinputT *const input);
+int wwise_convert_wwriff(riff_t *const rf, ogg_stream_state *const streamer,
+    const codebook_library_t *const library, const neinput_t *const input);
 
 #endif /* WWISE_H */

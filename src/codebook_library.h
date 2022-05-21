@@ -31,14 +31,14 @@ typedef struct packed_codebook {
 	brru8 unpacked_bits;
 	brru4 size;
 	int did_unpack;
-} packed_codebookT;
+} packed_codebook_t;
 typedef struct codebook_library {
-	packed_codebookT *codebooks;
+	packed_codebook_t *codebooks;
 	brru4 codebook_count;
-} codebook_libraryT;
+} codebook_library_t;
 
-void packed_codebook_clear(packed_codebookT *const pc);
-void packed_codebook_clear_unpacked(packed_codebookT *const pc);
+void packed_codebook_clear(packed_codebook_t *const pc);
+void packed_codebook_clear_unpacked(packed_codebook_t *const pc);
 /* -2 : decode error/corrupt data
  * -1 : error (allocation/argument)
  *  0 : success
@@ -48,30 +48,30 @@ int packed_codebook_unpack_raw(oggpack_buffer *const unpacker, oggpack_buffer *c
  * -1 : error (allocation/argument)
  *  0 : success
  * */
-int packed_codebook_unpack(packed_codebookT *const pc);
+int packed_codebook_unpack(packed_codebook_t *const pc);
 
-void codebook_library_clear(codebook_libraryT *const cb);
+void codebook_library_clear(codebook_library_t *const cb);
 /* -2 : corruption
  * -1 : error (allocation/argument)
  *  0 : success
  * */
-int codebook_library_deserialize_old(codebook_libraryT *const cb,
+int codebook_library_deserialize_old(codebook_library_t *const cb,
     const void *const data, brru8 data_size);
 /* -2 : corruption
  * -1 : error (allocation/argument)
  *  0 : success
  * */
-int codebook_library_deserialize(codebook_libraryT *const cb,
+int codebook_library_deserialize(codebook_library_t *const cb,
     const void *const data, brru8 data_size);
 /* -1 : error (allocation/argument)
  *  0 : success
  * */
-int codebook_library_serialize_old(const codebook_libraryT *const cb,
+int codebook_library_serialize_old(const codebook_library_t *const cb,
     void **const data, brru8 *const data_size);
 /* -1 : error (allocation/argument)
  *  0 : success
  * */
-int codebook_library_serialize(const codebook_libraryT *const cb,
+int codebook_library_serialize(const codebook_library_t *const cb,
     void **const data, brru8 *const data_size);
 
 #endif /* CODEBOOK_LIBRARY_H */

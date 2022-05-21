@@ -120,6 +120,6 @@
 
 int print_usage(void);
 int print_help(void);
-int print_report(const nestateT *const state);
+int print_report(const nestate_t *const state);
 
 #endif /* PRINT_H */

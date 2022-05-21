@@ -32,17 +32,17 @@ limitations under the License.
 typedef enum neinput_filter_type {
 	neinput_filter_white = 0,
 	neinput_filter_black,
-} neinput_filter_typeT;
+} neinput_filter_type_t;
 
 /* TODO Eventually index white/blackisting can be replaced by a more flexible filtering system, similar to in 'countwsp' */
 typedef struct neinput_filter {
 	brru4 *list;
 	brru4 count;
-	neinput_filter_typeT type;
-} neinput_filterT;
+	neinput_filter_type_t type;
+} neinput_filter_t;
 
-void neinput_filter_clear(neinput_filterT *const filter);
-int neinput_filter_contains(const neinput_filterT *const filter, brru4 index);
+void neinput_filter_clear(neinput_filter_t *const filter);
+int neinput_filter_contains(const neinput_filter_t *const filter, brru4 index);
 
 typedef enum neinput_type {
 	neinput_type_auto = 0,
@@ -50,7 +50,7 @@ typedef enum neinput_type {
 	neinput_type_wem,
 	neinput_type_wsp,
 	neinput_type_bnk,
-} neinput_typeT;
+} neinput_type_t;
 typedef brru1 neinput_type_int;
 
 typedef struct neinput {
@@ -69,10 +69,10 @@ typedef struct neinput {
 		brru1 inplace_ogg:1;          /* Should weem-to-ogg conversion be done in-place (replace)? */
 		brru1 inplace_regrain:1;      /* Should regranularized oggs replace the original? */
 	} flag;
-	neinput_filterT filter;
-} neinputT;
+	neinput_filter_t filter;
+} neinput_t;
 
-void neinput_clear(neinputT *const input);
+void neinput_clear(neinput_t *const input);
 
 typedef struct neinput_library {
 	struct {
@@ -82,22 +82,22 @@ typedef struct neinput_library {
 	} status;
 	brru2 path_length;
 	const char *path;
-	codebook_libraryT library;
-} neinput_libraryT;
+	codebook_library_t library;
+} neinput_library_t;
 
-int neinput_library_load(neinput_libraryT *const library);
-void neinput_library_clear(neinput_libraryT *const library);
+int neinput_library_load(neinput_library_t *const library);
+void neinput_library_clear(neinput_library_t *const library);
 
 typedef struct neprocessstat {
 	brrsz assigned;
 	brrsz succeeded;
 	brrsz failed;
-} neprocessstatT;
+} nestate_stat_t;
 typedef struct nestate {
-	neinputT *inputs;
+	neinput_t *inputs;
 	brrsz n_inputs;
-	const neinputT default_input;
-	neinput_libraryT *libraries;
+	const neinput_t default_input;
+	neinput_library_t *libraries;
 	brrsz n_libraries;
 
 	struct {
@@ -116,15 +116,15 @@ typedef struct nestate {
 		brrsz input_path_max; /* For log padding */
 		brrsz n_input_digits;
 
-		neprocessstatT oggs, wems, wsps, bnks;
-		neprocessstatT wem_extracts;
-		neprocessstatT wem_converts;
+		nestate_stat_t oggs, wems, wsps, bnks;
+		nestate_stat_t wem_extracts;
+		nestate_stat_t wem_converts;
 	} stats;
-} nestateT;
+} nestate_t;
 
-int nestate_init(nestateT *const state, int argc, char **argv);
-void nestate_clear(nestateT *const state);
+int nestate_init(nestate_t *const state, int argc, char **argv);
+void nestate_clear(nestate_t *const state);
 
-int neinput_load_codebooks(neinput_libraryT *const libraries, const codebook_libraryT **const library, brrsz index);
+int neinput_load_codebooks(neinput_library_t *const libraries, const codebook_library_t **const library, brrsz index);
 
 #endif /* INPUT_H */

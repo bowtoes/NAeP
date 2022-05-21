@@ -28,7 +28,7 @@ limitations under the License.
 int
 main(int argc, char **argv)
 {
-	static nestateT state = {
+	static nestate_t state = {
 		.default_input = {
 			.library_index = -1,
 			.log_priority = brrlog_priority_normal,

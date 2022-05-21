@@ -31,11 +31,11 @@ limitations under the License.
 static char goutput_root[BRRPATH_MAX_PATH + 1] = {0};
 
 static int
-i_extract_bnk(nestateT *const state, neinput_libraryT *const libraries, const neinputT *const input)
+i_extract_bnk(nestate_t *const state, neinput_library_t *const libraries, const neinput_t *const input)
 {
 	int err = 0;
 	wsp_metaT meta = {0};
-	const codebook_libraryT *library = NULL;
+	const codebook_library_t *library = NULL;
 	char *buffer = NULL;
 	brrsz bufsize = 0;
 
@@ -55,7 +55,7 @@ i_extract_bnk(nestateT *const state, neinput_libraryT *const libraries, const ne
 }
 
 int
-neextract_bnk(nestateT *const state, neinput_libraryT *const libraries, const neinputT *const input)
+neextract_bnk(nestate_t *const state, neinput_library_t *const libraries, const neinput_t *const input)
 {
 	int err = 0;
 	state->stats.bnks.assigned++;

@@ -47,10 +47,10 @@ _riff_boiler_gen(_getter_boiler)
 #undef _getter_boiler
 #undef _array_processor
 
-riff_byteorderT
+riff_byteorder_t
 riff_cc_byteorder(brru4 cc)
 {
-	for (riff_byteorderT t = 0;t < 4; ++t) {
+	for (riff_byteorder_t t = 0;t < 4; ++t) {
 		if (cc == riff_root_ccs[t])
 			return 1 + t;
 	}
@@ -82,15 +82,15 @@ static void *(*const _riff_copy_table[8])(void *const, const void *const, size_t
 	memcpy, memcpy,  cpy_rvs, cpy_rvs,
 	memcpy, cpy_rvs, memcpy,  cpy_rvs,
 };
-riff_copierT
-riff_copier_cc(riff_byteorderT byteorder)
+riff_copier_t
+riff_copier_cc(riff_byteorder_t byteorder)
 {
 	if (!byteorder)
 		return _riff_copy_table[0];
 	return _riff_copy_table[0 + _riff_copier_idx(byteorder)];
 }
-riff_copierT
-riff_copier_data(riff_byteorderT byteorder)
+riff_copier_t
+riff_copier_data(riff_byteorder_t byteorder)
 {
 	if (!byteorder)
 		return _riff_copy_table[4];
@@ -98,7 +98,7 @@ riff_copier_data(riff_byteorderT byteorder)
 }
 
 void
-riff_chunk_info_clear(riff_chunk_infoT *const sc)
+riff_chunk_info_clear(riff_chunk_info_t *const sc)
 {
 	if (sc) {
 		memset(sc, 0, sizeof(*sc));
@@ -106,7 +106,7 @@ riff_chunk_info_clear(riff_chunk_infoT *const sc)
 }
 
 void
-riff_data_sync_clear(riff_data_syncT *const ds)
+riff_data_sync_clear(riff_data_sync_t *const ds)
 {
 	if (ds) {
 		if (ds->data)
@@ -115,14 +115,14 @@ riff_data_sync_clear(riff_data_syncT *const ds)
 	}
 }
 int
-riff_data_sync_check(const riff_data_syncT *const ds)
+riff_data_sync_check(const riff_data_sync_t *const ds)
 {
 	if (!ds || ds->consumed > ds->stored || ds->stored > ds->storage)
 		return -1;
 	return 0;
 }
 int
-riff_data_sync_from_buffer(riff_data_syncT *const ds,
+riff_data_sync_from_buffer(riff_data_sync_t *const ds,
     unsigned char *const buffer, brrsz buffer_size)
 {
 	if (riff_data_sync_check(ds))
@@ -134,7 +134,7 @@ riff_data_sync_from_buffer(riff_data_syncT *const ds,
 	return 0;
 }
 int
-riff_data_sync_seek(riff_data_syncT *const ds, brrof offset)
+riff_data_sync_seek(riff_data_sync_t *const ds, brrof offset)
 {
 	if (riff_data_sync_check(ds))
 		return -1;
@@ -146,7 +146,7 @@ riff_data_sync_seek(riff_data_syncT *const ds, brrof offset)
 	return 0;
 }
 char *
-riff_data_sync_buffer(riff_data_syncT *const ds, brrsz size)
+riff_data_sync_buffer(riff_data_sync_t *const ds, brrsz size)
 {
 	if (riff_data_sync_check(ds))
 		return NULL;
@@ -169,7 +169,7 @@ riff_data_sync_buffer(riff_data_syncT *const ds, brrsz size)
 	return (char *)ds->data + ds->stored;
 }
 int
-riff_data_sync_apply(riff_data_syncT *const ds, brrsz size)
+riff_data_sync_apply(riff_data_sync_t *const ds, brrsz size)
 {
 	if (riff_data_sync_check(ds))
 		return RIFF_ERROR;
@@ -180,7 +180,7 @@ riff_data_sync_apply(riff_data_syncT *const ds, brrsz size)
 }
 
 void
-riff_clear(riffT *const rf)
+riff_clear(riff_t *const rf)
 {
 	if (rf) {
 		if (rf->basics) {
@@ -194,14 +194,14 @@ riff_clear(riffT *const rf)
 	}
 }
 int
-riff_init(riffT *const rf)
+riff_init(riff_t *const rf)
 {
 	if (rf)
 		memset(rf, 0, sizeof(*rf));
 	return 0;
 }
 int
-riff_check(const riffT *const rf)
+riff_check(const riff_t *const rf)
 {
 	if (!rf)
 		return RIFF_ERROR;
@@ -209,7 +209,7 @@ riff_check(const riffT *const rf)
 }
 
 static int
-i_setup_riff(riffT *const rf, riff_data_syncT *const ds)
+i_setup_riff(riff_t *const rf, riff_data_sync_t *const ds)
 {
 	unsigned char *ckdata = ds->data + ds->consumed;
 	brrsz stor = ds->stored - ds->consumed;
@@ -234,10 +234,10 @@ i_setup_riff(riffT *const rf, riff_data_syncT *const ds)
 	return RIFF_CONSUME_MORE;
 }
 static int
-i_add_basic_type(riffT *const rf, riff_data_syncT *const ds, riff_basic_typeT cktype, brru4 cksize)
+i_add_basic_type(riff_t *const rf, riff_data_sync_t *const ds, riff_basic_typeT cktype, brru4 cksize)
 {
 	unsigned char *ckdata = ds->data + ds->consumed;
-	riff_basic_chunkT basic = {0};
+	riff_basic_chunk_t basic = {0};
 	basic.type = cktype;
 	basic.size = cksize;
 	if (brrlib_alloc((void **)&basic.data, basic.size, 1)) {
@@ -262,7 +262,7 @@ i_add_basic_type(riffT *const rf, riff_data_syncT *const ds, riff_basic_typeT ck
 	return RIFF_CHUNK_CONSUMED;
 }
 static int
-i_add_list_type(riffT *const rf, riff_data_syncT *const ds, brru4 cksize)
+i_add_list_type(riff_t *const rf, riff_data_sync_t *const ds, brru4 cksize)
 {
 	unsigned char *ckdata = ds->data + ds->consumed;
 	riff_list_chunkT list = {0};
@@ -281,7 +281,7 @@ i_add_list_type(riffT *const rf, riff_data_syncT *const ds, brru4 cksize)
 	return RIFF_CHUNK_CONSUMED;
 }
 int
-riff_consume_chunk(riffT *const rf, riff_chunk_infoT *const sc, riff_data_syncT *const ds)
+riff_consume_chunk(riff_t *const rf, riff_chunk_info_t *const sc, riff_data_sync_t *const ds)
 {
 	unsigned char *ckdata = ds->data + ds->consumed;
 	brrs8 stor = ds->stored - ds->consumed;

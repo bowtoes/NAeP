@@ -32,14 +32,14 @@ limitations under the License.
 static char goutput_name[BRRPATH_MAX_PATH + 1] = {0};
 
 static int
-i_convert_wem(neinput_libraryT *const libraries, const neinputT *const input)
+i_convert_wem(neinput_library_t *const libraries, const neinput_t *const input)
 {
 	int err = 0;
 	ogg_stream_state streamer;
-	riffT rf = {0};
+	riff_t rf = {0};
 	char *buffer = NULL;
 	brrsz bufsize = 0;
-	const codebook_libraryT *library = NULL; /* NULL library means inline library */
+	const codebook_library_t *library = NULL; /* NULL library means inline library */
 
 	if ((err = lib_read_entire_file(input->path, (void **)&buffer, &bufsize)))
 		return err;
@@ -57,7 +57,7 @@ i_convert_wem(neinput_libraryT *const libraries, const neinputT *const input)
 }
 
 int
-neconvert_wem(nestateT *const state, neinput_libraryT *const libraries, const neinputT *const input)
+neconvert_wem(nestate_t *const state, neinput_library_t *const libraries, const neinput_t *const input)
 {
 	int err = 0;
 	state->stats.wems.assigned++;
