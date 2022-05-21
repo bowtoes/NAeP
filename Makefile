@@ -5,6 +5,12 @@ all:
 include config.mk
 include help.mk
 
+info: _delim_1 _info _delim_2
+build_info: _delim_1 _build_info _delim_2
+output_info: _delim_1 _output_info _delim_2
+all_info: _delim_1 _info _build_info _output_info _delim_2
+.PHONY: info build_info output_info all_info
+
 ass_dir ?= ass
 ass_out_dir ?= $(output_directory)/$(ass_dir)
 ass_out := $(addprefix $(ass_out_dir)/,$(srcs:.c=.s))
@@ -19,16 +25,10 @@ obj_out := $(addprefix $(obj_out_dir)/,$(srcs:.c=.o))
 
 build_directories := $(sort $(dir $(output_file) $(ass_out) $(int_out) $(obj_out)))
 
-all: info setup $(project)
-
-info: _delim_1 _info _delim_2
-build_info: _delim_1 _build_info _delim_2
-output_info: _delim_1 _output_info _delim_2
-all_info: _delim_1 _info _build_info _output_info _delim_2
-
+all: info $(project)
 setup:
 	@$(mk_dir_tree) $(build_directories) 2>$(null) ||:
-.PHONY: all info setup
+.PHONY: all setup
 
 $(ass_out_dir)/%.s: $(src_dir)/%.c ; $(cc_custom) $(project_cppflags) $(project_cflags) -S $< -o $@
 $(int_out_dir)/%.e: $(src_dir)/%.c ; $(cc_custom) $(project_cppflags) $(project_cflags) -E $< -o $@
@@ -43,7 +43,7 @@ aio: ass int obj
 
 $(output_file): vnd $(obj_out) $(makefiles) $(addprefix $(src_dir)/,$(hdrs))
 	$(cc_custom) -o $@ $(obj_out) $(vnd_bins) $(project_ldflags)
-$(project): $(output_file)
+$(project): setup $(output_file)
 
 clean:
 	@$(rm_file) $(output_file) $(ass_out) $(int_out) $(obj_out) 2>$(null) ||:

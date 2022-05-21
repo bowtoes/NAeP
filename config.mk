@@ -110,6 +110,7 @@ c_optimization :=
 c_performance :=
 ifeq ($(debug),0)
  c_optimization += -O3 -Ofast
+ c_links += -Wl,--strip-all
  #ifeq ($(target_mode),shared)
  # c_performance += -s
  #else
@@ -117,7 +118,6 @@ ifeq ($(debug),0)
  #endif
 else
  c_optimization += -O0 -g
- c_links += -Wl,--strip-all
  c_defines += -D$(uproject)_debug
  ifeq ($(memcheck),0)
   c_performance += -pg -no-pie
