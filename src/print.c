@@ -72,55 +72,55 @@ print_report(const nestateT *const state)
 {
 	brrsz input_count_digits = 1 + brrnum_ndigits(state->n_inputs, 0, 10);
 	brrsz total_success =
-	      state->oggs_regrained
-	    + state->wems_converted
-	    + state->wsps_processed
-	    + state->bnks_processed;
+	      state->stats.oggs.succeeded
+	    + state->stats.wems.succeeded
+	    + state->stats.wsps.succeeded
+	    + state->stats.bnks.succeeded;
 	brrsz total_failure =
-	      state->oggs_failed
-	    + state->wems_failed
-	    + state->wsps_failed
-	    + state->bnks_failed;
+	      state->stats.oggs.failed
+	    + state->stats.wems.failed
+	    + state->stats.wsps.failed
+	    + state->stats.bnks.failed;
 	BRRLOG_NORN("Successfully processed a total of ");
 	BRRLOG_FORENP(LOG_COLOR_INFO, "%*i / %*i",
 	    input_count_digits, total_success, input_count_digits, state->n_inputs);
 	BRRLOG_NORP(" inputs");
-	if (state->full_report) {
-		if (state->oggs_to_regrain) {
+	if (state->settings.full_report) {
+		if (state->stats.oggs.assigned) {
 			BRRLOG_NORN("    ");
 			BRRLOG_FORENP(LOG_COLOR_INFO, "%*i / %*i",
-				input_count_digits, state->oggs_regrained, input_count_digits, state->oggs_to_regrain);
-			BRRLOG_MESSAGETP(gbrrlog_level_last, LOG_FORMAT_OGG, " Regrained Oggs");
+				input_count_digits, state->stats.oggs.succeeded, input_count_digits, state->stats.oggs.assigned);
+			BRRLOG_MESSAGETP(gbrrlog_level(last), LOG_FORMAT_OGG, " Regrained Oggs");
 		}
-		if (state->wems_to_convert) {
+		if (state->stats.wems.assigned) {
 			BRRLOG_NORN("    ");
 			BRRLOG_FORENP(LOG_COLOR_INFO, "%*i / %*i",
-				input_count_digits, state->wems_converted, input_count_digits, state->wems_to_convert);
-			BRRLOG_MESSAGETP(gbrrlog_level_last, LOG_FORMAT_WEM, " Converted WEMs");
+				input_count_digits, state->stats.wems.succeeded, input_count_digits, state->stats.wems.assigned);
+			BRRLOG_MESSAGETP(gbrrlog_level(last), LOG_FORMAT_WEM, " Converted WEMs");
 		}
-		if (state->wsps_to_process) {
+		if (state->stats.wsps.assigned) {
 			BRRLOG_NORN("    ");
 			BRRLOG_FORENP(LOG_COLOR_INFO, "%*i / %*i",
-				input_count_digits, state->wsps_processed, input_count_digits, state->wsps_to_process);
-			BRRLOG_MESSAGETP(gbrrlog_level_last, LOG_FORMAT_WSP, " Processed WSPs");
+				input_count_digits, state->stats.wsps.succeeded, input_count_digits, state->stats.wsps.assigned);
+			BRRLOG_MESSAGETP(gbrrlog_level(last), LOG_FORMAT_WSP, " Processed WSPs");
 		}
-		if (state->bnks_to_process) {
+		if (state->stats.bnks.assigned) {
 			BRRLOG_NORN("    ");
 			BRRLOG_FORENP(LOG_COLOR_INFO, "%*i / %*i",
-				input_count_digits, state->bnks_processed, input_count_digits, state->bnks_to_process);
-			BRRLOG_MESSAGETP(gbrrlog_level_last, LOG_FORMAT_BNK, " Processed BNKs");
+				input_count_digits, state->stats.bnks.succeeded, input_count_digits, state->stats.bnks.assigned);
+			BRRLOG_MESSAGETP(gbrrlog_level(last), LOG_FORMAT_BNK, " Processed BNKs");
 		}
-		if (state->wems_to_extract) {
+		if (state->stats.wem_extracts.assigned) {
 			BRRLOG_NORN("    ");
 			BRRLOG_FORENP(LOG_COLOR_INFO, "%*i / %*i",
-				input_count_digits, state->wems_extracted, input_count_digits, state->wems_to_extract);
-			BRRLOG_MESSAGETP(gbrrlog_level_last, LOG_FORMAT_WEM, " Extracted WEMs");
+				input_count_digits, state->stats.wem_extracts.succeeded, input_count_digits, state->stats.wem_extracts.assigned);
+			BRRLOG_MESSAGETP(gbrrlog_level(last), LOG_FORMAT_WEM, " Extracted WEMs");
 		}
-		if (state->wems_to_convert_extract) {
+		if (state->stats.wem_converts.assigned) {
 			BRRLOG_NORN("    ");
 			BRRLOG_FORENP(LOG_COLOR_INFO, "%*i / %*i",
-				input_count_digits, state->wems_convert_extracted, input_count_digits, state->wems_to_convert_extract);
-			BRRLOG_MESSAGETP(gbrrlog_level_last, LOG_FORMAT_OGG, " Auto-converted WEMs");
+				input_count_digits, state->stats.wem_converts.succeeded, input_count_digits, state->stats.wem_converts.assigned);
+			BRRLOG_MESSAGETP(gbrrlog_level(last), LOG_FORMAT_OGG, " Auto-converted WEMs");
 		}
 	}
 	return 0;

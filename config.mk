@@ -116,6 +116,7 @@ ifeq ($(debug),0)
  # c_performance += -static-pie
  #endif
 else
+ c_optimization += -O0 -g
  c_links += -Wl,--strip-all
  c_defines += -D$(uproject)_debug
  ifeq ($(memcheck),0)

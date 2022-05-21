@@ -36,7 +36,7 @@ static char goutput_name[BRRPATH_MAX_PATH + 1] = {0};
 // I'm thinking a tiered error system, with '+E, +error' and '-E, -error' like with the quiet options
 
 #define SYNC_BUFFER_SIZE 4096
-static int BRRCALL
+static int
 i_get_first_page(FILE *const file, ogg_sync_state *const syncer, ogg_page *sync_page)
 {
 	int err = 0;
@@ -62,7 +62,7 @@ i_get_first_page(FILE *const file, ogg_sync_state *const syncer, ogg_page *sync_
 	}
 	return I_SUCCESS;
 }
-static int BRRCALL
+static int
 i_get_next_page(FILE *const file, ogg_sync_state *const syncer,
 	ogg_page *const sync_page, ogg_stream_state *const stream)
 {
@@ -76,7 +76,7 @@ i_get_next_page(FILE *const file, ogg_sync_state *const syncer,
 	}
 	return I_SUCCESS;
 }
-static int BRRCALL
+static int
 i_get_next_packet(FILE *const file, ogg_sync_state *const syncer,
     ogg_page *const sync_page, ogg_packet *const sync_packet,
     ogg_stream_state *const istream)
@@ -93,7 +93,7 @@ i_get_next_packet(FILE *const file, ogg_sync_state *const syncer,
 	}
 	return I_SUCCESS;
 }
-static int BRRCALL
+static int
 i_init_streams(FILE *const file, ogg_sync_state *const syncer, ogg_page *const sync_page,
     ogg_stream_state *const istream, ogg_stream_state *const ostream)
 {
@@ -117,7 +117,7 @@ i_init_streams(FILE *const file, ogg_sync_state *const syncer, ogg_page *const s
 	}
 	return err;
 }
-static int BRRCALL
+static int
 i_copy_header(ogg_packet *const sync_packet,
     ogg_stream_state *const ostream,
     vorbis_info *const info, vorbis_comment *const comment)
@@ -142,7 +142,7 @@ i_copy_header(ogg_packet *const sync_packet,
 	}
 	return I_SUCCESS;
 }
-static int BRRCALL
+static int
 i_init_headers(FILE *const file, ogg_sync_state *const syncer,
     ogg_page *const sync_page, ogg_packet *const sync_packet,
     ogg_stream_state *const istream, ogg_stream_state *const ostream,
@@ -172,7 +172,7 @@ i_init_headers(FILE *const file, ogg_sync_state *const syncer,
 	}
 	return I_SUCCESS;
 }
-static int BRRCALL
+static int
 i_recompute_grains(FILE *const file, ogg_sync_state *const syncer,
     ogg_page *const sync_page, ogg_packet *const sync_packet,
     ogg_stream_state *const istream, ogg_stream_state *const ostream,
@@ -197,7 +197,7 @@ i_recompute_grains(FILE *const file, ogg_sync_state *const syncer,
 	}
 	return err;
 }
-static void BRRCALL
+static void
 i_clear(FILE **const in, ogg_sync_state *const syncer,
     ogg_stream_state *const istream, ogg_stream_state *ostream,
     vorbis_info *const info, vorbis_comment *const comment)
@@ -217,7 +217,7 @@ i_clear(FILE **const in, ogg_sync_state *const syncer,
 	if (comment)
 		vorbis_comment_clear(comment);
 }
-static int BRRCALL
+static int
 i_regrain(void)
 {
 	int err = 0;
@@ -252,27 +252,27 @@ i_regrain(void)
 	return err;
 }
 
-int BRRCALL
+int
 neregrain_ogg(nestateT *const state, const neinputT *const input)
 {
 	int err = 0;
-	state->oggs_to_regrain++;
-	if (input->dry_run) {
+	state->stats.oggs.assigned++;
+	if (input->flag.dry_run) {
 		LOG_FORMAT(LOG_PARAMS_DRY, "Regranularize OGG ");
 	} else {
 		LOG_FORMAT(LOG_PARAMS_WET, "Regranularizing OGG... ");
 		ginput_name = input->path;
-		if (input->inplace_regrain)
+		if (input->flag.inplace_regrain)
 			snprintf(goutput_name, sizeof(goutput_name), "%s", input->path);
 		else
 			lib_replace_ext(ginput_name, strlen(input->path), goutput_name, NULL, "_rvb.ogg");
 		err = i_regrain();
 	}
 	if (!err) {
-		state->oggs_regrained++;
+		state->stats.oggs.succeeded++;
 		LOG_FORMAT(LOG_PARAMS_SUCCESS, "Success!");
 	} else {
-		state->oggs_failed++;
+		state->stats.oggs.failed++;
 		LOG_FORMAT(LOG_PARAMS_FAILURE, " Failure! (%d)", err);
 	}
 	return err;

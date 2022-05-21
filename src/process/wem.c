@@ -60,22 +60,22 @@ int
 neconvert_wem(nestateT *const state, neinput_libraryT *const libraries, const neinputT *const input)
 {
 	int err = 0;
-	state->wems_to_convert++;
-	if (input->dry_run) {
+	state->stats.wems.assigned++;
+	if (input->flag.dry_run) {
 		LOG_FORMAT(LOG_PARAMS_DRY, "Convert WEM (dry) ");
 	} else {
 		LOG_FORMAT(LOG_PARAMS_WET, "Converting WEM... ");
-		if (input->inplace_ogg)
+		if (input->flag.inplace_ogg)
 			snprintf(goutput_name, sizeof(goutput_name), "%s", input->path);
 		else
 			lib_replace_ext(input->path, strlen(input->path), goutput_name, NULL, ".ogg");
 		err = i_convert_wem(libraries, input);
 	}
 	if (!err) {
-		state->wems_converted++;
+		state->stats.wems.succeeded++;
 		LOG_FORMAT(LOG_PARAMS_SUCCESS, "Success!");
 	} else {
-		state->wems_failed++;
+		state->stats.wems.failed++;
 		LOG_FORMAT(LOG_PARAMS_FAILURE, "Failure! (%d)", err);
 	}
 	return err;

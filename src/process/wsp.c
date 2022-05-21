@@ -43,7 +43,7 @@ i_extract_wsp(nestateT *const state, neinput_libraryT *const libraries, const ne
 		return err;
 	if (!(err = wsp_meta_init(&meta, buffer, bufsize))) {
 		if (!(err = neinput_load_codebooks(libraries, &library, input->library_index))) {
-			if (input->auto_ogg)
+			if (input->flag.auto_ogg)
 				err = wsp_meta_convert_wems(&meta, buffer, state, input, library, goutput_root);
 			else
 				err = wsp_meta_extract_wems(&meta, buffer, state, input, goutput_root);
@@ -58,21 +58,21 @@ int
 neextract_wsp(nestateT *const state, neinput_libraryT *const libraries, const neinputT *const input)
 {
 	int err = 0;
-	state->wsps_to_process++;
-	gbrrlog_level_last = gbrrlog_level_normal;
-	if (input->dry_run) {
+	state->stats.wsps.assigned++;
+	gbrrlog_level(last) = gbrrlog_level(normal); // why??
+	if (input->flag.dry_run) {
 		LOG_FORMAT(LOG_PARAMS_DRY, "Extract WSP (dry) ");
 	} else {
 		LOG_FORMAT(LOG_PARAMS_WET, "Extracting WSP... ");
 		lib_replace_ext(input->path, strlen(input->path) - 1, goutput_root, NULL, "");
 		err = i_extract_wsp(state, libraries, input);
 	}
-	gbrrlog_level_last = gbrrlog_level_normal;
+	gbrrlog_level(last) = gbrrlog_level(normal); // why??
 	if (!err) {
-		state->wsps_processed++;
+		state->stats.wsps.succeeded++;
 		LOG_FORMAT(LOG_PARAMS_SUCCESS, "Success!\n");
 	} else {
-		state->wsps_failed++;
+		state->stats.wsps.failed++;
 		LOG_FORMAT(LOG_PARAMS_FAILURE, "Failure! (%d)\n", err);
 	}
 	return err;

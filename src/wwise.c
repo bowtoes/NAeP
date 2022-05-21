@@ -802,7 +802,7 @@ i_build_headers(ogg_stream_state *const streamer, wwise_wemT *const wem,
 				err = I_INSUFFICIENT_DATA;
 			} else {
 				oggpack_readinit(&unpacker, packeteer.payload, packeteer.payload_size);
-				err = i_build_setup_header(&unpacker, &packer, wem, ginput->stripped_headers);
+				err = i_build_setup_header(&unpacker, &packer, wem, ginput->flag.stripped_headers);
 			}
 		}
 		if (err) {

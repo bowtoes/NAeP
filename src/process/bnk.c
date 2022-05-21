@@ -43,7 +43,7 @@ i_extract_bnk(nestateT *const state, neinput_libraryT *const libraries, const ne
 		return err;
 	if (!(err = wsp_meta_init(&meta, buffer, bufsize))) {
 		if (!(err = neinput_load_codebooks(libraries, &library, input->library_index))) {
-			if (input->auto_ogg)
+			if (input->flag.auto_ogg)
 				err = wsp_meta_convert_wems(&meta, buffer, state, input, library, goutput_root);
 			else
 				err = wsp_meta_extract_wems(&meta, buffer, state, input, goutput_root);
@@ -54,12 +54,12 @@ i_extract_bnk(nestateT *const state, neinput_libraryT *const libraries, const ne
 	return err;
 }
 
-int BRRCALL
+int
 neextract_bnk(nestateT *const state, neinput_libraryT *const libraries, const neinputT *const input)
 {
 	int err = 0;
-	state->bnks_to_process++;
-	if (input->dry_run) {
+	state->stats.bnks.assigned++;
+	if (input->flag.dry_run) {
 		LOG_FORMAT(LOG_PARAMS_DRY, "Extract BNK (dry) ");
 	} else {
 		LOG_FORMAT(LOG_PARAMS_WET, "Extracting WSP... ");
@@ -67,10 +67,10 @@ neextract_bnk(nestateT *const state, neinput_libraryT *const libraries, const ne
 		err = i_extract_bnk(state, libraries, input);
 	}
 	if (!err) {
-		state->bnks_processed++;
+		state->stats.bnks.succeeded++;
 		LOG_FORMAT(LOG_PARAMS_SUCCESS, "Success!\n");
 	} else {
-		state->bnks_failed++;
+		state->stats.bnks.failed++;
 		LOG_FORMAT(LOG_PARAMS_FAILURE, "Failure! (%d)\n", err);
 	}
 	return err;

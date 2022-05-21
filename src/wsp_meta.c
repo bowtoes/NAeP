@@ -96,36 +96,40 @@ wsp_meta_convert_wems(const wsp_metaT *const wsp, const char *const buffer,
 		const wem_geometryT *const wem = &wsp->wems[i];
 		ogg_stream_state streamer;
 		riffT rf = {0};
-		if (input->list.count) {
-			int contained = neinput_list_contains(&input->list, i);
-			if ((contained && input->list.type) || (!contained && !input->list.type)) {
-				BRRLOG_DEBUG("WEM %zu was filtered due to %slist", i, input->list.type?"black":"white");
+		if (input->filter.count) {
+			int contained = neinput_filter_contains(&input->filter, i);
+			if ((contained && input->filter.type) || (!contained && !input->filter.type)) {
+				BRRLOG_DEBUG("WEM %zu was filtered due to %slist", i, input->filter.type?"black":"white");
 				continue;
 			}
 		}
-		state->wems_to_convert_extract++;
+
+		state->stats.wem_converts.assigned++;
 		if ((err = lib_parse_buffer_as_riff(&rf, buffer + wem->offset, wem->size))) {
 			BRRLOG_ERRN("Failed to parse wem ");
 			LOG_FORMAT(LOG_PARAMS_INFO, "#%*zu", digits, i);
 			BRRLOG_ERRP(" skipping : %s", lib_strerr(err));
-			continue;
-		}
-		if ((err = wwise_convert_wwriff(&rf, &streamer, library, input))) {
-			BRRLOG_ERRN("Failed to convert wem ");
-			LOG_FORMAT(LOG_PARAMS_INFO, "#%*zu", digits, i);
-			BRRLOG_ERRP(" skipping : %s", lib_strerr(err));
 		} else {
-			snprintf(goutput_path, sizeof(goutput_path), "%s"OUTPUT_FORMAT".ogg", output_root, digits, i);
-			if ((err = lib_write_ogg_out(&streamer, goutput_path))) {
-				BRRLOG_ERRN("Failed to write converted wem ");
+			if ((err = wwise_convert_wwriff(&rf, &streamer, library, input))) {
+				BRRLOG_ERRN("Failed to convert wem ");
 				LOG_FORMAT(LOG_PARAMS_INFO, "#%*zu", digits, i);
 				BRRLOG_ERRP(" skipping : %s", lib_strerr(err));
 			} else {
-				state->wems_convert_extracted++;
+				snprintf(goutput_path, sizeof(goutput_path), "%s"OUTPUT_FORMAT".ogg", output_root, digits, i);
+				if ((err = lib_write_ogg_out(&streamer, goutput_path))) {
+					BRRLOG_ERRN("Failed to write converted wem ");
+					LOG_FORMAT(LOG_PARAMS_INFO, "#%*zu", digits, i);
+					BRRLOG_ERRP(" skipping : %s", lib_strerr(err));
+				}
+				ogg_stream_clear(&streamer);
 			}
-			ogg_stream_clear(&streamer);
+			riff_clear(&rf);
 		}
-		riff_clear(&rf);
+
+		if (!err)
+			state->stats.wem_converts.succeeded++;
+		else
+			state->stats.wem_converts.failed++;
 	}
 	return I_SUCCESS;
 }
@@ -145,30 +149,34 @@ wsp_meta_extract_wems(const wsp_metaT *const wsp, const char *const buffer,
 		const wem_geometryT *const wem = &wsp->wems[i];
 		brrsz wrote = 0;
 		FILE *output = NULL;
-		if (input->list.count) {
-			int contained = neinput_list_contains(&input->list, i);
-			if ((contained && input->list.type) || (!contained && !input->list.type)) {
-				BRRLOG_DEBUG("WEM %zu was filtered due to %slist", i, input->list.type?"black":"white");
+		if (input->filter.count) {
+			int contained = neinput_filter_contains(&input->filter, i);
+			if ((contained && input->filter.type) || (!contained && !input->filter.type)) {
+				BRRLOG_DEBUG("WEM %zu was filtered due to %slist", i, input->filter.type?"black":"white");
 				continue;
 			}
 		}
-		state->wems_to_extract++;
+
 		BRRLOG_DEBUG("Extracting WEM %zu, %lu bytes", i, wem->size);
+
+		state->stats.wem_extracts.assigned++;
 		snprintf(goutput_path, sizeof(goutput_path), "%s"OUTPUT_FORMAT".wem", output_root, digits, i);
 		if (!(output = fopen(goutput_path, "wb"))) {
 			BRRLOG_ERRN("Failed to open output wem ");
 			LOG_FORMAT(LOG_PARAMS_INFO, "#%*zu", digits, i);
 			BRRLOG_ERRP(" skipping : %s", lib_strerr(err));
-			continue;
-		}
-		if (wem->size != (wrote = fwrite(buffer + wem->offset, 1, wem->size, output))) {
-			BRRLOG_ERRN("Failed to write to output wem ");
-			LOG_FORMAT(LOG_PARAMS_INFO, "#%*zu", digits, i);
-			BRRLOG_ERRP(" (%s) skipping : %s", goutput_path, strerror(errno));
+			state->stats.wem_extracts.failed++;
 		} else {
-			state->wems_extracted++;
+			if (wem->size != (wrote = fwrite(buffer + wem->offset, 1, wem->size, output))) {
+				BRRLOG_ERRN("Failed to write to output wem ");
+				LOG_FORMAT(LOG_PARAMS_INFO, "#%*zu", digits, i);
+				BRRLOG_ERRP(" (%s) skipping : %s", goutput_path, strerror(errno));
+				state->stats.wem_extracts.failed++;
+			} else {
+				state->stats.wem_extracts.succeeded++;
+			}
+			fclose(output);
 		}
-		fclose(output);
 	}
 	return I_SUCCESS;
 }

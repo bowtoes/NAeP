@@ -22,8 +22,8 @@ limitations under the License.
 #include <brrtools/brrtypes.h>
 
 #define CODEBOOK_SUCCESS 0
-#define CODEBOOK_ERROR -1
-#define CODEBOOK_CORRUPT -2
+#define CODEBOOK_ERROR 1
+#define CODEBOOK_CORRUPT 2
 
 typedef struct packed_codebook {
 	unsigned char *data;

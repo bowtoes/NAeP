@@ -30,14 +30,14 @@ limitations under the License.
 static void
 i_set_log_state(const nestateT *const state, const neinputT *const input)
 {
-	if (state->log_style_enabled)
-		gbrrlogctl.style_enabled = input->log_color_enabled;
+	if (state->settings.log_style_enabled)
+		gbrrlogctl.style_disabled = !input->flag.log_color_enabled;
 #if defined(Ne_debug)
 	gbrrlogctl.debug_enabled = 1;
 	brrlog_setmaxpriority(brrlog_priority_debug);
 #else
-	gbrrlogctl.debug_enabled = input->log_debug;
-	brrlog_setmaxpriority(input->log_priority);
+	gbrrlogctl.debug_enabled = input->flag.log_debug;
+	brrlog_set_max_priority(input->log_priority);
 #endif
 }
 static int
@@ -102,15 +102,15 @@ i_process_input(nestateT *const state, neinput_libraryT *const libraries, neinpu
 {
 	int err = 0;
 	BRRLOG_NORN("Processing input ");
-	LOG_FORMAT(LOG_PARAMS_INFO, "%*zu / %zu", state->n_input_digits, idx + 1, state->n_inputs);
+	LOG_FORMAT(LOG_PARAMS_INFO, "%*zu / %zu", state->stats.n_input_digits, idx + 1, state->n_inputs);
 	BRRLOG_NORN(" ");
 	switch (input->type) {
-		case neinput_type_auto: LOG_FORMAT(LOG_PARAMS_AUT, "%-*s", state->input_path_max, input->path, "");
+		case neinput_type_auto: LOG_FORMAT(LOG_PARAMS_AUT, "%-*s", state->stats.input_path_max, input->path, "");
 		    err = i_determine_input_type(input); break;
-		case neinput_type_ogg: LOG_FORMAT(LOG_PARAMS_OGG, "%-*s", state->input_path_max, input->path, ""); break;
-		case neinput_type_wem: LOG_FORMAT(LOG_PARAMS_WEM, "%-*s", state->input_path_max, input->path, ""); break;
-		case neinput_type_wsp: LOG_FORMAT(LOG_PARAMS_WSP, "%-*s", state->input_path_max, input->path, ""); break;
-		case neinput_type_bnk: LOG_FORMAT(LOG_PARAMS_BNK, "%-*s", state->input_path_max, input->path, ""); break;
+		case neinput_type_ogg: LOG_FORMAT(LOG_PARAMS_OGG, "%-*s", state->stats.input_path_max, input->path, ""); break;
+		case neinput_type_wem: LOG_FORMAT(LOG_PARAMS_WEM, "%-*s", state->stats.input_path_max, input->path, ""); break;
+		case neinput_type_wsp: LOG_FORMAT(LOG_PARAMS_WSP, "%-*s", state->stats.input_path_max, input->path, ""); break;
+		case neinput_type_bnk: LOG_FORMAT(LOG_PARAMS_BNK, "%-*s", state->stats.input_path_max, input->path, ""); break;
 	}
 	BRRLOG_NORN(" ");
 	if (err) {
@@ -122,8 +122,8 @@ i_process_input(nestateT *const state, neinput_libraryT *const libraries, neinpu
 		case neinput_type_wem: return neconvert_wem(state, libraries, input);
 		case neinput_type_wsp: return neextract_wsp(state, libraries, input);
 		case neinput_type_bnk: return neextract_bnk(state, libraries, input);
+		default: return I_UNRECOGNIZED_DATA;
 	}
-	return I_UNRECOGNIZED_DATA;
 }
 
 int
@@ -134,9 +134,9 @@ neprocess_inputs(nestateT *const state, neinput_libraryT *const libraries, neinp
 		i_set_log_state(state, input);
 		if (i_check_input(input))
 			continue;
-		BRRLOG_DEBUGN("%sLIST : ", input->list.type?"BLACK":"WHITE");
-		for (brru4 i = 0; i < input->list.count; ++i) {
-			BRRLOG_DEBUGNP("%zu ", input->list.list[i]);
+		BRRLOG_DEBUGN("%sLIST : ", input->filter.type?"BLACK":"WHITE");
+		for (brru4 i = 0; i < input->filter.count; ++i) {
+			BRRLOG_DEBUGNP("%zu ", input->filter.list[i]);
 		}
 		BRRLOG_DEBUGP("");
 		i_process_input(state, libraries, input, i);
