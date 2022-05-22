@@ -27,75 +27,114 @@ limitations under the License.
 #include "errors.h"
 #include "lib.h"
 #include "packer.h"
+#include "print.h"
 
+// TODO please explain this
 typedef struct wwise_vorb_implicit {
 	brru4 sample_count;
 	brru4 mod_signal;
+
 	brru1 skipped_0[8];
+
 	brru4 header_packets_offset;
 	brru4 audio_start_offset;
+
 	brru1 skipped_1[12];
+
 	brru4 uid;
-	brru1 blocksize[2];
-} wwise_vorb_implicitT;
+	brru1 blocksize_0;
+	brru1 blocksize_1;
+} wwise_vorb_implicit_t;
+
+// TODO please explain this
 typedef struct wwise_vorb_basic {
 	brru4 sample_count;
+
 	brru1 skipped_0[20];
+
 	brru4 header_packets_offset;
 	brru4 audio_start_offset;
+
 	brru1 unknown[12];
-} wwise_vorb_basicT;
+} wwise_vorb_basic_t;
+
+// TODO please explain this
 typedef struct wwise_vorb_extra {
 	brru4 sample_count;
+
 	brru1 skipped_0[20];
+
 	brru4 header_packets_offset;
 	brru4 audio_start_offset;
-	brru1 skipped_1[12];
-	brru4 uid;
-	brru1 blocksize[2];
-	brru1 unknown[2];
-} wwise_vorb_extraT;
 
-static void
+	brru1 skipped_1[12];
+
+	brru4 uid;
+	brru1 blocksize_0;
+	brru1 blocksize_1;
+
+	brru1 unknown[2];
+} wwise_vorb_extra_t;
+
+static inline void
 i_init_vorb(wwise_wem_t *const wem, const unsigned char *const data, brru4 data_size)
 {
-	if (data_size == 42) { /* Implicit type */
-		wwise_vorb_implicitT i = {0};
+	if (data_size == 42) {
+		/* Implicit type */
+		wwise_vorb_implicit_t i = {0};
 		memcpy(&i, data, 42);
+
 		wem->vorb.sample_count = i.sample_count;
 		wem->vorb.mod_signal = i.mod_signal;
 		wem->vorb.header_packets_offset = i.header_packets_offset;
 		wem->vorb.audio_start_offset = i.audio_start_offset;
 		wem->vorb.uid = i.uid;
-		wem->vorb.blocksize[0] = i.blocksize[0];
-		wem->vorb.blocksize[1] = i.blocksize[1];
+		wem->vorb.blocksize_0 = i.blocksize_0;
+		wem->vorb.blocksize_1 = i.blocksize_1;
 
-		/* from ww2ogg, no idea what they mean */
+		/* from ww2ogg, no idea what 'mod_packets' is supposed to mean */
 		if (i.mod_signal == 0x4a || i.mod_signal == 0x4b || i.mod_signal == 0x69 || i.mod_signal == 0x70) {
-			wem->mod_packets = 0;
+			wem->flag.mod_packets = 0;
 		} else {
-			wem->mod_packets = 1;
+			wem->flag.mod_packets = 1;
 		}
-		wem->granule_present = 0;
-		wem->all_headers_present = 0;
-	} else { /* Explicit type */
-		wwise_vorb_extraT e = {0};
-		memcpy(&e, data, brrnum_umin(data_size, sizeof(e)));
+
+		wem->flag.granule_present = 0;
+		wem->flag.all_headers_present = 0;
+	} else {
+		/* Explicit type */
+		wwise_vorb_extra_t e = {0};
+#ifdef Ne_extra_debug
+		if (data_size > sizeof(e)) {
+			NePrintExtra(DEBUG,
+				"Explicit vorbis initialization header size is %zu bytes (expected at most %zu).",
+				data_size, sizeof(e));
+		}
+#endif
+		memcpy(&e, data, brrnum_umin(data_size, sizeof(e))); // TODO why this min?
+
 		wem->vorb.sample_count = e.sample_count;
 		wem->vorb.header_packets_offset = e.header_packets_offset;
 		wem->vorb.audio_start_offset = e.audio_start_offset;
 		wem->vorb.uid = e.uid;
-		wem->vorb.blocksize[0] = e.blocksize[0];
-		wem->vorb.blocksize[1] = e.blocksize[1];
+		wem->vorb.blocksize_0 = e.blocksize_0;
+		wem->vorb.blocksize_1 = e.blocksize_1;
 
-		wem->mod_packets = 0;
-		wem->granule_present = 1;
-		wem->all_headers_present = (data_size <= 44);
+		wem->flag.mod_packets = 0;
+		wem->flag.granule_present = 1;
+		wem->flag.all_headers_present = (data_size <= 44);
 	}
 }
-static void
+static inline void
 i_init_fmt(wwise_fmt_t *const fmt, const unsigned char *const data, brru4 data_size)
 {
+#ifdef Ne_extra_debug
+		if (data_size > sizeof(*fmt)) {
+			NePrintExtra(DEBUG,
+				"fmt chunk size is %zu bytes (expected at most %zu).",
+				data_size, sizeof(*fmt));
+		}
+#endif
 	memcpy(fmt, data, brrnum_umin(data_size, sizeof(*fmt)));
 }
 int
@@ -103,38 +142,47 @@ wwise_wem_init(wwise_wem_t *const wem, const riff_t *const rf)
 {
 	if (!wem || !rf)
 		return WWISE_ERROR;
-	memset(wem, 0, sizeof(*wem));
+
+	wwise_wem_t w = {0};
+	// Iterate the RIFF chunks
 	for (brru8 i = 0; i < rf->n_basics; ++i) {
-		riff_basic_chunk_t *basic = &rf->basics[i];
-		if (basic->type == riff_basic_fmt) {
-			if (wem->fmt_initialized)
+		riff_basic_chunk_t basic = rf->basics[i];
+		if (basic.type == riff_basic_fmt) {
+
+			if (w.flag.fmt_initialized)
 				return WWISE_DUPLICATE;
-			i_init_fmt(&wem->fmt, basic->data, basic->size);
-			wem->fmt_initialized = 1;
-			if (basic->size == 66) { /* Vorb implicit in the fmt */
-				if (wem->vorb_initialized)
+
+			i_init_fmt(&w.fmt, basic.data, basic.size);
+			w.flag.fmt_initialized = 1;
+
+			/* Vorb init header data is contained in the fmt */
+			if (basic.size == 66) {
+				if (w.flag.vorb_initialized)
 					return WWISE_DUPLICATE;
-				i_init_vorb(wem, basic->data + 24, basic->size - 24);
-				wem->vorb_initialized = 1;
+				i_init_vorb(&w, basic.data + 24, basic.size - 24);
+				w.flag.vorb_initialized = 1;
 			}
-		} else if (basic->type == riff_basic_vorb) { /* Vorb explicit */
-			if (wem->vorb_initialized)
+
+		} else if (basic.type == riff_basic_vorb) {
+			/* Vorb init header data is explicit */
+			if (w.flag.vorb_initialized)
 				return WWISE_DUPLICATE;
-			i_init_vorb(wem, basic->data, basic->size);
-			wem->vorb_initialized = 1;
-		} else if (basic->type == riff_basic_data) {
-			if (wem->data_initialized)
+			i_init_vorb(&w, basic.data, basic.size);
+			w.flag.vorb_initialized = 1;
+
+		} else if (basic.type == riff_basic_data) {
+			if (w.flag.data_initialized)
 				return WWISE_DUPLICATE;
-			wem->data = basic->data;
-			wem->data_size = basic->size;
-			wem->data_initialized = 1;
+			w.data = basic.data;
+			w.data_size = basic.size;
+			w.flag.data_initialized = 1;
 		}
 	}
-	if (!wem->fmt_initialized || !wem->vorb_initialized || !wem->data_initialized)
+	if (!w.flag.fmt_initialized || !w.flag.vorb_initialized || !w.flag.data_initialized)
 		return WWISE_INCOMPLETE;
-	if (wem->vorb.header_packets_offset > wem->data_size ||
-	    wem->vorb.audio_start_offset > wem->data_size)
+	if (w.vorb.header_packets_offset > w.data_size || w.vorb.audio_start_offset > w.data_size)
 		return WWISE_CORRUPT;
+	*wem = w;
 	return WWISE_SUCCESS;
 }
 void
@@ -146,8 +194,12 @@ wwise_wem_clear(wwise_wem_t *const wem)
 }
 
 int
-wwise_packet_init(wwise_packet_t *const packet,
-    const wwise_wem_t *const wem, const unsigned char *const data, brrsz data_size)
+wwise_packet_init(
+    wwise_packet_t *const packet,
+    const wwise_wem_t *const wem,
+    const unsigned char *const data,
+    brrsz data_size
+)
 {
 	brru1 ofs = 2;
 	if (!packet || !wem || !data)
@@ -160,13 +212,13 @@ wwise_packet_init(wwise_packet_t *const packet,
 	if (packet->payload_size > data_size)
 		return WWISE_INCOMPLETE;
 
-	if (wem->granule_present) {
+	if (wem->flag.granule_present) {
 		if (data_size < ofs + 4)
 			return WWISE_INCOMPLETE;
 
 		packet->granule = *(brru4 *)(data + ofs);
 		ofs += 4;
-		if (wem->all_headers_present) {
+		if (wem->flag.all_headers_present) {
 			if (data_size < ofs + 2)
 				return WWISE_INCOMPLETE;
 
@@ -191,8 +243,12 @@ static const neinput_t *ginput = NULL;
 
 /* State init/input reading */
 static int
-i_init_state(ogg_stream_state *const streamer, const wwise_wem_t *const wem,
-    vorbis_info *const vi, vorbis_comment *const vc)
+i_init_state(
+    ogg_stream_state *const streamer,
+    const wwise_wem_t *const wem,
+    vorbis_info *const vi,
+    vorbis_comment *const vc
+)
 {
 	int serialno = 0;
 	serialno = wem->vorb.uid;
@@ -225,7 +281,6 @@ i_insert_packet(ogg_stream_state *const streamer, ogg_packet *const packet, vorb
 		if (!vi || !vc) {
 			return I_BAD_ERROR;
 		} else if ((err = vorbis_synthesis_headerin(vi, vc, packet))) {
-#if defined(Ne_extra_debug)
 			BRRLOG_ERRN("Failed to synthesize header %d : ", packet->packetno);
 			if (err == OV_ENOTVORBIS)
 				BRRLOG_ERRNP("NOT VORBIS");
@@ -233,19 +288,29 @@ i_insert_packet(ogg_stream_state *const streamer, ogg_packet *const packet, vorb
 				BRRLOG_ERRNP("BAD HEADER");
 			else
 				BRRLOG_ERRNP("INTERNAL ERROR");
-#endif
 			return I_CORRUPT;
 		}
 	}
 	return I_SUCCESS;
 }
 
-/* COPY */
+/****************************************
+ * Copy headers
+****************************************/
 static int
 i_copy_id_header(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 {
-	brrs4 packet_type = 0, vorbis[6] = {0}, audio_channels, blocksize_0, blocksize_1, frame_flag;
-	brrs8 version = 0, sample_rate, bitrate_max, bitrate_nom, bitrate_min;
+	brrs4 packet_type = 0,
+		  vorbis[6] = {0},
+		  audio_channels,
+		  blocksize_0,
+		  blocksize_1,
+		  frame_flag;
+	brrs8 version = 0,
+		  sample_rate,
+		  bitrate_max,
+		  bitrate_nom,
+		  bitrate_min;
 
 	packet_type = packer_unpack(unpacker, 8);        /* IN Packet type, should be 1 */
 	for (int i = 0; i < 6; ++i)
@@ -389,8 +454,12 @@ i_copy_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packer
 	return I_SUCCESS;
 }
 static int
-i_copy_headers(ogg_stream_state *const streamer, wwise_wem_t *const wem,
-    vorbis_info *const vi, vorbis_comment *const vc)
+i_copy_headers(
+    ogg_stream_state *const streamer,
+    wwise_wem_t *const wem,
+    vorbis_info *const vi,
+    vorbis_comment *const vc
+)
 {
 	int err = 0;
 	unsigned char *packets_start = wem->data + wem->vorb.header_packets_offset;
@@ -426,7 +495,10 @@ i_copy_headers(ogg_stream_state *const streamer, wwise_wem_t *const wem,
 	}
 	return I_SUCCESS;
 }
-/* BUILD */
+
+/****************************************
+ * Build headers
+****************************************/
 static int
 i_build_id_header(oggpack_buffer *const packer, const wwise_wem_t *const wem)
 {
@@ -439,8 +511,8 @@ i_build_id_header(oggpack_buffer *const packer, const wwise_wem_t *const wem)
 	packer_pack(packer, 0, 32);                          /* OUT Bitrate maximum */
 	packer_pack(packer, wem->fmt.avg_byte_rate * 8, 32); /* OUT Bitrate nominal */
 	packer_pack(packer, 0, 32);                          /* OUT Bitrate minimum */
-	packer_pack(packer, wem->vorb.blocksize[0], 4);      /* OUT Blocksize 0 */
-	packer_pack(packer, wem->vorb.blocksize[1], 4);      /* OUT Blocksize 1 */
+	packer_pack(packer, wem->vorb.blocksize_0, 4);      /* OUT Blocksize 0 */
+	packer_pack(packer, wem->vorb.blocksize_1, 4);      /* OUT Blocksize 1 */
 	packer_pack(packer, 1, 1);                           /* OUT Frame flag */
 	return I_SUCCESS;
 }
@@ -517,10 +589,8 @@ i_build_codebook(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 		for (long i = 0; i < lookup_values; ++i) { /* IN/OUT Codebook multiplicands */
 			long multiplicand = packer_transfer(unpacker, value_bits, packer, value_bits);
 		}
-#if defined(Ne_extra_debug)
 	} else {
 		BRRLOG_ERR("LOOKUP FAILED");
-#endif
 	}
 	return I_SUCCESS;
 }
@@ -641,8 +711,12 @@ i_build_mappings(oggpack_buffer *const unpacker, oggpack_buffer *const packer, i
 	return I_SUCCESS;
 }
 static int
-i_build_modes(oggpack_buffer *const unpacker, oggpack_buffer *const packer,
-    brru1 *const mode_blockflags, int *const mode_count)
+i_build_modes(
+    oggpack_buffer *const unpacker,
+    oggpack_buffer *const packer,
+    brru1 *const mode_blockflags,
+    int *const mode_count
+)
 {
 	int md_count = 1 + packer_transfer(unpacker, 6, packer, 6); /* IN/OUT Mode count */
 	*mode_count = md_count;
@@ -659,8 +733,12 @@ i_build_modes(oggpack_buffer *const unpacker, oggpack_buffer *const packer,
 	return I_SUCCESS;
 }
 static int
-i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packer,
-    wwise_wem_t *const wem, int stripped)
+i_build_setup_header(
+    oggpack_buffer *const unpacker,
+    oggpack_buffer *const packer,
+    wwise_wem_t *const wem,
+    int stripped
+)
 {
 	int codebook_count, err = 0;
 	packer_pack(packer, 5, 8);                            /* OUT Packet type */
@@ -671,25 +749,17 @@ i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packe
 	if (!glibrary) { /* Internal codebooks */
 		if (!stripped) { /* Full codebooks, can be copied directly */
 			for (int err = 0, i = 0; i < codebook_count; ++i) {
-#if defined(Ne_extra_debug)
-				BRRLOG_DEBUG("Copying internal codebook %d", i);
-#endif
+				NeExtraPrint(DEBUG, "Copying internal codebook %d", i);
 				if ((err = i_copy_next_codebook(unpacker, packer))) {
-#if defined(Ne_extra_debug)
-					BRRLOG_ERR("Failed to copy codebook %d", i);
-#endif
+					NeExtraPrint(ERR, "Failed to copy codebook %d", i);
 					return err;
 				}
 			}
 		} else {
 			for (int err = 0, i = 0; i < codebook_count; ++i) {
-#if defined(Ne_extra_debug)
-				BRRLOG_DEBUG("Rebuilding internal codebook %d", i);
-#endif
+				NeExtraPrint(DEBUG, "Rebuilding internal codebook %d", i);
 				if ((err = packed_codebook_unpack_raw(unpacker, packer))) {
-#if defined(Ne_extra_debug)
-					BRRLOG_ERR("Failed to build codebook %d", i);
-#endif
+					NeExtraPrint(ERR, "Failed to build codebook %d", i);
 					return err;
 				}
 			}
@@ -709,23 +779,18 @@ i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packe
 						/* ??? */
 					}
 				}
-#if defined(Ne_extra_debug)
-				BRRLOG_ERR("Codebook index too large %d", cbidx);
-#endif
+				NeExtraPrint(ERR, "Codebook index too large %d", cbidx);
 				return I_CORRUPT;
 			}
-#if defined(Ne_extra_debug)
-			BRRLOG_DEBUG("Building external codebook %3d: ", cbidx);
-#endif
+
+			NeExtraPrint(DEBUG, "Building external codebook %3d: ", cbidx);
 			cb = &glibrary->codebooks[cbidx];
 			if (CODEBOOK_SUCCESS != (err = packed_codebook_unpack(cb))) { /* Copy from external */
 				if (err == CODEBOOK_ERROR)
 					err = I_BUFFER_ERROR;
 				else if (err == CODEBOOK_CORRUPT)
 					err = I_CORRUPT;
-#if defined(Ne_extra_debug)
-				BRRLOG_ERR("Failed to copy external codebook %d : %s", cbidx, lib_strerr(err));
-#endif
+				NeExtraPrint(ERR, "Failed to copy external codebook %d : %s", cbidx, lib_strerr(err));
 				return err;
 			} else {
 				oggpack_buffer cb_unpacker;
@@ -741,32 +806,22 @@ i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packe
 
 	if (!stripped) { /* Rest of the header in-spec, copy verbatim */
 		if (-1 == (err = packer_transfer_remaining(unpacker, packer))) {
-#if defined(Ne_extra_debug)
-			BRRLOG_ERR("Failed to copy the rest of setup packet");
-#endif
+			NeExtraPrint(ERR, "Failed to copy the rest of setup packet");
 			err = I_CORRUPT;
 			return err;
 		}
 	} else { /* Need to rebuild the information */
 		if ((err = i_build_floors(unpacker, packer))) {
-#if defined(Ne_extra_debug)
-			BRRLOG_ERR("Failed building floors");
-#endif
+			NeExtraPrint(ERR, "Failed building floors");
 			return err;
 		} else if ((err = i_build_residues(unpacker, packer))) {
-#if defined(Ne_extra_debug)
-			BRRLOG_ERR("Failed building residues");
-#endif
+			NeExtraPrint(ERR, "Failed building residues");
 			return err;
 		} else if ((err = i_build_mappings(unpacker, packer, wem->fmt.n_channels))) {
-#if defined(Ne_extra_debug)
-			BRRLOG_ERR("Failed building mappings");
-#endif
+			NeExtraPrint(ERR, "Failed building mappings");
 			return err;
 		} else if ((err = i_build_modes(unpacker, packer, wem->mode_blockflags, &wem->mode_count))) {
-#if defined(Ne_extra_debug)
-			BRRLOG_ERR("Failed building modes");
-#endif
+			NeExtraPrint(ERR, "Failed building modes");
 			return err;
 		}
 	}
@@ -775,8 +830,12 @@ i_build_setup_header(oggpack_buffer *const unpacker, oggpack_buffer *const packe
 	return I_SUCCESS;
 }
 static int
-i_build_headers(ogg_stream_state *const streamer, wwise_wem_t *const wem,
-    vorbis_info *const vi, vorbis_comment *const vc)
+i_build_headers(
+    ogg_stream_state *const streamer,
+    wwise_wem_t *const wem,
+    vorbis_info *const vi,
+    vorbis_comment *const vc
+)
 {
 	int err = 0;
 	for (int current_header = 0; current_header < 3; ++current_header) {
@@ -792,13 +851,10 @@ i_build_headers(ogg_stream_state *const streamer, wwise_wem_t *const wem,
 			unsigned char *packets_start = wem->data + wem->vorb.header_packets_offset;
 			brru4 packets_size = wem->vorb.audio_start_offset - wem->vorb.header_packets_offset;
 			wwise_packet_t packeteer = {0};
-#if defined(Ne_extra_debug)
-			BRRLOG_DEBUG("Building setup header");
-#endif
+
+			NeExtraPrint(DEBUG, "Building setup header");
 			if (WWISE_SUCCESS != (err = wwise_packet_init(&packeteer, wem, packets_start, packets_size))) {
-#if defined(Ne_extra_debug)
-				BRRLOG_ERRN("Failed to init setup header packet (%d)", err);
-#endif
+				NeExtraPrint(ERRN, "Failed to init setup header packet (%d)", err);
 				err = I_INSUFFICIENT_DATA;
 			} else {
 				oggpack_readinit(&unpacker, packeteer.payload, packeteer.payload_size);
@@ -822,36 +878,48 @@ i_build_headers(ogg_stream_state *const streamer, wwise_wem_t *const wem,
 
 /* PROCESS */
 static int
-i_process_headers(ogg_stream_state *const streamer, wwise_wem_t *const wem,
-	vorbis_info *const vi, vorbis_comment *const vc)
+i_process_headers(
+    ogg_stream_state *const streamer,
+    wwise_wem_t *const wem,
+    vorbis_info *const vi,
+    vorbis_comment *const vc
+)
 {
-	if (wem->all_headers_present) {
+	if (wem->flag.all_headers_present) {
 		return i_copy_headers(streamer, wem, vi, vc);
 	} else {
 		return i_build_headers(streamer, wem, vi, vc);
 	}
 }
 static int
-i_process_audio(ogg_stream_state *const streamer, wwise_wem_t *const wem,
-	vorbis_info *const vi, vorbis_comment *const vc)
+i_process_audio(
+    ogg_stream_state *const streamer,
+    wwise_wem_t *const wem,
+    vorbis_info *const vi,
+    vorbis_comment *const vc
+)
 {
-	int err = 0;
-	brru4 packets_start = wem->vorb.audio_start_offset,
-	      packets_size = wem->data_size - wem->vorb.audio_start_offset;
+
+	brru4 packets_start = wem->vorb.audio_start_offset;
+	brru4 packets_size = wem->data_size - wem->vorb.audio_start_offset;
 	wwise_packet_t packeteer = {0};
-	int prev_blockflag = 0,
-	    mode_count_bits = lib_count_bits(wem->mode_count - 1);
-	brru8 packetno = 0, last_block = 0, total_block = 0;
+
+	int prev_blockflag = 0;
+	int mode_count_bits = lib_count_bits(wem->mode_count - 1);
+	brru8 packetno = 0;
+	brru8 last_block = 0;
+	brru8 total_block = 0;
 	for (; packets_start < wem->data_size; ++packetno) {
 		int eos = 0;
 		ogg_packet packet;
 		oggpack_buffer unpacker, packer;
-		if (WWISE_SUCCESS != wwise_packet_init(&packeteer, wem, wem->data + packets_start, packets_size))
+		if (WWISE_SUCCESS != wwise_packet_init(&packeteer, wem, wem->data + packets_start, packets_size)) {
 			return I_INSUFFICIENT_DATA;
+		}
 		oggpack_readinit(&unpacker, packeteer.payload, packeteer.payload_size);
 		oggpack_writeinit(&packer);
 
-		if (wem->mod_packets) {
+		if (wem->flag.mod_packets) {
 			int packet_type = 0;
 			int mode_number, remainder;
 			packer_pack(&packer, packet_type, 1); /* OUT Packet type */
@@ -883,6 +951,8 @@ i_process_audio(ogg_stream_state *const streamer, wwise_wem_t *const wem,
 			int transferred = packer_transfer(&unpacker, 8, &packer, 8); /* Unmodified first byte */
 		}
 		packer_transfer_remaining(&unpacker, &packer);
+
+		int err = 0;
 		if ((err = i_build_packet(&packet, &packer, packetno + 3, 0, eos))) {
 			oggpack_writeclear(&packer);
 			return err;
@@ -903,14 +973,16 @@ i_process_audio(ogg_stream_state *const streamer, wwise_wem_t *const wem,
 		packets_start += packeteer.header_length + packeteer.payload_size;
 		packets_size -= packeteer.header_length + packeteer.payload_size;
 	}
-#if defined(Ne_extra_debug)
-	BRRLOG_DEBUG("Packetno : %lld", 3 + packetno);
-#endif
+	NeExtraPrint(DEBUG, "Packetno : %lld", 3 + packetno);
 	return I_SUCCESS;
 }
 int
-wwise_convert_wwriff(riff_t *const rf, ogg_stream_state *const streamer,
-    const codebook_library_t *const library, const neinput_t *const input)
+wwise_convert_wwriff(
+    riff_t *const rf,
+    ogg_stream_state *const streamer,
+    const codebook_library_t *const library,
+    const neinput_t *const input
+)
 {
 	int err = 0;
 	wwise_wem_t wem;
@@ -918,30 +990,25 @@ wwise_convert_wwriff(riff_t *const rf, ogg_stream_state *const streamer,
 	vorbis_comment vc;
 
 	if (WWISE_SUCCESS != (err = wwise_wem_init(&wem, rf))) {
-#if defined(Ne_extra_debug)
 		if (err == WWISE_INCOMPLETE) {
 			BRRLOG_ERRN("WEM missing");
-			if (!wem.fmt_initialized)
+			if (!wem.flag.fmt_initialized)
 				BRRLOG_ERRNP(" 'fmt'");
-			if (!wem.vorb_initialized) {
-				if (!wem.fmt_initialized)
+			if (!wem.flag.vorb_initialized) {
+				if (!wem.flag.fmt_initialized)
 					BRRLOG_ERRNP(",");
 				BRRLOG_ERRNP(" 'vorb'");
 			}
-			if (!wem.data_initialized) {
-				if (!wem.fmt_initialized || !wem.vorb_initialized)
+			if (!wem.flag.data_initialized) {
+				if (!wem.flag.fmt_initialized || !wem.flag.vorb_initialized)
 					BRRLOG_ERRNP(",");
 				BRRLOG_ERRNP(" 'data'");
 			}
 			BRRLOG_ERRNP(" chunks");
 		} else if (err == WWISE_DUPLICATE) {
 			BRRLOG_ERRN("WEM has duplicate 'fmt', 'data', or 'vorb' chunk(s)");
-		} else
-#endif
-			if (err == WWISE_CORRUPT) {
-#if defined(Ne_extra_debug)
-			BRRLOG_ERRN("WEM is corrupted or does not contain vorbis data");
-#endif
+		} else if (err == WWISE_CORRUPT) {
+			NeExtraPrint(ERRN, "WEM is corrupted or does not contain vorbis data");
 			return I_CORRUPT;
 		}
 		return I_INIT_ERROR;

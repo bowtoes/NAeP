@@ -31,8 +31,10 @@ typedef struct wwise_vorb {
 	brru4 header_packets_offset;
 	brru4 audio_start_offset;
 	brru4 uid;
-	brru1 blocksize[2];
+	brru1 blocksize_0;
+	brru1 blocksize_1;
 } wwise_vorb_t;
+
 typedef struct wwise_fmt {
 	brru2 format_tag;
 	brru2 n_channels;
@@ -54,23 +56,26 @@ typedef struct wwise_fmt {
 		brru1 data4[8];
 	} guid;
 } wwise_fmt_t;
+
 typedef struct wwise_wem {
-	brru1 fmt_initialized:1;
-	brru1 vorb_initialized:1;
-	brru1 data_initialized:1;
-	brru1 mod_packets:1; /* No idea what this means */
-	brru1 granule_present:1; /* Whether data packets have 4-bytes for granule */
-	brru1 all_headers_present:1; /* If all vorbis headers are present at
-									header_packets_offset or it's just the
-									setup header */
-	brru1 mode_blockflags[32]; /* Storage for audio packet decode */
-	int mode_count; /* Storage for audio packet decode */
+	struct {
+		brru1 fmt_initialized:1;
+		brru1 vorb_initialized:1;
+		brru1 data_initialized:1;
+		brru1 mod_packets:1;         /* No idea what this means */
+		brru1 granule_present:1;     /* Whether data packets have 4-bytes for granule */
+		brru1 all_headers_present:1; /* If all vorbis headers are present at header_packets_offset or it's just the setup header */
+	} flag;
+	brru1 mode_blockflags[32];   /* Storage for audio packet decode */
+	int mode_count;              /* Storage for audio packet decode */
 	unsigned char *data;
 	brru4 data_size;
 	wwise_vorb_t vorb;
 	wwise_fmt_t fmt;
 } wwise_wem_t;
+
 typedef struct wwise_packet {
+// Bitfields to avoid padding
 	brru8 payload_size:16;
 	brru8 granule:32;
 	brru8 unused:16;
@@ -87,24 +92,32 @@ typedef struct wwise_packet {
 #define VORBIS_STR "vorbis"
 #define CODEBOOK_SYNC "BCV"
 
-/* -3 : corrupted stream
- * -2 : duplicate data
- * -1 : error (input)
- *  0 : insufficient data/missing chunks
+/* Consumes the riff data 'rf', and parses it as a wwise WEM structure.
+ * Returns:
  *  1 : success
+ *  0 : insufficient data/missing chunks
+ * -1 : error (input)
+ * -2 : duplicate data
+ * -3 : corrupted stream
  * */
 int wwise_wem_init(wwise_wem_t *const wem, const riff_t *const rf);
+
+/* Frees memory associated with 'wem', and clears it's data to 0. */
 void wwise_wem_clear(wwise_wem_t *const wem);
 
-/* -1 : error (input)
- *  0 : insufficient data
+/* Initializes 'packet' from the wwise stream 'wem' with data 'data'.
  *  1 : success
+ *  0 : insufficient data
+ * -1 : error (input)
  * */
-int wwise_packet_init(wwise_packet_t *const packet,
-    const wwise_wem_t *const wem, const unsigned char *const data, brrsz data_size);
+int wwise_packet_init(
+    wwise_packet_t *const packet,
+    const wwise_wem_t *const wem,
+    const unsigned char *const data,
+    brrsz data_size
+);
 void wwise_packet_clear(wwise_packet_t *const packet);
 
-int wwise_convert_wwriff(riff_t *const rf, ogg_stream_state *const streamer,
-    const codebook_library_t *const library, const neinput_t *const input);
+int wwise_convert_wwriff(riff_t *const rf, ogg_stream_state *const streamer, const codebook_library_t *const library, const neinput_t *const input);
 
 #endif /* WWISE_H */

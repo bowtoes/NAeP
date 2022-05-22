@@ -122,4 +122,10 @@ int print_usage(void);
 int print_help(void);
 int print_report(const nestate_t *const state);
 
+#if defined(Ne_extra_debug)
+# define NeExtraPrint(_type_, ...) BRRLOG_##_type_(__VA_ARGS__)
+#else
+# define NeExtraPrint(_type_, ...)
+#endif
+
 #endif /* PRINT_H */

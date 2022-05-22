@@ -83,9 +83,9 @@ limitations under the License.
     	riff_##_t_##_unrecognized = 0, \
     	_riff_##_t_##s_gen(_enum_processor) \
     	riff_##_t_##_count, \
-    } riff_##_t_##_t2_##T; \
+    } riff_##_t_##_t2_##_t; \
     extern const brru4 riff_##_t_##_ccs[riff_##_t_##_count - 1]; \
-    riff_##_t_##_t2_##T riff_cc_##_t_##_t2_(brru4 cc);
+    riff_##_t_##_t2_##_t riff_cc_##_t_##_t2_(brru4 cc);
 _riff_boiler_gen(_enum_boiler)
 #undef _enum_boiler
 #undef _enum_processor
@@ -103,29 +103,31 @@ typedef void *(*riff_copier_t)(void *const, const void *const, size_t);
 /* The byte-order of a RIFF file */
 typedef enum riff_byteorder {
 	riff_byteorder_unrecognized = 0,
-	riff_byteorder_RIFF, /* Chunk character codes and data are stored little-endian */
-	riff_byteorder_RIFX, /* Chunk character codes are stored little-endian and data is stored big-endian */
-	riff_byteorder_XFIR, /* Chunk character codes are stored big-endian and data is stored little-endian */
-	riff_byteorder_FFIR, /* Chunk character codes and data are stored big-endian */
+	riff_byteorder_RIFF, /* Chunk FourCCs and data are stored little-endian */
+	riff_byteorder_RIFX, /* Chunk FourCCs are stored little-endian and data is stored big-endian */
+	riff_byteorder_XFIR, /* Chunk FourCCs are stored big-endian and data is stored little-endian */
+	riff_byteorder_FFIR, /* Chunk FourCCs and data are stored big-endian */
 } riff_byteorder_t;
 
 /* Storage for the data of a basic riff chunk */
 typedef struct riff_basic_chunk {
 	unsigned char *data;   /* Chunk data, heap-allocated; freed through 'riff_clear' */
-	riff_basic_typeT type; /* Type of chunk */
+	riff_basic_type_t type; /* Type of chunk */
 	brru4 size;            /* Size of chunk data in bytes */
 } riff_basic_chunk_t;
 
-/* A representation of a riff LIST chunk */
+/* A representation of a riff LIST chunk.
+ * Stores only the index of the first chunk in the list, and the number of chunks in the list.
+ * */
 typedef struct riff_list_chunk {
-	riff_list_formatT type;  /* Type of the list */
-	brru4 size;              /* Size of list data in bytes */
-	brru4 first_basic_index; /* Index in the riff struct of the first child chunk */
-	brru4 n_basics;          /* How many children this list has */
-} riff_list_chunkT;
+	riff_list_format_t type;  /* Type of the list */
+	brru4 size;               /* Size of list data in bytes */
+	brru4 first_basic_index;  /* Index in the riff struct of the first child chunk */
+	brru4 n_basics;           /* How many children this list has */
+} riff_list_chunk_t;
 
-/* Used to help reading chunks into a riff struct */
-typedef struct riff_data_sync {
+/* Used to help read chunks into a riff struct */
+typedef struct riff_datasync {
 	unsigned char *data;
 	brrsz storage;
 	brrsz stored;
@@ -136,28 +138,34 @@ typedef struct riff_data_sync {
 	riff_copier_t cpy_data;
 
 	riff_byteorder_t byteorder;
-} riff_data_sync_t;
+} riff_datasync_t;
+
+#define RIFF_CHUNK_TYPE_UNKNOWN 0
+#define RIFF_CHUNK_TYPE_BASIC 1
+#define RIFF_CHUNK_TYPE_LIST 2
 
 /* Basic information about the chunk currently being read */
-typedef struct riff_chunk_info {
+typedef struct riff_chunkinfo {
 	brru4 chunkcc;     /* Fourcc of the chunk */
 	brru4 chunksize;   /* Size of the chunk's data */
 	int chunk_type;    /* Which type of basic/list chunk is this? What it means depends on is_basic and is_list */
 	brru4 chunk_index; /* Index position of the chunk in the riff struct */
 	brru1 is_basic:1;  /* Whether the chunk is basic */
 	brru1 is_list:1;   /* Whether the chunk is a list */
-} riff_chunk_info_t;
+} riff_chunkstate_t;
+
+/* 'chunkstate' and 'datasync' were inspired by libogg */
 
 /* Storage for riff chunks */
 typedef struct riff {
 	riff_basic_chunk_t *basics; /* Array of basic chunks */
-	riff_list_chunkT *lists;   /* Array of LIST chunks */
-	brrsz n_basics;            /* Number of chunks in the basics array */
-	brrsz n_lists;             /* Number of LISTs in the lists array */
+	riff_list_chunk_t *lists;    /* Array of LIST chunks */
+	brrsz n_basics;             /* Number of chunks in the basics array */
+	brrsz n_lists;              /* Number of LISTs in the lists array */
 
-	brru4 total_size;          /* Total size of the RIFF structure */
-	riff_rootT root;           /* Type of RIFF file root chunk */
-	riff_formatT format;       /* Format specification of the RIFF file/data */
+	brru4 total_size;           /* Total size of the RIFF structure */
+	riff_root_t root;           /* Type of RIFF file root chunk */
+	riff_format_t format;       /* Format specification of the RIFF file/data */
 } riff_t;
 
 riff_byteorder_t riff_cc_byteorder(brru4 cc);
@@ -172,48 +180,53 @@ riff_copier_t riff_copier_data(riff_byteorder_t byteorder);
 #define RIFF_NOT_RIFF -3
 #define RIFF_CORRUPTED -4
 
-void riff_chunk_info_clear(riff_chunk_info_t *const sc);
+void riff_chunkstate_clear(riff_chunkstate_t *const chunkstate);
 
-void riff_data_sync_clear(riff_data_sync_t *const ds);
-/* -1 : invalid/broken data sync
+void riff_datasync_clear(riff_datasync_t *const datasync);
+/*
  *  0 : valid data_sync
+ * -1 : invalid/broken data sync
  * */
-int riff_data_sync_check(const riff_data_sync_t *const ds);
-/* -1 : invalid arguments/data sync
+int riff_datasync_check(const riff_datasync_t *const datasync);
+/*
  *  0 : success
+ * -1 : invalid arguments/data sync
  * */
-int riff_data_sync_from_buffer(riff_data_sync_t *const ds,
-    unsigned char *const buffer, brrsz buffer_size);
-/* -1 : invalid offset/data sync
+int riff_datasync_from_buffer(riff_datasync_t *const datasync, unsigned char *const buffer, brrsz buffer_size);
+/*
  *  0 : success
+ * -1 : invalid offset/data sync
  * */
-int riff_data_sync_seek(riff_data_sync_t *const ds, brrof offset);
+int riff_datasync_seek(riff_datasync_t *const datasync, brrof offset);
 /* NULL : error
  * */
-char *riff_data_sync_buffer(riff_data_sync_t *const ds, brrsz size);
-/* -1 : error
- *  0 : success
- * */
-int riff_data_sync_apply(riff_data_sync_t *const ds, brrsz size);
-
-void riff_clear(riff_t *const rf);
-/* -1 : error
- *  0 : success
- * */
-int riff_init(riff_t *const rf);
-/* -1 : invalid/broken riff
- *  0 : valid riff
- * */
-int riff_check(const riff_t *const rf);
+char *riff_datasync_buffer(riff_datasync_t *const datasync, brrsz size);
 /*
- * -4 : data corrupted
- * -3 : not riff
- * -2 : need to consume again
+ *  0 : success
  * -1 : error
- *  0 : not enough data
- *  1 : chunk consumed successfully
- *  2 : chunk unrecognized
  * */
-int riff_consume_chunk(riff_t *const rf, riff_chunk_info_t *const sc, riff_data_sync_t *const ds);
+int riff_datasync_apply(riff_datasync_t *const datasync, brrsz size);
+
+void riff_clear(riff_t *const riff);
+/*
+ *  0 : success
+ * -1 : error
+ * */
+int riff_init(riff_t *const riff);
+/*
+ *  0 : valid riff
+ * -1 : invalid/broken riff
+ * */
+int riff_check(const riff_t *const riff);
+/*
+ *  2 : chunk unrecognized
+ *  1 : chunk consumed successfully
+ *  0 : not enough data
+ * -1 : error
+ * -2 : need to consume again
+ * -3 : not riff
+ * -4 : data corrupted
+ * */
+int riff_consume_chunk(riff_t *const riff, riff_chunkstate_t *const chunkstate, riff_datasync_t *const data_sync);
 
 #endif /* RIFF_CONSUMER_H */
