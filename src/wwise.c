@@ -661,7 +661,7 @@ i_build_residues(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 			if (bitflag)
 				cascades[j] += 8 * packer_transfer(unpacker, 5, packer, 5); /* IN/OUT Cascade high-bits */
 
-			acc += lib_count_set(cascades[j]);
+			acc += lib_count_ones(cascades[j]);
 		}
 		for (int j = 0; j < acc; ++j) {/* IN/OUT Residue books */
 			int residue_book_index_jb = packer_transfer(unpacker, 8, packer, 8);

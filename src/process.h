@@ -19,12 +19,11 @@ limitations under the License.
 
 #include "input.h"
 
-int neprocess_inputs(nestate_t *const state, neinput_library_t *const libraries, neinput_t *const inputs);
+int neprocess_inputs(nestate_t *const state);
 
-/* Implemented in 'process/' directory */
 int neregrain_ogg(nestate_t *const state, const neinput_t *const input);
-int neconvert_wem(nestate_t *const state, neinput_library_t *const libraries, const neinput_t *const input);
-int neextract_wsp(nestate_t *const state, neinput_library_t *const libraries, const neinput_t *const input);
-int neextract_bnk(nestate_t *const state, neinput_library_t *const libraries, const neinput_t *const input);
+int neconvert_wem(nestate_t *const state, const neinput_t *const input);
+int neextract_wsp(nestate_t *const state, const neinput_t *const input);
+int neextract_bnk(nestate_t *const state, const neinput_t *const input);
 
 #endif /* PROCESS_H */

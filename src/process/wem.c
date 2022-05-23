@@ -57,7 +57,7 @@ i_convert_wem(neinput_library_t *const libraries, const neinput_t *const input)
 }
 
 int
-neconvert_wem(nestate_t *const state, neinput_library_t *const libraries, const neinput_t *const input)
+neconvert_wem(nestate_t *const state, const neinput_t *const input)
 {
 	int err = 0;
 	state->stats.wems.assigned++;
@@ -69,7 +69,7 @@ neconvert_wem(nestate_t *const state, neinput_library_t *const libraries, const 
 			snprintf(goutput_name, sizeof(goutput_name), "%s", input->path);
 		else
 			lib_replace_ext(input->path, strlen(input->path), goutput_name, NULL, ".ogg");
-		err = i_convert_wem(libraries, input);
+		err = i_convert_wem(state->libraries, input);
 	}
 	if (!err) {
 		state->stats.wems.succeeded++;

@@ -182,7 +182,7 @@ i_parse_library_data(neinput_library_t *const library, const char *const buffer,
 {
 	int err = 0;
 	if (library->status.old) {
-		err = codebook_library_deserialize_old(&library->library, buffer, buffer_size);
+		err = codebook_library_deserialize_alt(&library->library, buffer, buffer_size);
 	} else {
 		err = codebook_library_deserialize(&library->library, buffer, buffer_size);
 	}
@@ -192,7 +192,7 @@ i_parse_library_data(neinput_library_t *const library, const char *const buffer,
 		codebook_library_clear(&library->library);
 		library->status.old = !library->status.old;
 		if (library->status.old) {
-			err = codebook_library_deserialize_old(&library->library, buffer, buffer_size);
+			err = codebook_library_deserialize_alt(&library->library, buffer, buffer_size);
 		} else {
 			err = codebook_library_deserialize(&library->library, buffer, buffer_size);
 		}

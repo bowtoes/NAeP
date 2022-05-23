@@ -75,7 +75,7 @@ main(int argc, char **argv)
 		BRRLOG_ERR("No files passed");
 		return 1;
 	}
-	neprocess_inputs(&state, state.libraries, state.inputs);
+	neprocess_inputs(&state);
 	nestate_clear(&state);
 
 	if (state.settings.report_card || state.settings.full_report)

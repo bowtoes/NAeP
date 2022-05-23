@@ -27,7 +27,7 @@ limitations under the License.
 #include "errors.h"
 #include "print.h"
 
-static void
+static inline void
 i_set_log_state(const nestate_t *const state, const neinput_t *const input)
 {
 	if (state->settings.log_style_enabled)
@@ -40,7 +40,7 @@ i_set_log_state(const nestate_t *const state, const neinput_t *const input)
 	brrlog_set_max_priority(input->log_priority);
 #endif
 }
-static int
+static inline int
 i_check_input(const neinput_t *const input)
 {
 	brrpath_stat_result_t stat;
@@ -61,7 +61,7 @@ i_check_input(const neinput_t *const input)
 	}
 	return 0;
 }
-static int
+static inline int
 i_determine_input_type(neinput_t *const input)
 {
 	FILE *fp = NULL;
@@ -97,8 +97,8 @@ i_determine_input_type(neinput_t *const input)
 	return 0;
 }
 
-static int
-i_process_input(nestate_t *const state, neinput_library_t *const libraries, neinput_t *const input, brrsz idx)
+static inline int
+i_process_input(nestate_t *const state, neinput_t *const input, brrsz idx)
 {
 	int err = 0;
 	BRRLOG_NORN("Processing input ");
@@ -119,18 +119,18 @@ i_process_input(nestate_t *const state, neinput_library_t *const libraries, nein
 	}
 	switch (input->type) {
 		case neinput_type_ogg: return neregrain_ogg(state, input);
-		case neinput_type_wem: return neconvert_wem(state, libraries, input);
-		case neinput_type_wsp: return neextract_wsp(state, libraries, input);
-		case neinput_type_bnk: return neextract_bnk(state, libraries, input);
+		case neinput_type_wem: return neconvert_wem(state, input);
+		case neinput_type_wsp: return neextract_wsp(state, input);
+		case neinput_type_bnk: return neextract_bnk(state, input);
 		default: return I_UNRECOGNIZED_DATA;
 	}
 }
 
 int
-neprocess_inputs(nestate_t *const state, neinput_library_t *const libraries, neinput_t *const inputs)
+neprocess_inputs(nestate_t *const state)
 {
 	for (brrsz i = 0; i < state->n_inputs; ++i) {
-		neinput_t *const input = &inputs[i];
+		neinput_t *const input = &state->inputs[i];
 		i_set_log_state(state, input);
 		if (i_check_input(input))
 			continue;
@@ -139,7 +139,7 @@ neprocess_inputs(nestate_t *const state, neinput_library_t *const libraries, nei
 			BRRLOG_DEBUGNP("%zu ", input->filter.list[i]);
 		}
 		BRRLOG_DEBUGP("");
-		i_process_input(state, libraries, input, i);
+		i_process_input(state, input, i);
 	}
 	return 0;
 }

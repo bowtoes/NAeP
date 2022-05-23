@@ -31,7 +31,7 @@ limitations under the License.
 static char goutput_root[BRRPATH_MAX_PATH + 1] = {0};
 
 static int
-i_extract_wsp(nestate_t *const state, neinput_library_t *const libraries, const neinput_t *const input)
+i_extract_wsp(nestate_t *const state, const neinput_t *const input)
 {
 	int err = 0;
 	wsp_metaT meta = {0};
@@ -42,7 +42,7 @@ i_extract_wsp(nestate_t *const state, neinput_library_t *const libraries, const 
 	if ((err = lib_read_entire_file(input->path, (void **)&buffer, &bufsize)))
 		return err;
 	if (!(err = wsp_meta_init(&meta, buffer, bufsize))) {
-		if (!(err = neinput_load_codebooks(libraries, &library, input->library_index))) {
+		if (!(err = neinput_load_codebooks(state->libraries, &library, input->library_index))) {
 			if (input->flag.auto_ogg)
 				err = wsp_meta_convert_wems(&meta, buffer, state, input, library, goutput_root);
 			else
@@ -55,7 +55,7 @@ i_extract_wsp(nestate_t *const state, neinput_library_t *const libraries, const 
 }
 
 int
-neextract_wsp(nestate_t *const state, neinput_library_t *const libraries, const neinput_t *const input)
+neextract_wsp(nestate_t *const state, const neinput_t *const input)
 {
 	int err = 0;
 	state->stats.wsps.assigned++;
@@ -65,7 +65,7 @@ neextract_wsp(nestate_t *const state, neinput_library_t *const libraries, const 
 	} else {
 		LOG_FORMAT(LOG_PARAMS_WET, "Extracting WSP... ");
 		lib_replace_ext(input->path, strlen(input->path) - 1, goutput_root, NULL, "");
-		err = i_extract_wsp(state, libraries, input);
+		err = i_extract_wsp(state, input);
 	}
 	gbrrlog_level(last) = gbrrlog_level(normal); // why??
 	if (!err) {
