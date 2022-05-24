@@ -251,15 +251,17 @@ i_add_basic_type(riff_t *const rf, riff_datasync_t *const datasync, riff_basic_t
 		return RIFF_ERROR;
 	}
 	rf->basics[rf->n_basics++] = basic;
+	if (datasync->list_end == BRRSZ_MAX) {
+		/* List was corrupted, stream is too */
+		return RIFF_CORRUPTED;
+	}
+
 	if (datasync->list_end > 0) { /* Again, assuming lists can't have lists as subelements */
 		riff_list_chunk_t *list = &rf->lists[rf->n_lists - 1];
 		if (list->n_basics == 0)
 			list->first_basic_index = rf->n_basics - 1;
 		list->n_basics++;
 		datasync->list_end -= basic.size + 8;
-	} else if (datasync->list_end < 0) {
-		/* List was corrupted, stream is too */
-		return RIFF_CORRUPTED;
 	}
 	return RIFF_CHUNK_CONSUMED;
 }

@@ -13,7 +13,9 @@ packer_transfer(oggpack_buffer *const unpacker, int unpack_bits,
 long
 packer_transfer_remaining(oggpack_buffer *const unpacker, oggpack_buffer *const packer)
 {
-	long dwords = 0, left = 0, transferred = 0;
+	long dwords = 0;
+	long transferred = 0;
+	long left = 0;
 	if (unpacker->endbit) {
 		int bits = 8 - unpacker->endbit;
 		if (-1 == packer_transfer(unpacker, bits, packer, bits))

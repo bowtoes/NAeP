@@ -87,6 +87,7 @@ typedef struct neinput_library {
 
 int neinput_library_load(neinput_library_t *const library);
 void neinput_library_clear(neinput_library_t *const library);
+int neinput_load_codebooks(neinput_library_t *const libraries, const codebook_library_t **const library, brrsz index);
 
 typedef struct neprocessstat {
 	brrsz assigned;
@@ -124,7 +125,5 @@ typedef struct nestate {
 
 int nestate_init(nestate_t *const state, int argc, char **argv);
 void nestate_clear(nestate_t *const state);
-
-int neinput_load_codebooks(neinput_library_t *const libraries, const codebook_library_t **const library, brrsz index);
 
 #endif /* INPUT_H */

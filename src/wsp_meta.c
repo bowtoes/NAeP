@@ -78,24 +78,21 @@ wsp_meta_clear(wsp_metaT *const wsp)
 	memset(wsp, 0, sizeof(*wsp));
 }
 
-static char goutput_path[BRRPATH_MAX_PATH + 1] = {0};
+static char s_output_file[BRRPATH_MAX_PATH + 1] = {0};
 #define OUTPUT_FORMAT "_%0*zu"
 int
 wsp_meta_convert_wems(const wsp_metaT *const wsp, const char *const buffer,
     nestate_t *const state, const neinput_t *const input, const codebook_library_t *const library,
     const char *const output_root)
 {
-	int err = 0;
-	brrsz digits = 0;
 	if (!buffer)
 		return I_INSUFFICIENT_DATA;
 	if (!wsp || !state || !input || !output_root)
 		return I_GENERIC_ERROR;
-	digits = brrnum_ndigits(wsp->wem_count, 0, 10);
+
+	int digits = brrnum_ndigits(wsp->wem_count, 0, 10);
 	for (brrsz i = 0; i < wsp->wem_count; ++i) {
 		const wem_geometryT *const wem = &wsp->wems[i];
-		ogg_stream_state streamer;
-		riff_t rf = {0};
 		if (input->filter.count) {
 			int contained = neinput_filter_contains(&input->filter, i);
 			if ((contained && input->filter.type) || (!contained && !input->filter.type)) {
@@ -104,24 +101,27 @@ wsp_meta_convert_wems(const wsp_metaT *const wsp, const char *const buffer,
 			}
 		}
 
+		int err = 0;
 		state->stats.wem_converts.assigned++;
+		riff_t rf = {0};
 		if ((err = lib_parse_buffer_as_riff(&rf, buffer + wem->offset, wem->size))) {
 			BRRLOG_ERRN("Failed to parse wem ");
 			LOG_FORMAT(LOG_PARAMS_INFO, "#%*zu", digits, i);
 			BRRLOG_ERRP(" skipping : %s", lib_strerr(err));
 		} else {
-			if ((err = wwise_convert_wwriff(&rf, &streamer, library, input))) {
-				BRRLOG_ERRN("Failed to convert wem ");
-				LOG_FORMAT(LOG_PARAMS_INFO, "#%*zu", digits, i);
-				BRRLOG_ERRP(" skipping : %s", lib_strerr(err));
-			} else {
-				snprintf(goutput_path, sizeof(goutput_path), "%s"OUTPUT_FORMAT".ogg", output_root, digits, i);
-				if ((err = lib_write_ogg_out(&streamer, goutput_path))) {
+			ogg_stream_state streamer;
+			if (!(err = wwise_convert_wwriff(&rf, &streamer, library, input))) {
+				snprintf(s_output_file, sizeof(s_output_file), "%s"OUTPUT_FORMAT".ogg", output_root, digits, i);
+				if ((err = lib_write_ogg_out(&streamer, s_output_file))) {
 					BRRLOG_ERRN("Failed to write converted wem ");
 					LOG_FORMAT(LOG_PARAMS_INFO, "#%*zu", digits, i);
 					BRRLOG_ERRP(" skipping : %s", lib_strerr(err));
 				}
 				ogg_stream_clear(&streamer);
+			} else {
+				BRRLOG_ERRN("Failed to convert wem ");
+				LOG_FORMAT(LOG_PARAMS_INFO, "#%*zu", digits, i);
+				BRRLOG_ERRP(" skipping : %s", lib_strerr(err));
 			}
 			riff_clear(&rf);
 		}
@@ -138,13 +138,12 @@ wsp_meta_extract_wems(const wsp_metaT *const wsp, const char *const buffer,
     nestate_t *const state, const neinput_t *const input,
     const char *const output_root)
 {
-	int err = 0;
-	brrsz digits = 0;
 	if (!buffer)
 		return I_INSUFFICIENT_DATA;
 	if (!wsp || !state || !input || !output_root)
 		return I_GENERIC_ERROR;
-	digits = brrnum_ndigits(wsp->wem_count, 0, 10);
+
+	int digits = brrnum_ndigits(wsp->wem_count, 0, 10);
 	for (brrsz i = 0; i < wsp->wem_count; ++i) {
 		const wem_geometryT *const wem = &wsp->wems[i];
 		brrsz wrote = 0;
@@ -160,17 +159,17 @@ wsp_meta_extract_wems(const wsp_metaT *const wsp, const char *const buffer,
 		BRRLOG_DEBUG("Extracting WEM %zu, %lu bytes", i, wem->size);
 
 		state->stats.wem_extracts.assigned++;
-		snprintf(goutput_path, sizeof(goutput_path), "%s"OUTPUT_FORMAT".wem", output_root, digits, i);
-		if (!(output = fopen(goutput_path, "wb"))) {
+		snprintf(s_output_file, sizeof(s_output_file), "%s"OUTPUT_FORMAT".wem", output_root, digits, i);
+		if (!(output = fopen(s_output_file, "wb"))) {
 			BRRLOG_ERRN("Failed to open output wem ");
 			LOG_FORMAT(LOG_PARAMS_INFO, "#%*zu", digits, i);
-			BRRLOG_ERRP(" skipping : %s", lib_strerr(err));
+			BRRLOG_ERRP(" skipping : %s", strerror(errno));
 			state->stats.wem_extracts.failed++;
 		} else {
 			if (wem->size != (wrote = fwrite(buffer + wem->offset, 1, wem->size, output))) {
 				BRRLOG_ERRN("Failed to write to output wem ");
 				LOG_FORMAT(LOG_PARAMS_INFO, "#%*zu", digits, i);
-				BRRLOG_ERRP(" (%s) skipping : %s", goutput_path, strerror(errno));
+				BRRLOG_ERRP(" (%s) skipping : %s", s_output_file, strerror(errno));
 				state->stats.wem_extracts.failed++;
 			} else {
 				state->stats.wem_extracts.succeeded++;

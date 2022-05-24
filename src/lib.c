@@ -139,7 +139,7 @@ lib_parse_buffer_as_riff(riff_t *const riff, const void *const buffer, brrsz buf
 
 	riff_chunkstate_t sync_chunk = {0};
 	while (I_SUCCESS == (err = i_consume_next_buffer_chunk(riff, &sync_chunk, &sync_data))) {
-		NeExtraPrint("Found chunk %s", FCC_GET_CODE(sync_chunk.chunkcc));
+		NeExtraPrint(DEB, "Found chunk %s", FCC_GET_CODE(sync_chunk.chunkcc));
 		riff_chunkstate_clear(&sync_chunk);
 	}
 
@@ -238,9 +238,9 @@ int
 lib_cstr_compare(const char *const a, const char *const b, brrsz max_length, int case_sensitive)
 {
 	if (!max_length && case_sensitive) {
-		return strcmp(a, b);
+		return lib_cmp(a, b);
 	} else if (max_length && case_sensitive) {
-		return strncmp(a, b, max_length);
+		return lib_ncmp(a, b, max_length);
 	} else if (!max_length && !case_sensitive) {
 		return lib_case_cmp(a, b);
 	} else {

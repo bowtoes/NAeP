@@ -33,7 +33,7 @@ limitations under the License.
 #include "lib.h"
 #include "print.h"
 
-static int
+static inline int
 i_mod_priority(neinput_t *const input, int delta)
 {
 	neinput_t i = *input;
@@ -49,7 +49,7 @@ i_mod_priority(neinput_t *const input, int delta)
 	return 1;
 }
 // Retruns 0 when an argument is not parsed, 1 when it is.
-static int
+static inline int
 i_parse_argument(const char *const arg, nestate_t *const state, neinput_t *const current)
 {
 	if (arg[0] == 0) { /* Argument is of 0 length, very bad! */
@@ -109,7 +109,7 @@ i_parse_argument(const char *const arg, nestate_t *const state, neinput_t *const
 #undef CHECK_RUN_ARG
 	else return 0;
 }
-static int
+static inline int
 i_parse_index(char *const arg, int arglen, neinput_filter_t *const list, int *const offset)
 {
 	int comma = *offset;
@@ -135,7 +135,7 @@ i_parse_index(char *const arg, int arglen, neinput_filter_t *const list, int *co
 	*offset = comma + 1;
 	return 0;
 }
-static int
+static inline int
 i_set_filter(const char *const arg, int arglen, neinput_filter_t *const filter)
 {
 	int offset = 0;
@@ -158,9 +158,7 @@ neinput_filter_clear(neinput_filter_t *const filter)
 int
 neinput_filter_contains(const neinput_filter_t *const filter, brru4 index)
 {
-	if (!filter)
-		return 0;
-	if (!filter->list)
+	if (!filter || !filter->list)
 		return 0;
 	for (brru4 i = 0; i < filter->count; ++i) {
 		if (filter->list[i] == index)
@@ -177,7 +175,8 @@ neinput_clear(neinput_t *const input)
 		memset(input, 0, sizeof(*input));
 	}
 }
-static int
+
+static inline int
 i_parse_library_data(neinput_library_t *const library, const char *const buffer, brrsz buffer_size)
 {
 	int err = 0;
@@ -212,10 +211,10 @@ neinput_library_load(neinput_library_t *const library)
 {
 	if (!library)
 		return -1;
-	else if (library->status.loaded)
-		return 0;
-	else if (library->status.load_error)
+	if (library->status.load_error)
 		return library->status.load_error;
+	if (library->status.loaded)
+		return 0;
 
 	void *buffer = NULL;
 	brrsz bufsize = 0;
@@ -239,6 +238,7 @@ neinput_load_codebooks(neinput_library_t *const libraries, const codebook_librar
 {
 	if (!library)
 		return I_GENERIC_ERROR;
+
 	*library = NULL;
 	if (libraries && index != -1) {
 		int err = 0;
@@ -251,7 +251,7 @@ neinput_load_codebooks(neinput_library_t *const libraries, const codebook_librar
 	return I_SUCCESS;
 }
 
-static int
+static inline int
 i_add_library(nestate_t *const state, neinput_t *const current, const char *const arg, int arglen)
 {
 	neinput_library_t next = {.path = arg, .path_length = arglen};
@@ -268,7 +268,7 @@ i_add_library(nestate_t *const state, neinput_t *const current, const char *cons
 	state->libraries[state->n_libraries++] = next;
 	return 0;
 }
-static int
+static inline int
 i_add_input(nestate_t *const state, neinput_t *const current, const char *const arg, int arglen)
 {
 	neinput_t next = *current;

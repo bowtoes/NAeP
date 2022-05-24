@@ -57,6 +57,7 @@ pedantic ?= 1
 do_strip ?= 1
 # Enable debug compiler flags
 debug ?= 0
+extra_debug ?= 0
 # Enable valgrind memcheck-compitable debug flags (only takes effect when debug != 0)
 memcheck ?= 0
 
@@ -123,6 +124,9 @@ else
   c_performance += -pg -no-pie
  else
   c_defines += -D$(uproject)_memcheck
+ endif
+ ifneq ($(extra_debug),0)
+  c_defines += -D$(uproject)_extra_debug
  endif
 endif
 c_performance += -m$(target_bit)
