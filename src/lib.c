@@ -66,6 +66,53 @@ lib_strerr(int err)
 }
 
 int
+lib_count_ones(unsigned long number)
+{
+	int r = 0;
+	while (number) {
+		r += number & 1;
+		number >>= 1;
+	}
+	return r;
+}
+
+int
+lib_count_bits(long number)
+{
+	int res = 0;
+	while (number > 0) {
+		res++;
+		number >>= 1;
+	}
+	return res;
+}
+
+long
+lib_lookup1_values(long entries, long dimensions)
+{
+	int bits = lib_count_bits(entries);
+	int vals = entries >> ((bits - 1) * (dimensions - 1) / dimensions);
+
+	while(1) {
+		long acc = 1;
+		long acc1 = 1;
+		int i;
+		for(i = 0; i < dimensions; ++i) {
+			acc *= vals;
+			acc1 *= vals + 1;
+		}
+
+		if(acc <= entries && acc1 > entries) {
+			return vals;
+		} else if(acc > entries) {
+			 vals--;
+		} else {
+			 vals++;
+		}
+	}
+}
+
+int
 lib_read_entire_file(const char *const path, void **const buffer, brrsz *const buffer_size)
 {
 	if (!path || !buffer || !buffer_size)
@@ -105,24 +152,19 @@ lib_read_entire_file(const char *const path, void **const buffer, brrsz *const b
 static inline int
 i_consume_next_buffer_chunk(riff_t *const riff, riff_chunkstate_t *const chunkstate, riff_datasync_t *const datasync)
 {
-	int err = 0;
-	while (RIFF_CHUNK_CONSUMED != (err = riff_consume_chunk(riff, chunkstate, datasync))) {
-		if (err == RIFF_CONSUME_MORE) {
-			continue;
-		} else if (err == RIFF_CHUNK_UNRECOGNIZED) {
-			riff_datasync_seek(datasync, 1);
-			continue;
-		} else if (err != RIFF_CHUNK_INCOMPLETE) {
-			if (err == RIFF_ERROR)
-				return I_BUFFER_ERROR;
-			else if (err == RIFF_NOT_RIFF)
-				return I_NOT_RIFF;
-			else if (err == RIFF_CORRUPTED)
-				return I_CORRUPT;
-			else
-				return I_BAD_ERROR - err;
-		} else { /* RIFF_CHUNK_INCOMPLETE */
-			return I_INSUFFICIENT_DATA;
+	while (riff_consume_chunk(riff, chunkstate, datasync)) {
+		switch (datasync->status) {
+			case riff_status_chunk_unrecognized:
+				/* Seek forward a single byte to skip unrecognized/broken chunk */
+				riff_datasync_seek(datasync, 1);
+				/* fallthrough */
+			case riff_status_consume_again:    continue;
+			case riff_status_chunk_incomplete: return I_INSUFFICIENT_DATA;
+			case riff_status_system_error:     return I_BUFFER_ERROR;
+			case riff_status_not_riff:         return I_NOT_RIFF;
+			case riff_status_corrupt:          return I_CORRUPT;
+
+			default:                           return I_INIT_ERROR;
 		}
 	}
 	return I_SUCCESS;
@@ -131,22 +173,41 @@ i_consume_next_buffer_chunk(riff_t *const riff, riff_chunkstate_t *const chunkst
 int
 lib_parse_buffer_as_riff(riff_t *const riff, const void *const buffer, brrsz buffer_size)
 {
-	int err;
-	riff_datasync_t sync_data = {0};
-	if ((err = riff_datasync_from_buffer(&sync_data, (void *)buffer, buffer_size))) {
+	riff_datasync_t datasync = {0};
+	if (riff_datasync_from_buffer(&datasync, (void *)buffer, buffer_size))
 		return I_INIT_ERROR;
-	}
 
-	riff_chunkstate_t sync_chunk = {0};
-	while (I_SUCCESS == (err = i_consume_next_buffer_chunk(riff, &sync_chunk, &sync_data))) {
+	int err;
+	riff_chunkstate_t chunkstate = {0};
+	riff_t rf = {0};
+	while (I_SUCCESS == (err = i_consume_next_buffer_chunk(&rf, &chunkstate, &datasync))) {
 		NeExtraPrint(DEB, "Found chunk %s", FCC_GET_CODE(sync_chunk.chunkcc));
-		riff_chunkstate_clear(&sync_chunk);
+		riff_chunkstate_zero(&chunkstate);
 	}
+	if (err && err != I_INSUFFICIENT_DATA) {
+		riff_clear(&rf);
+		return err;
+	}
+	*riff = rf;
+	return 0;
+}
 
-	if (err == I_INSUFFICIENT_DATA)
-		return I_SUCCESS;
+int
+lib_parse_buffer_as_wwriff(wwriff_t *const wwriff_out, const void *const buffer, brrsz buffer_size)
+{
+	if (!wwriff_out || !buffer || !buffer_size)
+		return -1;
 
-	return err;
+	int err = 0;
+	riff_t riff = {0};
+	if ((err = lib_parse_buffer_as_riff(&riff, buffer, buffer_size)))
+		return err;
+	if ((err = wwriff_init(wwriff_out, &riff))) {
+		riff_clear(&riff);
+		return err;
+	}
+	riff_clear(&riff);
+	return 0;
 }
 
 int

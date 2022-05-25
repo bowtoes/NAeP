@@ -14,7 +14,7 @@ override makefiles := platform.mk config.mk Makefile
 override project_major := 0
 override project_minor := 0
 override project_revis := 2
-override project_letter := c
+override project_letter := d
 override project_version := $(project_major).$(project_minor).$(project_revis)$(project_letter)
 override project_date := $(shell git show -s --date=format:'%Y/%m/%d %l:%M%p' --format=%ad)
 
@@ -34,7 +34,7 @@ srcs :=\
 	process/wem.c\
 	process/wsp.c\
 	riff.c\
-	wsp_meta.c\
+	rifflist.c\
 	wwise.c\
 
 hdrs :=\
@@ -47,7 +47,7 @@ hdrs :=\
 	process.h\
 	riff.h\
 	riff_extension.h\
-	wsp_meta.h\
+	rifflist.h\
 	wwise.h\
 
 ## These variables must be set to exclusively 0 to disable them

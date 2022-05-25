@@ -1,5 +1,7 @@
 #include "packer.h"
 
+long packer_pack(oggpack_buffer *const, unsigned long, int);
+
 long
 packer_transfer(oggpack_buffer *const unpacker, int unpack_bits,
     oggpack_buffer *const packer, int pack_bits)

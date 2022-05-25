@@ -25,7 +25,7 @@ limitations under the License.
 #include "lib.h"
 #include "errors.h"
 #include "print.h"
-#include "wsp_meta.h"
+#include "rifflist.h"
 #include "wwise.h"
 
 static char goutput_root[BRRPATH_MAX_PATH + 1] = {0};
@@ -34,21 +34,21 @@ static int
 i_extract_bnk(nestate_t *const state, const neinput_t *const input)
 {
 	int err = 0;
-	wsp_metaT meta = {0};
+	rifflist_t meta = {0};
 	const codebook_library_t *library = NULL;
-	char *buffer = NULL;
+	unsigned char *buffer = NULL;
 	brrsz bufsize = 0;
 
 	if ((err = lib_read_entire_file(input->path, (void **)&buffer, &bufsize)))
 		return err;
-	if (!(err = wsp_meta_init(&meta, buffer, bufsize))) {
+	if (!(err = rifflist_scan(&meta, buffer, bufsize))) {
 		if (!(err = neinput_load_codebooks(state->libraries, &library, input->library_index))) {
 			if (input->flag.auto_ogg)
-				err = wsp_meta_convert_wems(&meta, buffer, state, input, library, goutput_root);
+				err = rifflist_convert(&meta, buffer, state, input, library, goutput_root);
 			else
-				err = wsp_meta_extract_wems(&meta, buffer, state, input, goutput_root);
+				err = rifflist_extract(&meta, buffer, state, input, goutput_root);
 		}
-		wsp_meta_clear(&meta);
+		rifflist_clear(&meta);
 	}
 	free(buffer);
 	return err;

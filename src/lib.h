@@ -23,6 +23,7 @@ limitations under the License.
 #include <brrtools/brrtypes.h>
 
 #include "riff.h"
+#include "wwise.h"
 
 typedef union fourcc {
 	struct {
@@ -56,52 +57,11 @@ typedef union fourcc {
 const char *lib_strerr(int err);
 
 /* Counts number of set bits in number */
-static inline int
-lib_count_ones(unsigned long number)
-{
-	int r = 0;
-	while (number) {
-		r += number & 1;
-		number >>= 1;
-	}
-	return r;
-}
+int lib_count_ones(unsigned long number);
 /* Counts number of bits needed to store number (log base 2) */
-static inline int
-lib_count_bits(long number)
-{
-	int res = 0;
-	while (number > 0) {
-		res++;
-		number >>= 1;
-	}
-	return res;
-}
+int lib_count_bits(long number);
 /* Ripped from tremor, don't understand what it does. */
-static inline long
-lib_lookup1_values(long entries, long dimensions)
-{
-	int bits = lib_count_bits(entries);
-	int vals = entries >> ((bits - 1) * (dimensions - 1) / dimensions);
-
-	while(1) {
-		long acc = 1;
-		long acc1 = 1;
-		int i;
-		for(i = 0; i < dimensions; ++i) {
-			acc *= vals;
-			acc1 *= vals + 1;
-		}
-
-		if(acc <= entries && acc1 > entries) {
-			return vals;
-		} else if(acc > entries) {
-			 vals--;
-		} else {
-			 vals++;
-		}
-	}
-}
+long lib_lookup1_values(long entries, long dimensions);
 
 typedef int (* lib_cmp_t)(const char *const, const char *const);
 typedef int (* lib_ncmp_t)(const char *const, const char *const, size_t);
@@ -120,6 +80,8 @@ extern const lib_ncmp_t lib_case_ncmp;
 int lib_read_entire_file(const char *const path, void **const buffer, brrsz *const buffer_size);
 
 int lib_parse_buffer_as_riff(riff_t *const rf, const void *const buffer, brrsz buffer_size);
+
+int lib_parse_buffer_as_wwriff(wwriff_t *const rf, const void *const buffer, brrsz buffer_size);
 
 /* Writes the ogg stream 'stream' to the file 'destination'.
  * Returns 0 on success, or I_IO_ERROR on failure.

@@ -19,17 +19,11 @@ limitations under the License.
 
 #include <ogg/ogg.h>
 
-#include <brrtools/brrapi.h>
 #include <brrtools/brrtypes.h>
+#include <brrtools/brrstringr.h>
 
 #include "input.h"
 #include "riff.h"
-
-#define WWISE_SUCCESS 1
-#define WWISE_INCOMPLETE 0
-#define WWISE_ERROR -1
-#define WWISE_DUPLICATE -2
-#define WWISE_CORRUPT -3
 
 #define VORBIS_STR "vorbis"
 #define CODEBOOK_SYNC "BCV"
@@ -73,7 +67,7 @@ typedef struct wwise_wem_flags {
 	brru1 mod_packets:1;         /* No idea what this means */
 	brru1 granule_present:1;     /* Whether data packets have 4-bytes for granule */
 	brru1 all_headers_present:1; /* If all vorbis headers are present at header_packets_offset or it's just the setup header */
-} wwise_wem_flags_t;
+} wwriff_flags_t;
 
 typedef struct wwise_packeteer {
 // Bitfields to avoid padding
@@ -94,21 +88,24 @@ int wwise_packeteer_init(
     wwise_packeteer_t *const packeteer,
     const unsigned char *const data,
     brrsz data_size,
-    wwise_wem_flags_t wem_flags
+    wwriff_flags_t wem_flags
 );
 void wwise_packeteer_zero(wwise_packeteer_t *const packet);
 
-typedef struct wwise_wem {
-	wwise_wem_flags_t flags;
+typedef struct wwriff {
+	wwriff_flags_t flags;
 	int mode_count;              /* Storage for audio packet decode */
 	brru1 mode_blockflags[32];   /* Storage for audio packet decode */
 	unsigned char *data;
 	brru4 data_size;
 	wwise_vorb_t vorb;
 	wwise_fmt_t fmt;
-} wwise_wem_t;
+	brru4 n_comments;
+	brrstringr_t *comments;
+} wwriff_t;
 
-/* Consumes the riff data 'rf', and parses it as a wwise WEM structure.
+/* Consumes the riff data 'rf', and parses it as WWRIFF data.
+ * 'rf' is free to be cleared after initialization.
  * Returns:
  *  1 : success
  *  0 : insufficient data/missing chunks
@@ -116,19 +113,21 @@ typedef struct wwise_wem {
  * -2 : duplicate data
  * -3 : corrupted stream
  * */
-int wwise_wem_init(wwise_wem_t *const wem, const riff_t *const rf);
+int wwriff_init(wwriff_t *const wwriff, const riff_t *const rf);
 
 /* Frees memory associated with 'wem', and clears it's data to 0. */
-void wwise_wem_zero(wwise_wem_t *const wem);
+void wwriff_clear(wwriff_t *const wwriff);
+
+int wwriff_add_comment(wwriff_t *const wwriff, const char *const format, ...);
 
 /* Converts the wwriff data 'in_riff' to an ogg stream in 'out_stream', using codebooks from 'library'.
  * 'input' is for output stream metadata (like which file the output is converted from, etc.).
  * */
 int wwise_convert_wwriff(
-	riff_t *const in_riff,
-	ogg_stream_state *const out_stream,
-	const codebook_library_t *const library,
-	const neinput_t *const input
+    wwriff_t *const in_wwriff,
+    ogg_stream_state *const out_stream,
+    const codebook_library_t *const library,
+    const neinput_t *const input
 );
 
 #endif /* WWISE_H */

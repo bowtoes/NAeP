@@ -10,7 +10,7 @@
 
 #define packer_unpack oggpack_read
 
-static inline long
+inline long
 packer_pack(oggpack_buffer *const packer, unsigned long value, int bits)
 {
 	oggpack_write(packer, value, bits);

@@ -270,10 +270,10 @@ neregrain_ogg(nestate_t *const state, const neinput_t *const input)
 	}
 	if (!err) {
 		state->stats.oggs.succeeded++;
-		LOG_FORMAT(LOG_PARAMS_SUCCESS, "Success!");
+		LOG_FORMAT(LOG_PARAMS_SUCCESS, "Success!\n");
 	} else {
 		state->stats.oggs.failed++;
-		LOG_FORMAT(LOG_PARAMS_FAILURE, " Failure! (%d)", err);
+		LOG_FORMAT(LOG_PARAMS_FAILURE, " Failure! (%d)\n", err);
 	}
 	return err;
 }
