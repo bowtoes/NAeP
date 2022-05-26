@@ -167,11 +167,11 @@ i_init_vorb(wwriff_t *const wem, const unsigned char *const data, brru4 data_siz
 		/* Explicit type */
 		wwise_vorb_extra_t e = {0};
 #ifdef Ne_extra_debug
-		if (data_size > sizeof(e)) {
-			NeExtraPrint(DEBUG,
-				"Explicit vorbis initialization header size is %zu bytes (expected at most %zu).",
-				data_size, sizeof(e));
-		}
+		//if (data_size > sizeof(e)) {
+		//	NeExtraPrint(DEBUG,
+		//		"Explicit vorbis initialization header size is %zu bytes (expected at most %zu).",
+		//		data_size, sizeof(e));
+		//}
 #endif
 		memcpy(&e, data, brrnum_umin(data_size, sizeof(e))); // TODO why this min?
 
@@ -193,11 +193,11 @@ static inline void
 i_init_fmt(wwise_fmt_t *const fmt, const unsigned char *const data, brru4 data_size)
 {
 #ifdef Ne_extra_debug
-	if (data_size > sizeof(*fmt)) {
-		NeExtraPrint(DEBUG,
-			"fmt chunk size is %zu bytes (expected at most %zu).",
-			data_size, sizeof(*fmt));
-	}
+	//if (data_size > sizeof(*fmt)) {
+	//	NeExtraPrint(DEBUG,
+	//		"fmt chunk size is %zu bytes (expected at most %zu).",
+	//		data_size, sizeof(*fmt));
+	//}
 #endif
 	memcpy(fmt, data, brrnum_umin(data_size, sizeof(*fmt)));
 }
@@ -341,6 +341,7 @@ i_init_ogg_packet(ogg_packet *const packet, oggpack_buffer *const packer, brru8 
 	};
 	return 0;
 }
+#ifdef Ne_extra_debug
 #define PRINT_PACKET(_packet_) do {\
 	NeExtraPrint(DEB, "    Packetno:   %lld", (_packet_).packetno);\
 	NeExtraPrint(DEB, "    Granulepos: %lld", (_packet_).granulepos);\
@@ -348,18 +349,21 @@ i_init_ogg_packet(ogg_packet *const packet, oggpack_buffer *const packer, brru8 
 	NeExtraPrint(DEB, "    EOS:        %i",   (_packet_).e_o_s);\
 	NeExtraPrint(DEB, "    Size:       %lld", (_packet_).bytes);\
 } while (0)
+#else
+#define PRINT_PACKET
+#endif
 static inline int
 i_insert_packet(ogg_stream_state *const streamer, ogg_packet *const packet)
 {
 #ifdef Ne_extra_debug
-	if (packet->b_o_s) {
-		NeExtraPrint(DEB, "Inserting BOS packet");
-		PRINT_PACKET(*packet);
-	}
-	if (packet->e_o_s) {
-		NeExtraPrint(DEB, "Inserting EOS packet");
-		PRINT_PACKET(*packet);
-	}
+	//if (packet->b_o_s) {
+	//	NeExtraPrint(DEB, "Inserting BOS packet");
+	//	PRINT_PACKET(*packet);
+	//}
+	//if (packet->e_o_s) {
+	//	NeExtraPrint(DEB, "Inserting EOS packet");
+	//	PRINT_PACKET(*packet);
+	//}
 #endif
 	if (ogg_stream_packetin(streamer, packet)) {
 		BRRLOG_ERR("Failed to insert ogg packet %lld into output stream.", packet->packetno);
@@ -371,9 +375,11 @@ static int
 i_insert_header(ogg_stream_state *const streamer, ogg_packet *const packet, vorbis_info *const vi, vorbis_comment *const vc)
 {
 	int err = 0;
-	NeExtraPrint(DEB, "Inserting vorbis %s header packet:", vorbis_header(packet->packetno));
-	if (packet->packetno != 0)
-		PRINT_PACKET(*packet);
+	//NeExtraPrint(DEB, "Inserting vorbis %s header packet:", vorbis_header(packet->packetno));
+#ifdef Ne_extra_debug
+	//if (packet->packetno != 0)
+	//	PRINT_PACKET(*packet);
+#endif
 
 	if ((err = i_insert_packet(streamer, packet))) {
 		BRRLOG_ERR("Failed to insert vorbis %s header packet into output stream.", vorbis_header_packet_names[packet->packetno]);
@@ -893,7 +899,7 @@ i_build_setup_header(oggpack_buffer *const packer, wwriff_t *const wem)
 		if (!stripped) {
 			/* Full codebooks, can be copied from header directly */
 			for (int i = 0; i < codebook_count; ++i) {
-				NeExtraPrint(DEBUG, "Copying internal codebook %d", i);
+				//NeExtraPrint(DEBUG, "Copying internal codebook %d", i);
 				if ((err = i_copy_next_codebook(&unpacker, packer))) {
 					BRRLOG_ERR("Failed to copy codebook %d", i);
 					return err;
@@ -1092,7 +1098,7 @@ i_process_audio(ogg_stream_state *const streamer, wwriff_t *const wem, vorbis_in
 		if (last_block)
 			total_block += (last_block + current_block) / 4;
 		last_block = current_block;
-		NeExtraPrint(DEB, "Granulepos: %llu | Block: %llu | Total block: %llu", packet.granulepos, current_block, total_block);
+		//NeExtraPrint(DEB, "Granulepos: %llu | Block: %llu | Total block: %llu", packet.granulepos, current_block, total_block);
 
 		if ((err = i_insert_packet(streamer, &packet))) {
 			oggpack_writeclear(&packer);
@@ -1104,7 +1110,7 @@ i_process_audio(ogg_stream_state *const streamer, wwriff_t *const wem, vorbis_in
 		packets_size  -= packeteer.total_size;
 		++packetno;
 	}
-	NeExtraPrint(DEBUG, "Total packets: %lld", 3 + packetno);
+	//NeExtraPrint(DEBUG, "Total packets: %lld", 3 + packetno);
 	return I_SUCCESS;
 }
 

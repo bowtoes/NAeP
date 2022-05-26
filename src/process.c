@@ -51,12 +51,12 @@ i_check_input(const neinput_t *const input)
 	} else if (!stat.exists) {
 		BRRLOG_WARN("Cannot parse input '");
 		LOG_FORMAT(LOG_PARAMS_PATH, "%s", input->path);
-		BRRLOG_WARN("' : Path does not exist");
+		BRRLOG_WAR("' : Path does not exist");
 		return 1;
 	} else if (stat.type != brrpath_type_file) {
 		BRRLOG_WARN("Cannot parse input '");
 		LOG_FORMAT(LOG_PARAMS_PATH, "%s", input->path);
-		BRRLOG_WARN("' : Path is not a regular file");
+		BRRLOG_WAR("' : Path is not a regular file");
 		return 1;
 	}
 	return 0;

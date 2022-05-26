@@ -15,34 +15,36 @@
 "\n        -h, -help, -v . . . . . . . . . . .  Print this help." \
 "\n    File Type Specification:" \
 "\n        -a, -auto, -detect  . . . . . . . .  Autodetect filetype from file header or extension." \
-"\n        -w, -wem, -weem . . . . . . . . . .  File(s) are WEMs to be converted to OGG." \
-"\n        -W, -wsp, -wisp . . . . . . . . . .  File(s) are wisps to have their WEMs extracted." \
-"\n        -b, -bnk, -bank . . . . . . . . . .  File(s) are banks to extract all referenced WEMs." \
-"\n        -o, -ogg  . . . . . . . . . . . . .  File(s) are OGG files to be regranularizeed." \
+"\n        -w, -wem, -weem . . . . . . . . . .  File(s) are single WwRIFFs to be converted to Ogg." \
+"\n        -W, -wsp, -wisp . . . . . . . . . .  File(s) are collections of WwRIFFs to be extracted/converted." \
+"\n        -b, -bnk, -bank . . . . . . . . . .  The same as '-wsp'." \
+"\n        -o, -ogg  . . . . . . . . . . . . .  File(s) are Ogg files to be regranularizeed." \
 "\n    OGG Processing Options:" \
 "\n        -ri, -rgrn-inplace, -rvb-inplace. .  Oggs are regranularized in-place." \
 "\n    WEM Processing Options:" \
-"\n        -oi, -ogg-inplace . . . . . . . . .  All WEM-to-OGG conversion is done in-place;" \
-"\n                                             WEMs are replaced with their converted OGGs." \
-"\n        -cbl, -codebook-library . . . . . .  The following is a codebook library to use for the following WEMs;" \
-"\n                                             if none are specified for a given WEM, then it is assumed the" \
-"\n                                             codebooks are inline." \
-"\n        -inline . . . . . . . . . . . . . .  The following WEMs have inline codebooks." \
-"\n        -stripped . . . . . . . . . . . . .  The vorbis headers of the WEM are stripped." \
+"\n        -oi, -ogg-inplace . . . . . . . . .  All WwRIFF-to-Ogg conversion is replaces input files." \
+"\n        -cbl, -codebook-library . . . . . .  The following file is the codebook library to use for the" \
+"\n                                             WwRIFFs following." \
+"\n                                             If no coedbooks are specified for a WwRIFF, then it is assumed" \
+"\n                                             the codebooks are inline." \
+"\n        -inline . . . . . . . . . . . . . .  The following WwRIFFs have inline codebooks." \
+"\n        -stripped . . . . . . . . . . . . .  The following WwRIFFs' are stripped and must be rebuilt from" \
+"\n                                             a codebook library." \
 "\n    WSP/BNK Processing Options:" \
-"\n        -w2o, -wem2ogg  . . . . . . . . . .  Convert extracted WEMs to OGGs." \
-"\n        -white, -black," \
-"\n        -weiss, -noir . . . . . . . . . . .  Comma-separated list of indices used to determine" \
+"\n        -w2o, -wem2ogg  . . . . . . . . . .  Convert WwRIFFs from '-wsp' files to Oggs, rather than extracting them." \
+"\n        -white, -weiss," \
+"\n        -black, -noir . . . . . . . . . . .  Comma-separated list of indices used to determine" \
 "\n                                             what indices to process from the file(s)." \
 "\n                                             Blacklists and whitelists are mutually exclusive; each " \
 "\n                                             overrides the others preceding it." \
 "\n                                             E.g. '-black 3,9' would process every index except 3 and 9," \
-"\n                                             but  '+white 3,9' would process only indices 3 and 9." \
+"\n                                             but  '-white 3,9' would process only indices 3 and 9." \
 "\n        -rubrum . . . . . . . . . . . . . .  Toggle the list to between being a whitelist/blacklist." \
 "\n    Miscellaneous options:" \
 "\n        -!  . . . . . . . . . . . . . . . .  The following argument is a file path, not an option." \
 "\n        --  . . . . . . . . . . . . . . . .  All following arguments are file paths, not options." \
 "\n        -d, -debug  . . . . . . . . . . . .  Enable debug output, irrespective of quiet settings." \
+"\n        -co, -comments  . . . . . . . . . .  Toggles inserting of additional comments in output Oggs." \
 "\n        -c, -color  . . . . . . . . . . . .  Toggle color logging." \
 "\n        -C, -global-color (g) . . . . . . .  Toggle whether log styling is enabled at all." \
 "\n        -r, -report-card (g)  . . . . . . .  Print a status report of all files processed after processing." \
@@ -70,7 +72,7 @@ print_help(void)
 int
 print_report(const nestate_t *const state)
 {
-	brrsz input_count_digits = 1 + brrnum_ndigits(state->n_inputs, 0, 10);
+	brrsz input_count_digits = 1 + brrnum_ndigits(state->n_inputs, 10, 0);
 	brrsz total_success =
 	      state->stats.oggs.succeeded
 	    + state->stats.wems.succeeded

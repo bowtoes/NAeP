@@ -93,6 +93,7 @@ i_parse_argument(const char *const arg, nestate_t *const state, neinput_t *const
 
 	else CHECK_TOGGLE_ARG(1, state->settings.next_is_file, "-!")
 	else CHECK_TOGGLE_ARG(1, state->settings.always_file, "--")
+	else CHECK_TOGGLE_ARG(1, current->flag.add_comments, "-co", "-comments")
 	else CHECK_TOGGLE_ARG(1, current->flag.log_debug, "-d", "-debug")
 	else CHECK_TOGGLE_ARG(1, current->flag.log_color_enabled, "-c", "-color")
 	else CHECK_TOGGLE_ARG(1, state->settings.log_style_enabled, "-C", "-state-color")
@@ -326,7 +327,7 @@ nestate_init(nestate_t *const state, int argc, char **argv)
 				nestate_clear(state);
 		}
 	}
-	state->stats.n_input_digits = brrnum_ndigits(state->n_inputs, 0, 10);
+	state->stats.n_input_digits = brrnum_ndigits(state->n_inputs, 10, 0);
 	return 0;
 }
 

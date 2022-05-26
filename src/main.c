@@ -38,6 +38,7 @@ main(int argc, char **argv)
 		#if defined(Ne_debug)
 				.log_debug = 1,
 		#endif
+				.add_comments = 1,
 			},
 		},
 		.settings = {

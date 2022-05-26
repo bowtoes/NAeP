@@ -46,11 +46,14 @@ i_convert_wem(neinput_library_t *const libraries, const neinput_t *const input)
 		if (err)
 			return err;
 	}
-	if ((err = wwriff_add_comment(&wwriff, "SourceFile=%s", input->path))) {
-		BRRLOG_ERR("Failed to add comment to WWRIFF : %s (%d)", strerror(errno), errno);
-	} else if ((err = wwriff_add_comment(&wwriff, "OutputFile=%s", s_output_name))) {
-		BRRLOG_ERR("Failed to add comment to WWRIFF : %s (%d)", strerror(errno), errno);
-	} else {
+	if (input->flag.add_comments) {
+		if ((err = wwriff_add_comment(&wwriff, "SourceFile=%s", input->path))) {
+			BRRLOG_ERR("Failed to add comment to WWRIFF : %s (%d)", strerror(errno), errno);
+		} else if ((err = wwriff_add_comment(&wwriff, "OutputFile=%s", s_output_name))) {
+			BRRLOG_ERR("Failed to add comment to WWRIFF : %s (%d)", strerror(errno), errno);
+		}
+	}
+	if (!err) {
 		const codebook_library_t *library = NULL; /* NULL library means inline library */
 		if (!(err = neinput_load_codebooks(libraries, &library, input->library_index))) {
 			ogg_stream_state streamer;

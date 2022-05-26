@@ -14,6 +14,7 @@ NAeP
 .stor/
 .old/
 .old*/
+install/
 build/
 test/
 codebooks/

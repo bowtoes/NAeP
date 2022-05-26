@@ -60,14 +60,15 @@ typedef struct neinput {
 	neinput_type_int type;
 	brrlog_priority_int log_priority; /* Priority used if logging is enabled. */
 	struct {
-		brru1 log_enabled:1;          /* Is output logging enabled? */
-		brru1 log_color_enabled:1;    /* Is log coloring enabled? */
-		brru1 log_debug:1;            /* Is debug logging enabled (implies log_enabled)? */
-		brru1 stripped_headers:1;     /* Whether the vorbis headers of a given wem are stripped or spec-compliant. */
-		brru1 dry_run:1;              /* Do not process any input or output, just print what would happen. */
-		brru1 auto_ogg:1;             /* Should output weems automatically be converted to ogg? */
-		brru1 inplace_ogg:1;          /* Should weem-to-ogg conversion be done in-place (replace)? */
-		brru1 inplace_regrain:1;      /* Should regranularized oggs replace the original? */
+		brru2 log_enabled:1;          /* Is output logging enabled? */
+		brru2 log_color_enabled:1;    /* Is log coloring enabled? */
+		brru2 log_debug:1;            /* Is debug logging enabled (implies log_enabled)? */
+		brru2 add_comments:1;         /* Enables additional comments in output Oggs. */
+		brru2 stripped_headers:1;     /* Whether the vorbis headers of a given wem are stripped or spec-compliant. */
+		brru2 dry_run:1;              /* Do not process any input or output, just print what would happen. */
+		brru2 auto_ogg:1;             /* Should output weems automatically be converted to ogg? */
+		brru2 inplace_ogg:1;          /* Should weem-to-ogg conversion be done in-place (replace)? */
+		brru2 inplace_regrain:1;      /* Should regranularized oggs replace the original? */
 	} flag;
 	neinput_filter_t filter;
 } neinput_t;

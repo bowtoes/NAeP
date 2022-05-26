@@ -14,7 +14,7 @@ override makefiles := platform.mk config.mk Makefile
 override project_major := 0
 override project_minor := 0
 override project_revis := 2
-override project_letter := d
+override project_letter :=
 override project_version := $(project_major).$(project_minor).$(project_revis)$(project_letter)
 override project_date := $(shell git show -s --date=format:'%Y/%m/%d %l:%M%p' --format=%ad)
 
@@ -176,7 +176,7 @@ project_ldflags = \
 	$(LDFLAGS)
 
 ### Build-output variables
-$(eval $(call dUnixWindowsVar,prefix,/usr/local,$(CURDIR)/install,host))
+$(eval $(call dUnixWindowsVar,prefix,/usr/local,$(CURDIR)/install,target))
 
 build_subdir_target_unix ?= uni
 build_subdir_target_windows ?= win
@@ -194,6 +194,12 @@ build_root ?= $(CURDIR)/build
 build_tree ?= $(build_subdir_target)/$(build_subdir_bit)
 output_directory ?= $(build_root)/$(build_tree)
 
+output_suf_unix_32 ?= x86
+output_suf_unix_64 ?=
+output_suf_windows_32 ?= x86
+output_suf_windows_64 ?=
+output_suf ?= $(output_suf_$(target)_$(target_bit))
+
 output_ext_unix_shared ?=
 output_ext_unix_static ?=
 output_ext_windows_shared ?= .exe
@@ -201,7 +207,7 @@ output_ext_windows_static ?= .exe
 output_ext ?= $(output_ext_$(target)_$(target_mode))
 
 output_base_name ?= $(project)
-output_name ?= $(output_base_name)$(output_ext)
+output_name ?= $(output_base_name)$(output_suf)$(output_ext)
 output_file ?= $(output_directory)/$(output_name)
 
 # windows libraries only

@@ -1,105 +1,174 @@
-# NieR:Automated extraction Precept_v0.0.2d
+# NieR:Automated extraction Precept_v0.0.2
 C11 device with the goal of extracting and converting NieR:Automata and
 Replicant audio data into useable [Ogg][oggvorbis] files.
 
-## Table of Contents
+# Table of Contents
 1. [Goal](#goal)
-2. [Present](#present)
+   1. [Guide](#guide)
+   1. [Capabilities](#capabilities)
    1. [Usage](#usage)
-3. [Capabilities](#capabilities)
-4. [Build](#build)
-5. [Todo](#todo)
-6. [References](#references)
+1. [Build](#build)
+1. [Todo](#todo)
+1. [References](#references)
 
-# Goal  
+## Goal
 Extract the media files stored within NieR:Automata's data archives into a
 useable/viewable format.  
-Originally, this was inspired by another precept called [NME2][NME2], however I
-thought it could be done better and more cross platform; this is an attempt at
-that.
 
-## Usage  
-All command-line options are viewable by passing any of `-h`, `-help`, or
-`-version`.  Most options are toggleable; for example, passing `-w` before a
-bunch of files, all those files will be parsed as WEMs. Passing `-w` again
-means any files after will be not be parsed as WEMs and instead will be parsed
-differently, depending on the state of what other options are passed.
+### Guide
+In NieR:Automata's sound directories are multiple files of a few different
+types; these types by file-suffix and what they are is given:
 
-## Capabilities
-What the program can/will be able to do:
-1. &#9746; WSP Extraction:  
-   * &#9746; Extract all WEMs embedded in arguments to separate, individual
-     files (`..._XX.wem`).  
-   * &#9746; Option to convert all embedded WEMs to ogg files directly.  
-2. &#9746; BNK Extraction:  
-    Same capabilities as WSP extraction, with one addition:  
-   * &#9744; Recursive extraction: search each passed BNK for WEMs
-     referenced in other BNK/WSP files passed on command-line.  
-3. &#9746; WEM-to-ogg Conversion:  
-   * &#9746; All passed WEMs are converted to ogg, either in-place or to
-     separate files (`.ogg`).  
-   * &#9746; All WEMs extracted from BNKs or WSPs can be similarly converted.  
-4. &#9746; Ogg Regranularization:  
+* `.wem`:  
+  &emsp;These files are Ogg/Vorbis audio data stored in a custom format, namely a
+  version one of AudioKinetic's Wwise sound format. This format (herein called
+  WwRIFF) is a modified form of Microsoft's RIFF storage format, and this
+  precept can convert such files into usable Ogg/Vorbis files that can then be
+  played/converted as normal.
+
+* `.wsp`:  
+  &emsp;Another format common to Wwise, is the `.wsp` format (*wisp*). These
+  files are simple, each being little more than the concatenation of multiple
+  WwRIFFs into one `.wsp`. There is one caveat, and that's that each
+  WwRIFF in the `.wsp` is padded at the end with zeros to the nearest
+  multiple of 2048 bytes (found with [countwsp][countwsp]).
+
+* `.bnk`:  
+  &emsp;`.bnk` (*bank*) files are a little tougher, though. Right now, this precept treats them
+  no differently than `.wsp`, as they can also contain whole WwRIFFs, though
+  not in as simple simple a way.
+
+NieR Replicant is a little different than Automata, storing most of its data in
+`.pck` files; however this precept can still convert such files (though it
+doesn't know how to automatically). To convert these files, they must be treated
+as `.wsp` files (specifiable on the command-line with `-W`/`-wsp`).
+
+### Capabilities
+* &#9746; WwRIFF-to-Ogg Conversion:  
+   * &#9746; All passed WwRIFFs (`.wem`) are converted to Ogg, either in-place
+     (overwriting input) or to separate files (`[wem_name].ogg`).  
+* &#9746; `.wsp`/`.bnk` Extraction:  
+   * &#9746; Extract all WwRIFFs embedded in arguments to separate,
+     individual files (`[wsp_name]_XX.wem`).  
+   * &#9746; All WwRIFFs extracted this way can be directly converted to Ogg
+     by toggling a command-line argument.  
+* &#9746; Ogg Regranularization:  
     * &#9746; All passed oggs are regranularized, either in-place or to
-      separate files (`..._rvb.ogg`).  
-5. &#9746; Logging:  
-   Not really a focused 'feature' of the program, but logging options.  
-    * &#9746; Option for successively quieter output.  
-    * &#9746; Option for completely silent output, no errors or critical
-      messages at all.  
-    * &#9746; Option for debug output, turning on all possible logs.  
-    * &#9746; Option for turning off color/stylized output.  
+      separate files (`[ogg_name]_rvb.ogg`).  
+* &#9746; Logging:  
+   Not a primary focus, but there are various settings for logging:
+    * &#9746; `-q` for quieter output; can be passed multiple times.  
+    Pass `+q` to undo this.
+    * &#9746; `-Q` or `-qq` to completely disable output logging.  
+    * &#9746; `-d` to enable debug (and all other) output, irrespective of the
+      above settings (only works in debug builds).  
+    * &#9746; `-c` to disable colored logging for given inputs, or `-C` to
+      disable all log styling.  
+      Windows has no log styling.
 
-### Maybe
-* &#9744; Videos:  
-   * &#9744; Video extraction.  
-   * &#9744; Audio rip from videos, either embedded or from extracted.  
+### Usage
+`NAeP [ARGUMENTS ... [FILES ...]] ...`
 
-## Build  
-**NOTE:** This section is out of date; run `make help` to see accurate
-information.
+&emsp;All command-line options are viewable by passing any of `-h`, `-help`, or
+`-version`, or by looking in `src/print.c`.  
+Most options are toggleable; for example, by passing `-w` before a bunch of
+files, all those files will be processed as if they're `.wem`s.  Passing `-w`
+again will revert to the default processing model, where the type of file is
+determined automatically.  
+A few options are global, meaning that their order doesn't matter and they do
+not apply to any individual files; these are marked in the helptext with a
+`(g)`.
 
-After cloning, be sure to run `git submodule init` and `git submodule update`.  
-Then issue one of the following commands (take note of the notice after the
-table):  
-(arguments in brackets `[]` are optional).
+In order to  convert WwRIFF to Ogg files, codebooks are needed. For some
+WwRIFFs, these are provided in the file itself (`inline`); for others, they
+are provided but in a stripped-down form (`stripped`) and must be rebuilt; and
+for others still, they aren't provided at all.  
+For those last two, external codebook libraries must be used, and these are
+provided in `codebooks.zip`. In this are two folders:
+```
+codebooks.zip/
+├── codebooks/
+│   ├── codebooks_aoTuV_603.cbl
+│   └── codebooks_vanilla.cbl
+└── codebooks_alt/
+    ├── codebooks_aoTuV_603.ocbl
+    └── codebooks_vanilla.ocbl
+```
+`.cbl` and `.ocbl` files differ only in the technical details, which are
+unimportant to their use.  
+In either case, these files are sourced from [`ww2ogg`][ww2ogg]; where they
+originally came from or how they were created is undocumented.
 
-|Host   |Target |Requirements                        |Command|
-|:---:  |:---:  |:---                                |:---|
-|\*NIX  |\*NIX  |GNU `make` and toolchain            |`make [HOST=UNIX] [TARGET=UNIX] ...`|
-|\*NIX  |Windows|GNU `make` and `mingw-w64` toolchain|`make [HOST=UNIX] TARGET=WINDOWS ...`|
-|Windows|\*NIX  |N/A|N/A|
-|Windows|Windows|Cygwin with above or mingw          |`make HOST=WINDOWS TARGET=WINDOWS ...`|
+To specify what codebook library to use for some given WwRIFFs, use `-cbl
+[codebook_library].cbl` prior to the input files.
 
-**NOTE:** When building for the first time (or if building again for a
-different platform than previously), the environment variable `LIBRECONFIG`
-must be set to something, anything, or else the `libogg` and `libvorbis`
-submodules will be incorrectly configured and almost certainly fail
-compilation.  
+*Note:* If you are encountering trouble converting some WwRIFFs, it's worth
+specifying different combinations of the command-line arguments
+`-stripped`/`-inline`; these settings currently aren't (or maybe can't be)
+automatically determined.
+
+## Build
+*Note:* For a more in-depth list and explanation, run `make help` or check
+`help.mk`.
+
+&emsp;This precept requires [`libogg`][libogg] and [`libvorbis`][libvorbis], and
+makes use of [`brrtools`][brrtools]; these are provided as submodules, and
+after cloning, run `git submodule init` and `git submodule update` to
+initialize them.  
+*Note:* There is currently no way to build with external versions of these
+libraries.
+
+In order to build, you'll need GNU Make, and to build `libogg`/`libvorbis`, GNU
+Autotools is also needed.
+
+If you look through the various `.mk` files, you'll see a plethora of various
+settings that can be customized (they're assigned with `?=`); here are only the
+primary ones for build customization:
+
+| Host    | Target  | Requirements                       | Command                                |
+| :---    |  ---:   | :---                               | :---                                   |
+| Unix    | Unix    | GNU Make and C-toolchain           | `make [target=unix] [host=unix] ...`   |
+| Unix    | Windows | GNU Make and `mingw-w64` toolchain | `make target=windows [host=unix] ...`  |
+| Windows | Unix    | N/A                                | Not implemented                        |
+| Windows | Windows | `MSYS2`/`CygWin`/`MinGW`           | `make target=windows host=windows ...` |
+
+*Note:* When first compiling, or when cross-compiling, `libogg` and `libvorbis`
+will need to be configured for the correct host/target pair; this is done
+automatically the first time, but must be specified manually when
+cross-compiling. This is done by defining the Make variable `LIBRECONFIG`.  
 Be aware that library reconfiguring will take some time.
 
-32/64-bit compilation can be specified by setting the environment variable
-`BITS` to either `32` or `64`; defaults to `64`.  
-Other environment variables can be set; most ones that are safe to change and
-their defaults are listed in `config.mk`.  
+Host and target architectures and be specified with `host_bit` and `target_bit`
+respectively, either `32` or `64`; changing these is also cause to reconfigure
+`libogg` and `libvorbis`.
 
-**Note:** `libogg` and `libvorbis` are provided and built as submodules; they
-need-not be installed on the host/target system to compile or run.  
+**Disclaimer:** I only have a Linux distribution, so I can't/am too lazy to
+test building on Windows or other Unixes (don't be surprised if it doesn't
+work).  
 
-**DISCLAIMER:** I only have a Linux distribution, so I can't/am too lazy to
-test building on Windows.  
+## Todo
+* Bug testing, (Buster) crash testing, log testing, all testing.
+* Better output/process logging.
+* More consistent application of logging settings.
+* A better output filtering feature.
+* Better documentation, everywhere.
 
-## References  
-* Ogg regranularization is done as a custom re-implementation of
-  [revorb][revorb]; previously revorb was used directly.
-* WEM-to-ogg conversion was implemented with heavy reference
-  (though not duplication) to [ww2ogg][ww2ogg].
-* Of course, the official [ogg vorbis][oggvorbis] documentation was also
-  referenced (a heavily edited (prettified) version of the HTML docs, to be
+## References
+* Ogg regranularization was initially done using a wrapper around [revorb][revorb]
+  (wrapper is [revorbc][revorbc]).
+* WwRIFF-to-Ogg conversion was first implemented with heavy reference to [ww2ogg][ww2ogg].
+* Of course, the official [Ogg][libogg]/[Vorbis][libvorbis] documentation was also
+  referenced (a custom-edited (prettified) version of the HTML docs, to be
   precise).
+
+This precept was initially inspired by another called [NME2][NME2]; it could be
+done better and more cross platform. This is an attempt at that.
 
 [NME2]:https://github.com/TypeA2/NME2
 [ww2ogg]:https://github.com/hcs64/ww2ogg
-[revorbc]:https://github.com/bowtoes/revorbc
 [revorb]:http://yirkha.fud.cz/progs/foobar2000/revorb.cpp
-[oggvorbis]:https://xiph.org/vorbis/doc/
+[revorbc]:https://github.com/bowtoes/revorbc
+[countwsp]:https://github.com/bowtoes/countwsp
+[brrtools]:https://github.com/bowtoes/brrtools
+[libogg]:https://xiph.org/ogg/doc/
+[libvorbis]:https://xiph.org/vorbis/doc/

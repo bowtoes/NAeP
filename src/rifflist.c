@@ -73,6 +73,7 @@ rifflist_scan(rifflist_t *const out_list, const unsigned char *const buffer, brr
 		l.riffs[l.n_riffs++] = current;
 		offset += current.riff_size;
 	}
+	NeExtraPrint(DEB, "Scanned list of %zu WwRIFFs...", l.n_riffs);
 
 	*out_list = l;
 	return I_SUCCESS;
@@ -107,7 +108,8 @@ rifflist_convert(
 	if (!list || !state || !input || !output_root)
 		return I_GENERIC_ERROR;
 
-	int digits = brrnum_ndigits(list->n_riffs, 0, 10);
+	int digits = brrnum_ndigits(list->n_riffs, 10, 1);
+	NeExtraPrint(DEB, "Converting WwRIFF list...");
 	for (brrsz i = 0; i < list->n_riffs; ++i) {
 		if (input->filter.count) {
 			int contained = neinput_filter_contains(&input->filter, i);
@@ -128,11 +130,14 @@ rifflist_convert(
 			LOG_FORMAT(LOG_PARAMS_INFO, "#%*zu", digits, i);
 			BRRLOG_ERRP(" skipping : %s", lib_strerr(err));
 		} else {
-			if ((err = wwriff_add_comment(&wwriff, "SourceFile=%s", input->path))) {
-				BRRLOG_ERR("Failed to add comment to WWRIFF : %s (%d)", strerror(errno), errno);
-			} else if ((err = wwriff_add_comment(&wwriff, "OutputFile=%s", s_output_file))) {
-				BRRLOG_ERR("Failed to add comment to WWRIFF : %s (%d)", strerror(errno), errno);
-			} else {
+			if (input->flag.add_comments) {
+				if ((err = wwriff_add_comment(&wwriff, "SourceFile=%s", input->path))) {
+					BRRLOG_ERR("Failed to add comment to WWRIFF : %s (%d)", strerror(errno), errno);
+				} else if ((err = wwriff_add_comment(&wwriff, "OutputFile=%s", s_output_file))) {
+					BRRLOG_ERR("Failed to add comment to WWRIFF : %s (%d)", strerror(errno), errno);
+				}
+			}
+			if (!err) {
 				ogg_stream_state streamer;
 				if (!(err = wwise_convert_wwriff(&wwriff, &streamer, library, input))) {
 					if ((err = lib_write_ogg_out(&streamer, s_output_file))) {
@@ -150,10 +155,13 @@ rifflist_convert(
 			wwriff_clear(&wwriff);
 		}
 
-		if (!err)
+		if (!err) {
+			NeExtraPrint(DEB, "Successfuly converted WwRIFF to '%s'", s_output_file);
 			state->stats.wem_converts.succeeded++;
-		else
+		} else {
+			NeExtraPrint(DEB, "Failed to convert WwRIFF to '%s'", s_output_file);
 			state->stats.wem_converts.failed++;
+		}
 	}
 	return I_SUCCESS;
 }
@@ -171,7 +179,8 @@ rifflist_extract(
 	if (!list || !state || !input || !output_root)
 		return I_GENERIC_ERROR;
 
-	int digits = brrnum_ndigits(list->n_riffs, 0, 10);
+	int digits = brrnum_ndigits(list->n_riffs, 10, 0);
+	NeExtraPrint(DEB, "Extracting WwRIFF list...");
 	for (brrsz i = 0; i < list->n_riffs; ++i) {
 		const riffgeometry_t *const wem = &list->riffs[i];
 		brrsz wrote = 0;
@@ -184,10 +193,9 @@ rifflist_extract(
 			}
 		}
 
-		BRRLOG_DEBUG("Extracting WWRIFF %zu, %lu bytes", i, wem->riff_size);
-
-		state->stats.wem_extracts.assigned++;
 		snprintf(s_output_file, sizeof(s_output_file), "%s"OUTPUT_FORMAT".wem", output_root, digits, i);
+		state->stats.wem_extracts.assigned++;
+
 		if (!(output = fopen(s_output_file, "wb"))) {
 			BRRLOG_ERRN("Failed to open output WEM ");
 			LOG_FORMAT(LOG_PARAMS_INFO, "#%*zu", digits, i);
@@ -198,8 +206,10 @@ rifflist_extract(
 				BRRLOG_ERRN("Failed to write to output WEM ");
 				LOG_FORMAT(LOG_PARAMS_INFO, "#%*zu", digits, i);
 				BRRLOG_ERRP(" (%s), skipping", s_output_file);
+				NeExtraPrint(DEB, "Failed to extract WwRIFF to '%s'", s_output_file);
 				state->stats.wem_extracts.failed++;
 			} else {
+				NeExtraPrint(DEB, "Successfuly extracted WwRIFF to '%s'", s_output_file);
 				state->stats.wem_extracts.succeeded++;
 			}
 			fclose(output);

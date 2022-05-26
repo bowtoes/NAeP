@@ -6,9 +6,9 @@ include config.mk
 include help.mk
 
 info: _delim_1 _info _delim_2
-build_info: _delim_1 _build_info _delim_2
-output_info: _delim_1 _output_info _delim_2
-all_info: _delim_1 _info _build_info _output_info _delim_2
+build-info: _delim_1 _build_info _delim_2
+output-info: _delim_1 _output_info _delim_2
+all-info: _delim_1 _info _build_info _output_info _delim_2
 .PHONY: info build_info output_info all_info
 
 ass_dir ?= ass
@@ -55,9 +55,11 @@ CLEAN: vnd-clean clean
 AGAIN: CLEAN all
 
 install: all
-	@$(copy_file) $(output_file) $(prefix)/bin
+	@$(mk_dir_tree) '$(prefix)/bin'
+	@$(copy_file) '$(output_file)' '$(prefix)/bin'
+	@$(strip_exe) '$(prefix)/bin/$(output_name)'
 uninstall:
-	@$(rm_file) $(prefix)/bin/$(output_name)
+	@$(rm_file) '$(prefix)/bin/$(output_name)'
 
 ### Vendor shit
 vnd:
@@ -135,14 +137,23 @@ else
 endif
 
 $(ogg_reconfig_target):
+	@$(echo) '################################################################################'
+	@$(echo) 'Ogg RECONFIGURE'
+	@$(echo) '################################################################################'
 	cd '$(ogg_dir)' && $(MAKE) maintainer-clean 2>$(null)||:
 	cd '$(ogg_dir)' && ./autogen.sh
 	cd '$(ogg_dir)' && ./configure $(ogg_configure_flags)
 $(ogg_bin): $(ogg_reconfig_target)
-	cd '$(ogg_dir)' && $(MAKE) install
+	@$(echo) '################################################################################'
+	@$(echo) 'Ogg INSTALL'
+	@$(echo) '################################################################################'
+	cd '$(ogg_dir)' && $(MAKE) install prefix='$(ogg_out_dir)'
 ogg: $(ogg_bin)
 ogg-clean:
-	cd '$(ogg_dir)' && $(MAKE) uninstall clean 2>$(null)||:
+	@$(echo) '################################################################################'
+	@$(echo) 'Ogg CLEAN'
+	@$(echo) '################################################################################'
+	cd '$(ogg_dir)' && $(MAKE) uninstall prefix='$(ogg_out_dir)' clean 2>$(null)||:
 ifdef LIBRECONFIG
 	cd '$(ogg_dir)' && $(MAKE) maintainer-clean 2>$(null)||:
 endif
@@ -189,15 +200,24 @@ else
  vorbis_reconfig_target := $(vorbis_makefile)
 endif
 $(vorbis_reconfig_target):
+	@$(echo) '################################################################################'
+	@$(echo) 'Vorbis RECONFIGURE'
+	@$(echo) '################################################################################'
 	cd '$(vorbis_dir)' && $(MAKE) maintainer-clean 2>$(null)||:
 	cd '$(vorbis_dir)' && ./autogen.sh
 	cd '$(vorbis_dir)' && ./configure $(vorbis_configure_flags)
 
 $(vorbis_bin): $(ogg_bin) $(vorbis_reconfig_target)
-	cd '$(vorbis_dir)' && $(MAKE) install
+	@$(echo) '################################################################################'
+	@$(echo) 'Vorbis INSTALL'
+	@$(echo) '################################################################################'
+	cd '$(vorbis_dir)' && $(MAKE) install prefix='$(vorbis_out_dir)'
 vorbis: $(vorbis_bin)
 vorbis-clean:
-	cd '$(vorbis_dir)' && $(MAKE) uninstall clean 2>$(null)||:
+	@$(echo) '################################################################################'
+	@$(echo) 'Vorbis CLEAN'
+	@$(echo) '################################################################################'
+	cd '$(vorbis_dir)' && $(MAKE) uninstall prefix='$(vorbis_out_dir)' clean 2>$(null)||:
 ifdef LIBRECONFIG
 	cd '$(vorbis_dir)' && $(MAKE) maintainer-clean 2>$(null)||:
 endif
