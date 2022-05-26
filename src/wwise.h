@@ -28,6 +28,16 @@ limitations under the License.
 #define VORBIS_STR "vorbis"
 #define CODEBOOK_SYNC "BCV"
 
+typedef enum vorbis_header_packet {
+	vorbis_header_packet_id = 0,
+	vorbis_header_packet_comment = 1,
+	vorbis_header_packet_setup = 2,
+	vorbis_header_packet_count = 3,
+} vorbis_header_packet_t;
+
+extern const char *const vorbis_header_packet_names[3];
+#define vorbis_header(_index_) (vorbis_header_packet_names[_index_])
+
 typedef struct wwise_vorb {
 	brru4 sample_count;
 	brru4 mod_signal;
@@ -68,29 +78,6 @@ typedef struct wwise_wem_flags {
 	brru1 granule_present:1;     /* Whether data packets have 4-bytes for granule */
 	brru1 all_headers_present:1; /* If all vorbis headers are present at header_packets_offset or it's just the setup header */
 } wwriff_flags_t;
-
-typedef struct wwise_packeteer {
-// Bitfields to avoid padding
-	brru8 payload_size:16;
-	brru8 granule:32;
-	brru8 unused:16;
-	unsigned char *payload;
-	int header_length;
-	brru4 total_size;
-} wwise_packeteer_t;
-
-/* Initializes 'packet' from the wwise stream 'wem' with data 'data'.
- *  1 : success
- *  0 : insufficient data
- * -1 : error (input)
- * */
-int wwise_packeteer_init(
-    wwise_packeteer_t *const packeteer,
-    const unsigned char *const data,
-    brrsz data_size,
-    wwriff_flags_t wem_flags
-);
-void wwise_packeteer_zero(wwise_packeteer_t *const packet);
 
 typedef struct wwriff {
 	wwriff_flags_t flags;

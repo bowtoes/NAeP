@@ -128,4 +128,6 @@ int print_report(const nestate_t *const state);
 # define NeExtraPrint(_type_, ...)
 #endif
 
+#define NeFunc() do{NeExtraPrint(DEB, "Function %s", __func__);}while(0)
+
 #endif /* PRINT_H */

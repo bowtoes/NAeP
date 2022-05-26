@@ -181,7 +181,7 @@ lib_parse_buffer_as_riff(riff_t *const riff, const void *const buffer, brrsz buf
 	riff_chunkstate_t chunkstate = {0};
 	riff_t rf = {0};
 	while (I_SUCCESS == (err = i_consume_next_buffer_chunk(&rf, &chunkstate, &datasync))) {
-		NeExtraPrint(DEB, "Found chunk %s", FCC_GET_CODE(sync_chunk.chunkcc));
+		NeExtraPrint(DEB, "Found chunk %s", FCC_GET_CODE(chunkstate.chunkcc));
 		riff_chunkstate_zero(&chunkstate);
 	}
 	if (err && err != I_INSUFFICIENT_DATA) {

@@ -85,6 +85,11 @@ rifflist_clear(rifflist_t *const list)
 	memset(list, 0, sizeof(*list));
 }
 
+/* TODO for each embedded WWRIFF processed, log a symbol for success and one for failure;
+ * e.g. :
+ *   Processing file.wsp... . . . X X . . . . X . . . X . . X X . ... etc.
+ * */
+
 static char s_output_file[BRRPATH_MAX_PATH + 1] = {0};
 #define OUTPUT_FORMAT "_%0*zu"
 int

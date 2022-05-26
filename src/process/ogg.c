@@ -29,226 +29,222 @@ limitations under the License.
 #include "print.h"
 
 /* TODO remove ginput_name and all references to it */
-static const char *ginput_name = NULL;
-static char goutput_name[BRRPATH_MAX_PATH + 1] = {0};
+static const char *s_input_name = NULL;
+static char s_output_name[BRRPATH_MAX_PATH + 1] = {0};
 
 // There should be extended error logging that I think should be optional
 // I'm thinking a tiered error system, with '+E, +error' and '-E, -error' like with the quiet options
 
+typedef struct i_state {
+	FILE *input;
+	ogg_stream_state input_stream;
+	ogg_stream_state output_stream;
+	ogg_sync_state sync;
+	ogg_page current_page;
+	ogg_packet current_packet;
+	vorbis_info vi;
+	vorbis_comment vc;
+} i_state_t;
+
+/* Generalize processing steps:
+ *   Take pages from input file (ogg_sync_state)
+ *   Put those pages into an input stream
+ *   For each packet in that stream:
+ *     Regrain, insert into output stream.
+ *   Write the output stream to disk.
+ * */
+
 #define SYNC_BUFFER_SIZE 4096
-static int
-i_get_first_page(FILE *const file, ogg_sync_state *const syncer, ogg_page *sync_page)
+static inline int
+i_inc_page(i_state_t *const state)
 {
 	int err = 0;
 	brrsz bytes_read = 0;
-	char *sync_buffer = NULL;
-	while (SYNC_PAGEOUT_SUCCESS != (err = ogg_sync_pageout(syncer, sync_page)) && !feof(file)) {
-		if (!(sync_buffer = ogg_sync_buffer(syncer, SYNC_BUFFER_SIZE))) {
-			// ("Could not init sync buffer");
+	while (SYNC_PAGEOUT_SUCCESS != (err = ogg_sync_pageout(&state->sync, &state->current_page)) && !feof(state->input)) {
+		char *sync_buffer = NULL;
+		if (!(sync_buffer = ogg_sync_buffer(&state->sync, SYNC_BUFFER_SIZE))) {
+			NeExtraPrint(ERR, "Could not init sync buffer");
 			return I_BUFFER_ERROR;
 		}
-		bytes_read = fread(sync_buffer, 1, SYNC_BUFFER_SIZE, file);
-		if (ferror(file)) {
-			// ("Failed to read page from input : %s", strerror(errno));
+
+		bytes_read = fread(sync_buffer, 1, SYNC_BUFFER_SIZE, state->input);
+		if (ferror(state->input)) {
+			NeExtraPrint(ERR, "Failed to read page from input : %s", strerror(errno));
 			return I_IO_ERROR;
-		} else if (SYNC_WROTE_SUCCESS != ogg_sync_wrote(syncer, bytes_read)) {
-			// ("Failed to apply input page buffer");
+		}
+
+		if (SYNC_WROTE_SUCCESS != ogg_sync_wrote(&state->sync, bytes_read)) {
+			NeExtraPrint(ERR, "Failed to apply input page buffer");
 			return I_BUFFER_ERROR;
 		}
 	}
-	if (feof(file) && bytes_read != 0 && err != SYNC_PAGEOUT_SUCCESS) {
-		// ("Last page truncated");
+
+	if (feof(state->input) && bytes_read != 0 && err != SYNC_PAGEOUT_SUCCESS) {
+		NeExtraPrint(ERR, "Last page truncated");
 		return I_FILE_TRUNCATED;
 	}
-	return I_SUCCESS;
+	return 0;
 }
-static int
-i_get_next_page(FILE *const file, ogg_sync_state *const syncer,
-	ogg_page *const sync_page, ogg_stream_state *const stream)
+
+static inline int
+i_inc_packet(i_state_t *const state)
 {
 	int err = 0;
-	if ((err = i_get_first_page(file, syncer, sync_page))) {
-		BRRLOG_ERRN("Could not get next page from input");
-		return err;
-	} else if (STREAM_PAGEIN_SUCCESS != (err = ogg_stream_pagein(stream, sync_page))) {
-		BRRLOG_ERRN("Could not insert page into stream");
-		return I_BUFFER_ERROR; /* I think */
-	}
-	return I_SUCCESS;
-}
-static int
-i_get_next_packet(FILE *const file, ogg_sync_state *const syncer,
-    ogg_page *const sync_page, ogg_packet *const sync_packet,
-    ogg_stream_state *const istream)
-{
-	int err = 0;
-	while (STREAM_PACKETOUT_SUCCESS != (err = ogg_stream_packetout(istream, sync_packet))) {
+	while (STREAM_PACKETOUT_SUCCESS != (err = ogg_stream_packetout(&state->input_stream, &state->current_packet))) {
 		if (err == STREAM_PACKETOUT_INCOMPLETE) {
-			if ((err = i_get_next_page(file, syncer, sync_page, istream))) {
+			if ((err = i_inc_page(state))) {
+				BRRLOG_ERR("Could not get next page from input");
 				return err;
+			}
+			if (STREAM_PAGEIN_SUCCESS != (err = ogg_stream_pagein(&state->input_stream, &state->current_page))) {
+				BRRLOG_ERR("Could not insert page into stream");
+				return I_BUFFER_ERROR; /* I think */
 			}
 		} else {
 			return I_DESYNC; /* Again, should desync be fatal? In headers, probably */
 		}
 	}
-	return I_SUCCESS;
+	return 0;
 }
-static int
-i_init_streams(FILE *const file, ogg_sync_state *const syncer, ogg_page *const sync_page,
-    ogg_stream_state *const istream, ogg_stream_state *const ostream)
-{
-	int err = I_SUCCESS;
-	if (!(err = i_get_first_page(file, syncer, sync_page))) {
-		long page_ser = ogg_page_serialno(sync_page);
-		if (STREAM_INIT_SUCCESS != ogg_stream_init(istream, page_ser)) {
-			// ("Could not init input stream ");
-			return I_INIT_ERROR;
-		} else if (STREAM_INIT_SUCCESS != ogg_stream_init(ostream, page_ser)) {
-			ogg_stream_clear(istream);
-			// ("Could not init output stream ");
-			return I_INIT_ERROR;
-		}
-	} else {
-		return err;
-	}
-	if (STREAM_PAGEIN_SUCCESS != (err = ogg_stream_pagein(istream, sync_page))) {
-		// ("Could not read first input page");
-		return I_BUFFER_ERROR;
-	}
-	return err;
-}
-static int
-i_copy_header(ogg_packet *const sync_packet,
-    ogg_stream_state *const ostream,
-    vorbis_info *const info, vorbis_comment *const comment)
-{
-	int err = 0;
-	if (VORBIS_SYNTHESIS_HEADERIN_SUCCESS != (err = vorbis_synthesis_headerin(info, comment, sync_packet))) {
-		switch (err) {
-			case VORBIS_SYNTHESIS_HEADERIN_FAULT:
-				// ("Fault while synthesizing header from input ");
-				return I_BUFFER_ERROR;
-			case VORBIS_SYNTHESIS_HEADERIN_NOTVORBIS:
-				// ("Input stream failed to pass as vorbis ");
-				return I_NOT_VORBIS;
-			case VORBIS_SYNTHESIS_HEADERIN_BADHEADER:
-				// ("Input had bad header ");
-				return I_CORRUPT;
-			default: return I_BAD_ERROR;
-		}
-	} else if (STREAM_PACKETIN_SUCCESS != (err = ogg_stream_packetin(ostream, sync_packet))) {
-		// ("Could not copy header packet ");
-		return I_BUFFER_ERROR;
-	}
-	return I_SUCCESS;
-}
-static int
-i_init_headers(FILE *const file, ogg_sync_state *const syncer,
-    ogg_page *const sync_page, ogg_packet *const sync_packet,
-    ogg_stream_state *const istream, ogg_stream_state *const ostream,
-    vorbis_info *const info, vorbis_comment *const comment)
-{
-	int err = 0;
 
-	vorbis_info_init(info);
-	vorbis_comment_init(comment);
-	for (int completed_headers = 0; completed_headers < 3; ++completed_headers) {
-		if ((err = i_get_next_packet(file, syncer, sync_page, sync_packet, istream))) {
-			vorbis_comment_clear(comment);
-			vorbis_info_clear(info);
-			// ("Could not copy header %d", completed_headers + 1);
-			return err;
-		} else if (completed_headers == 0 && !vorbis_synthesis_idheader(sync_packet)) {
-			vorbis_comment_clear(comment);
-			vorbis_info_clear(info);
-			// ("Could not copy header %d", completed_headers + 1);
-			return I_NOT_VORBIS;
-		} else if ((err = i_copy_header(sync_packet, ostream, info, comment))) {
-			vorbis_comment_clear(comment);
-			vorbis_info_clear(info);
-			// ("Could not copy header %d", completed_headers + 1);
+static inline void
+i_state_clear(i_state_t *const state)
+{
+	if (state) {
+		if (state->input)
+			fclose(state->input);
+		 /* libogg never actually uses this, and I don't think it's necessary for me to either;
+		  * ogg_packet_clear doesn't even check if the packet actually has a valid pointer to free first
+		  * (the others do). */
+		// ogg_packet_clear(&state->current_packet);
+		vorbis_comment_clear(&state->vc);
+		vorbis_info_clear(&state->vi);
+		ogg_sync_clear(&state->sync);
+		ogg_stream_clear(&state->input_stream);
+		ogg_stream_clear(&state->output_stream);
+		memset(state, 0, sizeof(*state));
+	}
+}
+
+static inline int
+i_state_init(i_state_t *const state, const char *const input)
+{
+	i_state_t s = {0};
+	if (!(s.input = fopen(input, "rb"))) {
+		BRRLOG_ERR("Failed to open input ogg for regrain : %s (%d)", strerror(errno), errno);
+		return I_IO_ERROR;
+	}
+
+	ogg_sync_init(&s.sync); /* cannot fail */
+
+	{ /* Get first page of input. */
+		int err = 0;
+		if ((err = i_inc_page(&s))) {
+			i_state_clear(&s);
 			return err;
 		}
 	}
-	return I_SUCCESS;
+
+	long page_ser = ogg_page_serialno(&s.current_page);
+	if (STREAM_INIT_SUCCESS != ogg_stream_init(&s.input_stream, page_ser)) {
+		i_state_clear(&s);
+		NeExtraPrint(ERR, "Could not init input stream ");
+		return I_INIT_ERROR;
+	}
+	if (STREAM_PAGEIN_SUCCESS != ogg_stream_pagein(&s.input_stream, &s.current_page)) {
+		i_state_clear(&s);
+		NeExtraPrint(ERR, "Could not read first input page");
+		return I_BUFFER_ERROR;
+	}
+	if (STREAM_INIT_SUCCESS != ogg_stream_init(&s.output_stream, page_ser)) {
+		i_state_clear(&s);
+		NeExtraPrint(ERR, "Could not init output stream ");
+		return I_INIT_ERROR;
+	}
+	*state = s;
+	return 0;
 }
-static int
-i_recompute_grains(FILE *const file, ogg_sync_state *const syncer,
-    ogg_page *const sync_page, ogg_packet *const sync_packet,
-    ogg_stream_state *const istream, ogg_stream_state *const ostream,
-    vorbis_info *const info)
+
+static inline int
+i_state_process(i_state_t *const state)
 {
-	int err = I_SUCCESS;
-	long last_blocksize = 0;
-	brru8 total_grain = 0;
-	brru8 total_packets = 0;
-	while (I_SUCCESS == (err = i_get_next_packet(file, syncer, sync_page, sync_packet, istream))) {
-		long current_blocksize = current_blocksize = vorbis_packet_blocksize(info, sync_packet);
-		if (last_blocksize)
-			total_grain += (last_blocksize + current_blocksize) / 4;
-		last_blocksize = current_blocksize;
-		sync_packet->granulepos = total_grain;
-		sync_packet->packetno = total_packets++;
-		if (STREAM_PACKETIN_SUCCESS != ogg_stream_packetin(ostream, sync_packet)) {
+	int err = 0;
+	vorbis_info vi = {0};
+	vorbis_comment vc = {0};
+	vorbis_info_init(&vi);
+	vorbis_comment_init(&vc);
+	/* Copy the headers */
+	for (int current_header = vorbis_header_packet_id; current_header < 3; ++current_header) {
+		if ((err = i_inc_packet(state))) {
+			vorbis_comment_clear(&vc);
+			vorbis_info_clear(&vi);
+			NeExtraPrint(ERR, "Failed to get vorbis %s header.", vorbis_header(current_header));
+			return err;
+		}
+		if (current_header == vorbis_header_packet_id) {
+			if (!vorbis_synthesis_idheader(&state->current_packet)) {
+				vorbis_comment_clear(&vc);
+				vorbis_info_clear(&vi);
+				NeExtraPrint(ERR, "Bad vorbis ID header.");
+				return I_NOT_VORBIS;
+			}
+		}
+		if (VORBIS_SYNTHESIS_HEADERIN_SUCCESS != (err = vorbis_synthesis_headerin(&vi, &vc, &state->current_packet))) {
+			vorbis_comment_clear(&vc);
+			vorbis_info_clear(&vi);
+			switch (err) {
+				case VORBIS_SYNTHESIS_HEADERIN_FAULT:
+					NeExtraPrint(ERR, "Fault while synthesizing %s header from input.", vorbis_header(current_header));
+					return I_BUFFER_ERROR;
+				case VORBIS_SYNTHESIS_HEADERIN_NOTVORBIS:
+					NeExtraPrint(ERR, "Got invalid %s header from input.", vorbis_header(current_header));
+					return I_NOT_VORBIS;
+				case VORBIS_SYNTHESIS_HEADERIN_BADHEADER:
+					NeExtraPrint(ERR, "Got bad/corrupt %s header from input.", vorbis_header(current_header));
+					return I_CORRUPT;
+				default:
+					return I_BAD_ERROR;
+			}
+		}
+		if (STREAM_PACKETIN_SUCCESS != (err = ogg_stream_packetin(&state->output_stream, &state->current_packet))) {
+			NeExtraPrint(ERR, "Failed to copy vorbis %s header packet.", vorbis_header(current_header));
+			vorbis_comment_clear(&vc);
+			vorbis_info_clear(&vi);
 			return I_BUFFER_ERROR;
-		} else if (ogg_page_eos(sync_page)) {
-			break;
 		}
 	}
-	return err;
-}
-static void
-i_clear(FILE **const in, ogg_sync_state *const syncer,
-    ogg_stream_state *const istream, ogg_stream_state *ostream,
-    vorbis_info *const info, vorbis_comment *const comment)
-{
-	if (in && *in) {
-		fclose(*in);
-		*in = NULL;
+	state->vi = vi;
+	state->vc = vc;
+
+	/* Recompute granules */
+	long last_block = 0;
+	brru8 total_block = 0;
+	brru8 total_packets = 0;
+	while (!state->current_packet.e_o_s && !(err = i_inc_packet(state))) {
+		long current_block = vorbis_packet_blocksize(&state->vi, &state->current_packet);
+		state->current_packet.granulepos = total_block;
+		state->current_packet.packetno = total_packets++;
+		if (last_block)
+			total_block += (last_block + current_block) / 4;
+		last_block = current_block;
+		NeExtraPrint(DEB, "Granulepos: %llu | Block: %llu | Total block: %llu", state->current_packet.granulepos, current_block, total_block);
+		if (STREAM_PACKETIN_SUCCESS != ogg_stream_packetin(&state->output_stream, &state->current_packet))
+			return I_BUFFER_ERROR;
 	}
-	if (syncer)
-		ogg_sync_clear(syncer);
-	if (istream)
-		ogg_stream_clear(istream);
-	if (ostream)
-		ogg_stream_clear(ostream);
-	if (info)
-		vorbis_info_clear(info);
-	if (comment)
-		vorbis_comment_clear(comment);
+	return 0;
 }
-static int
+
+static inline int
 i_regrain(void)
 {
 	int err = 0;
-	FILE *in;
-	ogg_sync_state syncer;
-	ogg_page sync_page;
-	ogg_packet sync_packet;
-	ogg_stream_state istream, ostream;
-	vorbis_info info;
-	vorbis_comment comment;
-	if (!(in = fopen(ginput_name, "rb"))) {
-		BRRLOG_ERRN("Failed to open ogg for regrain input '%s' : %s", ginput_name, strerror(errno));
-		return I_IO_ERROR;
+	i_state_t state = {0};
+	if (!(err = i_state_init(&state, s_input_name))) {
+		if (!(err = i_state_process(&state))) {
+			err = lib_write_ogg_out(&state.output_stream, s_output_name);
+		}
 	}
-	ogg_sync_init(&syncer);
-	if ((err = i_init_streams(in, &syncer, &sync_page, &istream, &ostream))) {
-		i_clear(&in, &syncer, NULL, NULL, NULL, NULL);
-		BRRLOG_ERRN("Failed to initialize streams for regrain of '%s' : %s", ginput_name, lib_strerr(err));
-		return err;
-	} else if ((err = i_init_headers(in, &syncer, &sync_page, &sync_packet, &istream, &ostream, &info, &comment))) {
-		i_clear(&in, &syncer, &istream, &ostream, NULL, NULL);
-		BRRLOG_ERRN("Failed to initialize vorbis headers from '%s' : %s", ginput_name, lib_strerr(err));
-		return err;
-	} else if ((err = i_recompute_grains(in, &syncer, &sync_page, &sync_packet, &istream, &ostream, &info))) {
-		i_clear(&in, &syncer, &istream, &ostream, &info, &comment);
-		BRRLOG_ERRN("Failed to recompute granules of '%s' : %s", ginput_name, lib_strerr(err));
-		return err;
-	}
-	i_clear(&in, &syncer, &istream, NULL, &info, &comment);
-	err = lib_write_ogg_out(&ostream, goutput_name);
-	i_clear(NULL, NULL, NULL, &ostream, NULL, NULL);
+	i_state_clear(&state);
 	return err;
 }
 
@@ -261,13 +257,14 @@ neregrain_ogg(nestate_t *const state, const neinput_t *const input)
 		LOG_FORMAT(LOG_PARAMS_DRY, "Regranularize OGG ");
 	} else {
 		LOG_FORMAT(LOG_PARAMS_WET, "Regranularizing OGG... ");
-		ginput_name = input->path;
+		s_input_name = input->path;
 		if (input->flag.inplace_regrain)
-			snprintf(goutput_name, sizeof(goutput_name), "%s", input->path);
+			snprintf(s_output_name, sizeof(s_output_name), "%s", input->path);
 		else
-			lib_replace_ext(ginput_name, strlen(input->path), goutput_name, NULL, "_rvb.ogg");
+			lib_replace_ext(s_input_name, strlen(input->path), s_output_name, NULL, "_rvb.ogg");
 		err = i_regrain();
 	}
+
 	if (!err) {
 		state->stats.oggs.succeeded++;
 		LOG_FORMAT(LOG_PARAMS_SUCCESS, "Success!\n");

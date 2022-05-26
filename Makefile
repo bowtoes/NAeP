@@ -23,7 +23,7 @@ obj_dir ?= obj
 obj_out_dir ?= $(output_directory)/$(obj_dir)
 obj_out := $(addprefix $(obj_out_dir)/,$(srcs:.c=.o))
 
-build_directories := $(sort $(dir $(output_file) $(ass_out) $(int_out) $(obj_out)))
+build_directories := $(sort $(dir $(ass_out) $(int_out) $(obj_out)))
 
 all: info $(project)
 setup:

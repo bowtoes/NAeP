@@ -1,4 +1,4 @@
-# NieR:Automated extraction Precept_v0.0.2a
+# NieR:Automated extraction Precept_v0.0.2d
 C11 device with the goal of extracting and converting NieR:Automata and
 Replicant audio data into useable [Ogg][oggvorbis] files.
 

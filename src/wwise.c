@@ -36,18 +36,35 @@ limitations under the License.
 
 static const codebook_library_t *s_used_library = NULL;
 static const neinput_t *s_current_input = NULL;
-static const char *const s_vorbis_header_names[3] = {
+
+const char *const vorbis_header_packet_names[3] = {
 	"ID",
 	"comments",
 	"setup",
 };
 
-int
-wwise_packeteer_init(
-    wwise_packeteer_t *const packet,
+typedef struct i_packeteer {
+// Bitfields to avoid padding
+	brru8 payload_size:16;
+	brru8 granule:32;
+	brru8 unused:16;
+	unsigned char *payload;
+	int header_length;
+	brru4 total_size;
+} i_packeteer_t;
+
+/* Initializes 'packet' from the wwise stream 'wem' with data 'data'.
+ *  1 : success
+ *  0 : insufficient data
+ * -1 : error (input)
+ * */
+static inline int
+i_packeteer_init(
+    i_packeteer_t *const packet,
     const unsigned char *const data,
     brrsz data_size,
-    wwriff_flags_t wem_flags
+    wwriff_flags_t wem_flags,
+	brrsz offset
 )
 {
 	if (!packet || !data)
@@ -56,7 +73,7 @@ wwise_packeteer_init(
 	if (data_size < 2)
 		return I_INSUFFICIENT_DATA;
 
-	wwise_packeteer_t pk = {0};
+	i_packeteer_t pk = {0};
 	pk.payload_size = *(brru2 *)data;
 	if (pk.payload_size > data_size)
 		return I_INSUFFICIENT_DATA;
@@ -79,15 +96,9 @@ wwise_packeteer_init(
 	pk.payload = (unsigned char *)data + ofs;
 	pk.header_length = ofs;
 	pk.total_size = pk.payload_size + pk.header_length;
+	//NeExtraPrint(DEB, "Init packet of size %llu (%llu header, %llu payload) at offset 0x%08x", pk.total_size, pk.header_length, pk.payload_size, offset);
 	*packet = pk;
 	return 0;
-}
-void
-wwise_packeteer_zero(wwise_packeteer_t *const packet)
-{
-	if (packet) {
-		memset(packet, 0, sizeof(*packet));
-	}
 }
 
 /* TODO packer_transfer can error; many transfers don't check for errors. */
@@ -325,16 +336,33 @@ i_init_ogg_packet(ogg_packet *const packet, oggpack_buffer *const packer, brru8 
 		.bytes = oggpack_bytes(packer),
 		.b_o_s = packetno == 0,
 		.e_o_s = end_of_stream != 0,
-		.granulepos = granule,
 		.packetno = packetno,
+		.granulepos = granule,
 	};
 	return 0;
 }
+#define PRINT_PACKET(_packet_) do {\
+	NeExtraPrint(DEB, "    Packetno:   %lld", (_packet_).packetno);\
+	NeExtraPrint(DEB, "    Granulepos: %lld", (_packet_).granulepos);\
+	NeExtraPrint(DEB, "    BOS:        %i",   (_packet_).b_o_s);\
+	NeExtraPrint(DEB, "    EOS:        %i",   (_packet_).e_o_s);\
+	NeExtraPrint(DEB, "    Size:       %lld", (_packet_).bytes);\
+} while (0)
 static inline int
 i_insert_packet(ogg_stream_state *const streamer, ogg_packet *const packet)
 {
+#ifdef Ne_extra_debug
+	if (packet->b_o_s) {
+		NeExtraPrint(DEB, "Inserting BOS packet");
+		PRINT_PACKET(*packet);
+	}
+	if (packet->e_o_s) {
+		NeExtraPrint(DEB, "Inserting EOS packet");
+		PRINT_PACKET(*packet);
+	}
+#endif
 	if (ogg_stream_packetin(streamer, packet)) {
-		BRRLOG_ERR("Failed to insert audio packet %lld into output stream.", packet->packetno);
+		BRRLOG_ERR("Failed to insert ogg packet %lld into output stream.", packet->packetno);
 		return I_BUFFER_ERROR;
 	}
 	return I_SUCCESS;
@@ -343,13 +371,17 @@ static int
 i_insert_header(ogg_stream_state *const streamer, ogg_packet *const packet, vorbis_info *const vi, vorbis_comment *const vc)
 {
 	int err = 0;
+	NeExtraPrint(DEB, "Inserting vorbis %s header packet:", vorbis_header(packet->packetno));
+	if (packet->packetno != 0)
+		PRINT_PACKET(*packet);
+
 	if ((err = i_insert_packet(streamer, packet))) {
-		BRRLOG_ERR("Failed to insert vorbis %s header packet into output stream.", s_vorbis_header_names[packet->packetno]);
+		BRRLOG_ERR("Failed to insert vorbis %s header packet into output stream.", vorbis_header_packet_names[packet->packetno]);
 		return err;
 	}
 
 	if ((err = vorbis_synthesis_headerin(vi, vc, packet))) {
-		BRRLOG_ERRN("Could not synthesize header %s : ", s_vorbis_header_names[packet->packetno]);
+		BRRLOG_ERRN("Could not synthesize header %s : ", vorbis_header_packet_names[packet->packetno]);
 		if (err == OV_ENOTVORBIS)
 			BRRLOG_ERRP("NOT VORBIS");
 		else if (err == OV_EBADHEADER)
@@ -541,10 +573,10 @@ i_copy_headers(ogg_stream_state *const streamer, wwriff_t *const wem, vorbis_inf
 	brru4 packets_length = wem->vorb.audio_start_offset - wem->vorb.header_packets_offset;
 
 	int err = 0;
-	for (int current_header = 0; current_header < 3; ++current_header) {
-		wwise_packeteer_t packeteer = {0};
-		if ((err = wwise_packeteer_init(&packeteer, packets, packets_length, wem_flags))) {
-			BRRLOG_ERR("Insufficient data to copy vorbis %s header packet.", s_vorbis_header_names[current_header]);
+	for (int current_header = vorbis_header_packet_id; current_header < 3; ++current_header) {
+		i_packeteer_t packeteer = {0};
+		if ((err = i_packeteer_init(&packeteer, packets, packets_length, wem_flags, (brrsz)(packets - wem->data)))) {
+			BRRLOG_ERR("Insufficient data to copy vorbis %s header packet.", vorbis_header(current_header));
 			return err;
 		}
 
@@ -552,12 +584,12 @@ i_copy_headers(ogg_stream_state *const streamer, wwriff_t *const wem, vorbis_inf
 		oggpack_writeinit(&packer);
 		oggpack_readinit(&unpacker, packeteer.payload, packeteer.payload_size);
 		switch (current_header) {
-			case 0: err = i_copy_id_header(&unpacker, &packer); break;
-			case 1: err = i_copy_comment_header(&unpacker, &packer); break;
-			case 2: err = i_copy_setup_header(&unpacker, &packer); break;
+			case vorbis_header_packet_id: err = i_copy_id_header(&unpacker, &packer); break;
+			case vorbis_header_packet_comment: err = i_copy_comment_header(&unpacker, &packer); break;
+			case vorbis_header_packet_setup: err = i_copy_setup_header(&unpacker, &packer); break;
 		}
 		if (err) {
-			BRRLOG_ERR("Could not copy vorbis %s header.", s_vorbis_header_names[current_header]);
+			BRRLOG_ERR("Could not copy vorbis %s header.", vorbis_header(current_header));
 			oggpack_writeclear(&packer);
 			return err;
 		}
@@ -839,9 +871,9 @@ i_build_setup_header(oggpack_buffer *const packer, wwriff_t *const wem)
 {
 	unsigned char *packets_start = wem->data + wem->vorb.header_packets_offset;
 	brru4 packets_size = wem->vorb.audio_start_offset - wem->vorb.header_packets_offset;
-	wwise_packeteer_t packeteer = {0};
+	i_packeteer_t packeteer = {0};
 	int err = 0;
-	if ((err = wwise_packeteer_init(&packeteer, packets_start, packets_size, wem->flags))) {
+	if ((err = i_packeteer_init(&packeteer, packets_start, packets_size, wem->flags, (brrsz)(packets_start - wem->data)))) {
 		BRRLOG_ERR("Failed to initialize vorbis setup header packet.");
 		return err;
 	}
@@ -871,7 +903,6 @@ i_build_setup_header(oggpack_buffer *const packer, wwriff_t *const wem)
 		} else {
 			/* Stripped codebooks, need to be unpacked/rebuilt to spec */
 			for (int i = 0; i < codebook_count; ++i) {
-				NeExtraPrint(DEBUG, "Rebuilding internal codebook %d", i);
 				if ((err = packed_codebook_unpack_raw(&unpacker, packer))) {
 					BRRLOG_ERR("Failed to build codebook %d", i);
 					return err;
@@ -900,7 +931,6 @@ i_build_setup_header(oggpack_buffer *const packer, wwriff_t *const wem)
 				return I_CORRUPT;
 			}
 
-			NeExtraPrint(DEBUG, "Building external codebook %3d: ", cbidx);
 			cb = &s_used_library->codebooks[cbidx];
 			if (CODEBOOK_SUCCESS != (err = packed_codebook_unpack(cb))) { /* Copy from external */
 				if (err == CODEBOOK_ERROR)
@@ -964,7 +994,7 @@ i_build_headers(ogg_stream_state *const streamer, wwriff_t *const wem, vorbis_in
 			case 2: err = i_build_setup_header(&packer, wem); break;
 		}
 		if (err) {
-			BRRLOG_ERRN("Failed to build vorbis %s header", s_vorbis_header_names[current_header]);
+			BRRLOG_ERRN("Failed to build vorbis %s header", vorbis_header(current_header));
 			oggpack_writeclear(&packer);
 			return err;
 		}
@@ -996,80 +1026,82 @@ i_process_headers(ogg_stream_state *const streamer, wwriff_t *const wem, vorbis_
 static int
 i_process_audio(ogg_stream_state *const streamer, wwriff_t *const wem, vorbis_info *const vi, vorbis_comment *const vc)
 {
-	int err = 0;
+	const int mode_count_bits = lib_count_bits(wem->mode_count - 1);
 	brru4 packets_start = wem->vorb.audio_start_offset;
 	brru4 packets_size = wem->data_size - wem->vorb.audio_start_offset;
-	wwise_packeteer_t packeteer = {0};
+	i_packeteer_t packeteer = {0};
 
-	const int mode_count_bits = lib_count_bits(wem->mode_count - 1);
 	int prev_blockflag = 0;
 	brru8 last_block = 0;
 	brru8 total_block = 0;
 	brru8 packetno = 0;
+
+	int err = 0;
+	NeExtraPrint(DEB, "Stream mod packets");
 	while (packets_start < wem->data_size) {
 		int eos = 0;
-		oggpack_buffer unpacker, packer;
-		if ((err = wwise_packeteer_init(&packeteer, wem->data + packets_start, packets_size, wem->flags))) {
+		if ((err = i_packeteer_init(&packeteer, wem->data + packets_start, packets_size, wem->flags, packets_start))) {
 			BRRLOG_ERR("Insufficient data to build next audio packet %lld", packetno);
 			return err;
 		}
+
+		brru4 next_start = packets_start + packeteer.total_size;
+
+		oggpack_buffer unpacker, packer;
 		oggpack_readinit(&unpacker, packeteer.payload, packeteer.payload_size);
 		oggpack_writeinit(&packer);
-		brru4 packeteer_size = packeteer.header_length + packeteer.payload_size;
 
-		if (!wem->flags.mod_packets) {
-			int transferred = packer_transfer(&unpacker, 8, &packer, 8); /* Unmodified first byte */
-
-		} else {
-			int packet_type = 0;
-			packer_pack(&packer, packet_type, 1); /* W Packet type */
-
+		if (wem->flags.mod_packets) {
+			int packet_type = packer_pack(&packer, 0, 1); /* W Packet type */
 			int mode_number = packer_transfer(&unpacker, mode_count_bits, &packer, mode_count_bits); /* R/W Mode number */
 			int remainder = packer_unpack(&unpacker, 8 - mode_count_bits); /* R Remainder bits */
-
 			if (wem->mode_blockflags[mode_number]) {
 				/* Long window */
-				wwise_packeteer_t next_packeteer;
-				brru4 next_start = packets_start + packeteer_size,
-				      next_size = packets_size + packeteer_size;
 				int next_blockflag = 0;
-				if ((err = wwise_packeteer_init(&next_packeteer, wem->data + next_start, next_size, wem->flags))) {
+				brru4 next_size  = packets_size  + packeteer.total_size;
+				i_packeteer_t next_packeteer;
+				if ((err = i_packeteer_init(&next_packeteer, wem->data + next_start, next_size, wem->flags, next_start))) {
 					eos = 1;
 				} else if (next_packeteer.payload_size) {
-					int next_number;
 					oggpack_buffer next_unpacker;
 					oggpack_readinit(&next_unpacker, next_packeteer.payload, next_packeteer.payload_size);
-					next_number = packer_unpack(&next_unpacker, mode_count_bits); /* R Next number */
+					int next_number = packer_unpack(&next_unpacker, mode_count_bits); /* R Next number */
 					next_blockflag = wem->mode_blockflags[next_number];
 				}
 				packer_pack(&packer, prev_blockflag, 1); /* W Previous window type */
 				packer_pack(&packer, next_blockflag, 1); /* W Next window type */
 			}
-
 			packer_pack(&packer, remainder, 8 - mode_count_bits); /* W Remainder of read-in first byte */
 			prev_blockflag = wem->mode_blockflags[mode_number];
 		}
 
 		packer_transfer_remaining(&unpacker, &packer);
 
-		{	/* This granule calculation is from revorb, not sure its source though; probably somewhere in vorbis docs, haven't found it */
-			ogg_packet packet;
-			i_init_ogg_packet(&packet, &packer, packetno + 3, 0, eos);
+		/* This granule calculation is from revorb, not sure its source though; probably somewhere in vorbis docs, haven't found it */
+		/* I'll be honest; I really don't understand this at all. */
+		ogg_packet packet;
+		i_init_ogg_packet(&packet, &packer, packetno + 3, 0, eos || next_start >= wem->data_size);
 
-			long current_block = vorbis_packet_blocksize(vi, &packet);
-			if (last_block)
-				total_block += (last_block + current_block) / 4;
-			last_block = current_block;
-			packet.granulepos = total_block;
+		long current_block = vorbis_packet_blocksize(vi, &packet);
 
-			if ((err = i_insert_packet(streamer, &packet))) {
-				oggpack_writeclear(&packer);
-				return err;
-			}
+		/* This line goes after the 'if' in original revorb, however putting it before incrementing total_block
+		 * gets rid of one error from ogginfo, the ".. headers incorrectly framed, terminal header page has non-zero granpos."
+		 * Honestly, it's probably just a fluke with this whole algorithm and that one test I did it on; */
+		packet.granulepos = total_block;
+
+		if (last_block)
+			total_block += (last_block + current_block) / 4;
+		last_block = current_block;
+		NeExtraPrint(DEB, "Granulepos: %llu | Block: %llu | Total block: %llu", packet.granulepos, current_block, total_block);
+
+		if ((err = i_insert_packet(streamer, &packet))) {
+			oggpack_writeclear(&packer);
+			return err;
 		}
+
 		oggpack_writeclear(&packer);
-		packets_start += packeteer_size;
-		packets_size -= packeteer_size;
+		packets_start += packeteer.total_size;
+		packets_size  -= packeteer.total_size;
 		++packetno;
 	}
 	NeExtraPrint(DEBUG, "Total packets: %lld", 3 + packetno);
