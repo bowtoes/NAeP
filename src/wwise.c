@@ -643,7 +643,7 @@ static int
 i_build_comments_header(oggpack_buffer *const packer, const wwriff_t *const wem)
 {
 	static const char vendor_string[] = "NieR:Automated extraction Precept_v"Ne_version;
-	static long vendor_len = sizeof(vendor_string);
+	static long vendor_len = sizeof(vendor_string) - 1;
 
 	packer_pack(packer, 3, 8); /* W Packet type */
 	/* W Vorbis string */
