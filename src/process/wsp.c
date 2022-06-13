@@ -17,18 +17,12 @@ limitations under the License.
 #include "process.h"
 
 #include <stdlib.h>
-#include <string.h>
 
-#include <brrtools/brrlog.h>
-#include <brrtools/brrpath.h>
-
-#include "lib.h"
-#include "errors.h"
-#include "print.h"
+#include "neinput.h"
 #include "rifflist.h"
 #include "wwise.h"
 
-static char goutput_root[BRRPATH_MAX_PATH + 1] = {0};
+static char s_output_root[BRRPATH_MAX_PATH + 1] = {0};
 
 static int
 i_extract_wsp(nestate_t *const state, const neinput_t *const input)
@@ -37,16 +31,16 @@ i_extract_wsp(nestate_t *const state, const neinput_t *const input)
 	rifflist_t meta = {0};
 	const codebook_library_t *library = NULL;
 	unsigned char *buffer = NULL;
-	brrsz bufsize = 0;
 
-	if ((err = lib_read_entire_file(input->path, (void **)&buffer, &bufsize)))
+	if ((err = nepath_read(&input->path, (void **)&buffer)))
 		return err;
-	if (!(err = rifflist_scan(&meta, buffer, bufsize))) {
+
+	if (!(err = rifflist_scan(&meta, buffer, input->path.st.size))) {
 		if (!(err = neinput_load_codebooks(state->libraries, &library, input->library_index))) {
 			if (input->flag.auto_ogg)
-				err = rifflist_convert(&meta, buffer, state, input, library, goutput_root);
+				err = rifflist_convert(&meta, buffer, state, input, library, s_output_root);
 			else
-				err = rifflist_extract(&meta, buffer, state, input, goutput_root);
+				err = rifflist_extract(&meta, buffer, state, input, s_output_root);
 		}
 		rifflist_clear(&meta);
 	}
@@ -55,23 +49,23 @@ i_extract_wsp(nestate_t *const state, const neinput_t *const input)
 }
 
 int
-neextract_wsp(nestate_t *const state, const neinput_t *const input)
+neprocess_wsp(nestate_t *const state, const neinput_t *const input)
 {
 	int err = 0;
 	state->stats.wsps.assigned++;
 	if (input->flag.dry_run) {
-		LOG_FORMAT(LOG_PARAMS_DRY, "Extract WSP (dry) ");
+		Style(np,meta_dry, "Extract WSP (dry) ");
 	} else {
-		LOG_FORMAT(LOG_PARAMS_WET, "Extracting WSP... ");
-		lib_replace_ext(input->path, strlen(input->path) - 1, goutput_root, NULL, "");
+		Style(np,meta_wet, "Extracting WSP... ");
+		nepath_extension_replace(&input->path, NULL, 0, s_output_root);
 		err = i_extract_wsp(state, input);
 	}
 	if (!err) {
 		state->stats.wsps.succeeded++;
-		LOG_FORMAT(LOG_PARAMS_SUCCESS, "Success!\n");
+		Style(np,meta_success, "Success!\n");
 	} else {
 		state->stats.wsps.failed++;
-		LOG_FORMAT(LOG_PARAMS_FAILURE, "Failure! (%d)\n", err);
+		Style(np,meta_failure, "Failure! (%d)\n", err);
 	}
 	return err;
 }

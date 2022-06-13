@@ -18,16 +18,10 @@ limitations under the License.
 
 #include <errno.h>
 #include <stdlib.h>
-#include <string.h>
+#include <stdio.h>
 
-#include <ogg/ogg.h>
-
-#include <brrtools/brrpath.h>
-
-#include "lib.h"
-#include "errors.h"
+#include "neinput.h"
 #include "wwise.h"
-#include "print.h"
 
 static char s_output_name[BRRPATH_MAX_PATH + 1] = {0};
 
@@ -37,11 +31,12 @@ i_convert_wem(neinput_library_t *const libraries, const neinput_t *const input)
 	int err = 0;
 	wwriff_t wwriff = {0};
 	{
-		char *buffer = NULL;
-		brrsz bufsize = 0;
-		if ((err = lib_read_entire_file(input->path, (void **)&buffer, &bufsize)))
+		unsigned char *buffer = NULL;
+
+		if ((err = nepath_read(&input->path, (void **)&buffer)))
 			return err;
-		err = lib_parse_buffer_as_wwriff(&wwriff, buffer, bufsize);
+
+		err = neutil_buffer_to_wwriff(&wwriff, buffer, input->path.st.size);
 		free(buffer);
 		if (err)
 			return err;
@@ -58,7 +53,7 @@ i_convert_wem(neinput_library_t *const libraries, const neinput_t *const input)
 		if (!(err = neinput_load_codebooks(libraries, &library, input->library_index))) {
 			ogg_stream_state streamer;
 			if (!(err = wwise_convert_wwriff(&wwriff, &streamer, library, input)))
-				err = lib_write_ogg_out(&streamer, s_output_name);
+				err = neutil_write_ogg(&streamer, s_output_name);
 			ogg_stream_clear(&streamer);
 		}
 	}
@@ -67,27 +62,32 @@ i_convert_wem(neinput_library_t *const libraries, const neinput_t *const input)
 	return err;
 }
 
+#define W2O_EXT ".ogg"
+
 int
-neconvert_wem(nestate_t *const state, const neinput_t *const input)
+neprocess_wem(nestate_t *const state, const neinput_t *const input)
 {
 	int err = 0;
 	state->stats.wems.assigned++;
 	if (input->flag.dry_run) {
-		LOG_FORMAT(LOG_PARAMS_DRY, "Convert WEM (dry) ");
+		Style(np,meta_dry, "Convert WEM (dry) ");
 	} else {
-		LOG_FORMAT(LOG_PARAMS_WET, "Converting WEM... ");
-		if (input->flag.inplace_ogg) /* Overwrite input file */
-			snprintf(s_output_name, sizeof(s_output_name), "%s", input->path);
-		else /* Output to [file_path/base_name].ogg */
-			lib_replace_ext(input->path, input->path_length, s_output_name, NULL, ".ogg");
+		Style(np,meta_wet, "Converting WEM... ");
+		if (input->flag.inplace_ogg) {
+			/* Overwrite input file */
+			snprintf(s_output_name, sizeof(s_output_name), "%s", input->path.cstr);
+		} else {
+			/* Output to [file_path/base_name].ogg */
+			nepath_extension_replace(&input->path, W2O_EXT, sizeof(W2O_EXT) - 1, s_output_name);
+		}
 		err = i_convert_wem(state->libraries, input);
 	}
 	if (!err) {
 		state->stats.wems.succeeded++;
-		LOG_FORMAT(LOG_PARAMS_SUCCESS, "Success!\n");
+		Style(p,meta_success, "Success!");
 	} else {
 		state->stats.wems.failed++;
-		LOG_FORMAT(LOG_PARAMS_FAILURE, "Failure! (%d)\n", err);
+		Style(p,meta_failure, "Failure! (%d)", err);
 	}
 	return err;
 }

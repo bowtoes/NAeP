@@ -14,16 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef PROCESS_H
-#define PROCESS_H
+#ifndef NAeP_neprocess_h
+#define NAeP_neprocess_h
 
-#include "input.h"
+#include "neutil.h"
 
 int neprocess_inputs(nestate_t *const state);
 
-int neregrain_ogg(nestate_t *const state, const neinput_t *const input);
-int neconvert_wem(nestate_t *const state, const neinput_t *const input);
-int neextract_wsp(nestate_t *const state, const neinput_t *const input);
-int neextract_bnk(nestate_t *const state, const neinput_t *const input);
+int neprocess_ogg(nestate_t *const state, const neinput_t *const input);
+int neprocess_wem(nestate_t *const state, const neinput_t *const input);
+int neprocess_wsp(nestate_t *const state, const neinput_t *const input);
+int neprocess_bnk(nestate_t *const state, const neinput_t *const input);
+int neprocess_arc(nestate_t *const state, const neinput_t *const input);
 
-#endif /* PROCESS_H */
+#endif /* NAeP_neprocess_h */

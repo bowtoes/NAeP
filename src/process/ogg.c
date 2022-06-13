@@ -18,15 +18,11 @@ limitations under the License.
 
 #include <errno.h>
 #include <stdio.h>
-#include <string.h>
 
 #include <vorbis/vorbisenc.h>
 
-#include <brrtools/brrpath.h>
-
-#include "errors.h"
-#include "lib.h"
-#include "print.h"
+#include "neinput.h"
+#include "wwise.h"
 
 /* TODO remove ginput_name and all references to it */
 static const char *s_input_name = NULL;
@@ -60,28 +56,28 @@ i_inc_page(i_state_t *const state)
 {
 	int err = 0;
 	brrsz bytes_read = 0;
-	while (SYNC_PAGEOUT_SUCCESS != (err = ogg_sync_pageout(&state->sync, &state->current_page)) && !feof(state->input)) {
+	while (E_OGG_OUT_SUCCESS != (err = ogg_sync_pageout(&state->sync, &state->current_page)) && !feof(state->input)) {
 		char *sync_buffer = NULL;
 		if (!(sync_buffer = ogg_sync_buffer(&state->sync, SYNC_BUFFER_SIZE))) {
-			NeExtraPrint(ERR, "Could not init sync buffer");
-			return I_BUFFER_ERROR;
+			ExtraErr(,"Could not init sync buffer");
+			return -1;
 		}
 
 		bytes_read = fread(sync_buffer, 1, SYNC_BUFFER_SIZE, state->input);
 		if (ferror(state->input)) {
-			NeExtraPrint(ERR, "Failed to read page from input : %s", strerror(errno));
-			return I_IO_ERROR;
+			ExtraErr(,"Failed to read page from input : %s", strerror(errno));
+			return -1;
 		}
 
-		if (SYNC_WROTE_SUCCESS != ogg_sync_wrote(&state->sync, bytes_read)) {
-			NeExtraPrint(ERR, "Failed to apply input page buffer");
-			return I_BUFFER_ERROR;
+		if (E_OGG_SUCCESS != ogg_sync_wrote(&state->sync, bytes_read)) {
+			ExtraErr(,"Failed to apply input page buffer");
+			return -1;
 		}
 	}
 
-	if (feof(state->input) && bytes_read != 0 && err != SYNC_PAGEOUT_SUCCESS) {
-		NeExtraPrint(ERR, "Last page truncated");
-		return I_FILE_TRUNCATED;
+	if (feof(state->input) && bytes_read != 0 && err != E_OGG_OUT_SUCCESS) {
+		ExtraErr(,"Last page truncated");
+		return -1;
 	}
 	return 0;
 }
@@ -90,18 +86,18 @@ static inline int
 i_inc_packet(i_state_t *const state)
 {
 	int err = 0;
-	while (STREAM_PACKETOUT_SUCCESS != (err = ogg_stream_packetout(&state->input_stream, &state->current_packet))) {
-		if (err == STREAM_PACKETOUT_INCOMPLETE) {
-			if ((err = i_inc_page(state))) {
-				BRRLOG_ERR("Could not get next page from input");
-				return err;
+	while (E_OGG_OUT_SUCCESS != (err = ogg_stream_packetout(&state->input_stream, &state->current_packet))) {
+		if (err == E_OGG_OUT_INCOMPLETE) {
+			if (i_inc_page(state)) {
+				Err(,"Could not get next page from input");
+				return -1;
 			}
-			if (STREAM_PAGEIN_SUCCESS != (err = ogg_stream_pagein(&state->input_stream, &state->current_page))) {
-				BRRLOG_ERR("Could not insert page into stream");
-				return I_BUFFER_ERROR; /* I think */
+			if (E_OGG_SUCCESS != (err = ogg_stream_pagein(&state->input_stream, &state->current_page))) {
+				Err(,"Could not insert page into stream");
+				return -1; /* I think */
 			}
-		} else {
-			return I_DESYNC; /* Again, should desync be fatal? In headers, probably */
+		} else { /* Desync */
+			return -1; /* Should desync be fatal? In the vorbis headers, probably */
 		}
 	}
 	return 0;
@@ -131,8 +127,8 @@ i_state_init(i_state_t *const state, const char *const input)
 {
 	i_state_t s = {0};
 	if (!(s.input = fopen(input, "rb"))) {
-		BRRLOG_ERR("Failed to open input ogg for regrain : %s (%d)", strerror(errno), errno);
-		return I_IO_ERROR;
+		Err(,"Failed to open input ogg for regrain : %s (%d)", strerror(errno), errno);
+		return -1;
 	}
 
 	ogg_sync_init(&s.sync); /* cannot fail */
@@ -146,20 +142,20 @@ i_state_init(i_state_t *const state, const char *const input)
 	}
 
 	long page_ser = ogg_page_serialno(&s.current_page);
-	if (STREAM_INIT_SUCCESS != ogg_stream_init(&s.input_stream, page_ser)) {
+	if (E_OGG_SUCCESS != ogg_stream_init(&s.input_stream, page_ser)) {
 		i_state_clear(&s);
-		NeExtraPrint(ERR, "Could not init input stream ");
-		return I_INIT_ERROR;
+		ExtraErr(,"Could not init input stream ");
+		return -1;
 	}
-	if (STREAM_PAGEIN_SUCCESS != ogg_stream_pagein(&s.input_stream, &s.current_page)) {
+	if (E_OGG_SUCCESS != ogg_stream_pagein(&s.input_stream, &s.current_page)) {
 		i_state_clear(&s);
-		NeExtraPrint(ERR, "Could not read first input page");
-		return I_BUFFER_ERROR;
+		ExtraErr(,"Could not read first input page");
+		return -1;
 	}
-	if (STREAM_INIT_SUCCESS != ogg_stream_init(&s.output_stream, page_ser)) {
+	if (E_OGG_SUCCESS != ogg_stream_init(&s.output_stream, page_ser)) {
 		i_state_clear(&s);
-		NeExtraPrint(ERR, "Could not init output stream ");
-		return I_INIT_ERROR;
+		ExtraErr(,"Could not init output stream");
+		return -1;
 	}
 	*state = s;
 	return 0;
@@ -174,43 +170,37 @@ i_state_process(i_state_t *const state)
 	vorbis_info_init(&vi);
 	vorbis_comment_init(&vc);
 	/* Copy the headers */
-	for (int current_header = vorbis_header_packet_id; current_header < 3; ++current_header) {
-		if ((err = i_inc_packet(state))) {
+	for (int current_header = vorbishdr_id; current_header < 3; ++current_header) {
+		if (i_inc_packet(state)) {
 			vorbis_comment_clear(&vc);
 			vorbis_info_clear(&vi);
-			NeExtraPrint(ERR, "Failed to get vorbis %s header.", vorbis_header(current_header));
-			return err;
+			ExtraErr(,"Failed to get vorbis %s header", vorbis_header(current_header));
+			return -1;
 		}
-		if (current_header == vorbis_header_packet_id) {
+		if (current_header == vorbishdr_id) {
 			if (!vorbis_synthesis_idheader(&state->current_packet)) {
 				vorbis_comment_clear(&vc);
 				vorbis_info_clear(&vi);
-				NeExtraPrint(ERR, "Bad vorbis ID header.");
-				return I_NOT_VORBIS;
+				ExtraErr(,"Bad vorbis ID header");
+				return -1;
 			}
 		}
-		if (VORBIS_SYNTHESIS_HEADERIN_SUCCESS != (err = vorbis_synthesis_headerin(&vi, &vc, &state->current_packet))) {
+		if (E_VORBIS_HEADER_SUCCESS != (err = vorbis_synthesis_headerin(&vi, &vc, &state->current_packet))) {
 			vorbis_comment_clear(&vc);
 			vorbis_info_clear(&vi);
 			switch (err) {
-				case VORBIS_SYNTHESIS_HEADERIN_FAULT:
-					NeExtraPrint(ERR, "Fault while synthesizing %s header from input.", vorbis_header(current_header));
-					return I_BUFFER_ERROR;
-				case VORBIS_SYNTHESIS_HEADERIN_NOTVORBIS:
-					NeExtraPrint(ERR, "Got invalid %s header from input.", vorbis_header(current_header));
-					return I_NOT_VORBIS;
-				case VORBIS_SYNTHESIS_HEADERIN_BADHEADER:
-					NeExtraPrint(ERR, "Got bad/corrupt %s header from input.", vorbis_header(current_header));
-					return I_CORRUPT;
-				default:
-					return I_BAD_ERROR;
+				case E_VORBIS_HEADER_FAULT:     ExtraErr(,"Fault while synthesizing %s header from input", vorbis_header(current_header));
+				case E_VORBIS_HEADER_NOTVORBIS: ExtraErr(,"Got invalid %s header from input", vorbis_header(current_header));
+				case E_VORBIS_HEADER_BADHEADER: ExtraErr(,"Got bad/corrupt %s header from input", vorbis_header(current_header));
+				default: break;
 			}
+			return -1;
 		}
-		if (STREAM_PACKETIN_SUCCESS != (err = ogg_stream_packetin(&state->output_stream, &state->current_packet))) {
-			NeExtraPrint(ERR, "Failed to copy vorbis %s header packet.", vorbis_header(current_header));
+		if (E_OGG_SUCCESS != (err = ogg_stream_packetin(&state->output_stream, &state->current_packet))) {
 			vorbis_comment_clear(&vc);
 			vorbis_info_clear(&vi);
-			return I_BUFFER_ERROR;
+			ExtraErr(,"Failed to copy vorbis %s header packet", vorbis_header(current_header));
+			return -1;
 		}
 	}
 	state->vi = vi;
@@ -227,9 +217,9 @@ i_state_process(i_state_t *const state)
 		if (last_block)
 			total_block += (last_block + current_block) / 4;
 		last_block = current_block;
-		NeExtraPrint(DEB, "Granulepos: %llu | Block: %llu | Total block: %llu", state->current_packet.granulepos, current_block, total_block);
-		if (STREAM_PACKETIN_SUCCESS != ogg_stream_packetin(&state->output_stream, &state->current_packet))
-			return I_BUFFER_ERROR;
+		ExtraDeb(,"Granulepos: %llu | Block: %llu | Total block: %llu", state->current_packet.granulepos, current_block, total_block);
+		if (E_OGG_SUCCESS != ogg_stream_packetin(&state->output_stream, &state->current_packet))
+			return -1;
 	}
 	return 0;
 }
@@ -239,38 +229,43 @@ i_regrain(void)
 {
 	int err = 0;
 	i_state_t state = {0};
-	if (!(err = i_state_init(&state, s_input_name))) {
-		if (!(err = i_state_process(&state))) {
-			err = lib_write_ogg_out(&state.output_stream, s_output_name);
+	if (!i_state_init(&state, s_input_name)) {
+		if (!i_state_process(&state)) {
+			err = neutil_write_ogg(&state.output_stream, s_output_name);
 		}
+		i_state_clear(&state);
 	}
-	i_state_clear(&state);
 	return err;
 }
 
+#define RVB_EXT "_rvb.ogg"
+
 int
-neregrain_ogg(nestate_t *const state, const neinput_t *const input)
+neprocess_ogg(nestate_t *const state, const neinput_t *const input)
 {
 	int err = 0;
 	state->stats.oggs.assigned++;
 	if (input->flag.dry_run) {
-		LOG_FORMAT(LOG_PARAMS_DRY, "Regranularize OGG ");
+		Style(np,meta_dry, "Regranularize OGG (dry) ");
 	} else {
-		LOG_FORMAT(LOG_PARAMS_WET, "Regranularizing OGG... ");
-		s_input_name = input->path;
-		if (input->flag.inplace_regrain)
-			snprintf(s_output_name, sizeof(s_output_name), "%s", input->path);
-		else
-			lib_replace_ext(s_input_name, strlen(input->path), s_output_name, NULL, "_rvb.ogg");
+		Style(np,meta_wet, "Regranularizing OGG... ");
+		s_input_name = input->path.cstr;
+		if (input->flag.inplace_regrain) {
+			/* Overwrite input file */
+			snprintf(s_output_name, sizeof(s_output_name), "%s", input->path.cstr);
+		} else {
+			/* Output to [file_path/base_name]_rvb.ogg */
+			nepath_extension_replace(&input->path, RVB_EXT, sizeof(RVB_EXT) - 1, s_output_name);
+		}
 		err = i_regrain();
 	}
 
 	if (!err) {
 		state->stats.oggs.succeeded++;
-		LOG_FORMAT(LOG_PARAMS_SUCCESS, "Success!\n");
+		Style(np,meta_success, "Success!\n");
 	} else {
 		state->stats.oggs.failed++;
-		LOG_FORMAT(LOG_PARAMS_FAILURE, " Failure! (%d)\n", err);
+		Style(np,meta_failure, " Failure! (%d)\n", err);
 	}
 	return err;
 }

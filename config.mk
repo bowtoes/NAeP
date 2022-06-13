@@ -13,8 +13,8 @@ override makefiles := platform.mk config.mk Makefile
 
 override project_major := 0
 override project_minor := 0
-override project_revis := 2
-override project_letter :=
+override project_revis := 3
+override project_letter := a
 override project_version := $(project_major).$(project_minor).$(project_revis)$(project_letter)
 override project_date := $(shell git show -s --date=format:'%Y/%m/%d %l:%M%p' --format=%ad)
 
@@ -24,10 +24,9 @@ vnd_dir := vnd
 srcs :=\
 	main.c\
 	codebook_library.c\
-	input.c\
-	lib.c\
-	packer.c\
-	print.c\
+	neinput.c\
+	nepath.c\
+	neutil.c\
 	process.c\
 	process/bnk.c\
 	process/ogg.c\
@@ -39,15 +38,14 @@ srcs :=\
 
 hdrs :=\
 	codebook_library.h\
-	errors.h\
-	input.h\
-	lib.h\
-	packer.h\
-	print.h\
+	neinput.h\
+	nepath.h\
+	neutil.h\
 	process.h\
 	riff.h\
 	riff_extension.h\
 	rifflist.h\
+	typedefs.h\
 	wwise.h\
 
 ## These variables must be set to exclusively 0 to disable them

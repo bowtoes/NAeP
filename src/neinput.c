@@ -13,41 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "input.h"
+#include "neinput.h"
 
-#include <ctype.h>
-#include <stdarg.h>
-#include <stdio.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
-#if !defined(_WIN32)
-#include <strings.h>
-#endif
 
-#include <brrtools/brrlib.h>
 #include <brrtools/brrnum.h>
-#include <brrtools/brrstringr.h>
-#include <brrtools/brrpath.h>
 
-#include "errors.h"
-#include "lib.h"
-#include "print.h"
-
-static inline int
-i_mod_priority(neinput_t *const input, int delta)
-{
-	neinput_t i = *input;
-	if (delta < 0) {
-		if (i.log_priority > 0)
-			i.log_priority--;
-	} else if (delta > 0) {
-		if (i.log_priority < brrlog_priority_count - 1)
-			i.log_priority++;
-	}
-	i.flag.log_enabled = i.log_priority != 0 || i.flag.log_debug;
-	*input = i;
-	return 1;
-}
 // Retruns 0 when an argument is not parsed, 1 when it is.
 static inline int
 i_parse_argument(const char *const arg, nestate_t *const state, neinput_t *const current)
@@ -60,16 +33,25 @@ i_parse_argument(const char *const arg, nestate_t *const state, neinput_t *const
 	           state->settings.always_file) {
 		return 0;
 	}
+
+#define _mod_priority(_input_, _delta_) do {\
+	if ((_delta_) < 0 && (_input_)->log_priority > 0)\
+		(_input_)->log_priority--;\
+	else if ((_delta_) > 0 && (_input_)->log_priority < brrlog_priority_count - 1)\
+		(_input_)->log_priority++;\
+	(_input_)->flag.log_enabled = (_input_)->flag.log_debug || (_input_)->log_priority;\
+} while (0)
+
 #define IF_CHECK_ARG(_cse_, ...) if (brrstringr_cstr_compare(arg, _cse_, __VA_ARGS__, NULL))
 #define CHECK_TOGGLE_ARG(_c_, _a_, ...) IF_CHECK_ARG((_c_), __VA_ARGS__) { (_a_) = !(_a_); return 1; }
 #define CHECK_SET_ARG(_c_, _a_, _v_, ...) IF_CHECK_ARG((_c_), __VA_ARGS__) { (_a_) = (_v_); return 1; }
 #define CHECK_RUN_ARG(_c_, _a_, ...) IF_CHECK_ARG((_c_), __VA_ARGS__) { _a_; }
 	else CHECK_RUN_ARG(0, return print_help(), "-h", "-help", "--help", "-v", "-version", "--version")
-	else CHECK_SET_ARG(1, current->type, neinput_type_auto, "-a", "-auto", "-detect")
-	else CHECK_SET_ARG(1, current->type, neinput_type_wem, "-w", "-wem", "-weem")
-	else CHECK_SET_ARG(1, current->type, neinput_type_wsp, "-W", "-wsp", "-wisp")
-	else CHECK_SET_ARG(1, current->type, neinput_type_bnk, "-b", "-bnk", "-bank")
-	else CHECK_SET_ARG(1, current->type, neinput_type_ogg, "-o", "-ogg")
+	else CHECK_SET_ARG(1, current->data_type, nedatatype_auto, "-a", "-auto", "-detect")
+	else CHECK_SET_ARG(1, current->data_type, nedatatype_wem, "-w", "-wem", "-weem")
+	else CHECK_SET_ARG(1, current->data_type, nedatatype_wsp, "-W", "-wsp", "-wisp")
+	else CHECK_SET_ARG(1, current->data_type, nedatatype_bnk, "-b", "-bnk", "-bank")
+	else CHECK_SET_ARG(1, current->data_type, nedatatype_ogg, "-o", "-ogg")
 
 	else CHECK_TOGGLE_ARG(1, current->flag.inplace_regrain, "-ri", "-rgrn-inplace", "-rvb-inplace")
 
@@ -80,12 +62,12 @@ i_parse_argument(const char *const arg, nestate_t *const state, neinput_t *const
 
 	else CHECK_TOGGLE_ARG(1, current->flag.auto_ogg, "-w2o", "-wem2ogg")
 	else IF_CHECK_ARG(1, "-white", "-weiss") {
-		current->filter.type = neinput_filter_white;
+		current->filter.type = nefilter_white;
 		state->settings.next_is_filter = 1;
 		return 1;
 	}
 	else IF_CHECK_ARG(1, "-black", "-noir") {
-		current->filter.type = neinput_filter_black;
+		current->filter.type = nefilter_black;
 		state->settings.next_is_filter = 1;
 		return 1;
 	}
@@ -99,8 +81,8 @@ i_parse_argument(const char *const arg, nestate_t *const state, neinput_t *const
 	else CHECK_TOGGLE_ARG(1, state->settings.log_style_enabled, "-C", "-state-color")
 	else CHECK_TOGGLE_ARG(1, state->settings.report_card, "-r", "-report-card")
 	else CHECK_TOGGLE_ARG(1, state->settings.full_report, "+r", "-full-report")
-	else CHECK_RUN_ARG(1, return i_mod_priority(current, -1), "-q", "-quiet")
-	else CHECK_RUN_ARG(1, return i_mod_priority(current, +1), "+q", "+quiet")
+	else CHECK_RUN_ARG(1, _mod_priority(current, -1); return 1, "-q", "-quiet")
+	else CHECK_RUN_ARG(1, _mod_priority(current, +1); return 1, "+q", "+quiet")
 	else CHECK_TOGGLE_ARG(1, current->flag.log_enabled, "-Q", "-qq", "too-quiet")
 	else CHECK_TOGGLE_ARG(1, current->flag.dry_run, "-n", "-dry", "-dry-run")
 	else CHECK_TOGGLE_ARG(1, state->settings.should_reset, "-reset")
@@ -110,69 +92,12 @@ i_parse_argument(const char *const arg, nestate_t *const state, neinput_t *const
 #undef CHECK_RUN_ARG
 	else return 0;
 }
-static inline int
-i_parse_index(char *const arg, int arglen, neinput_filter_t *const list, int *const offset)
-{
-	int comma = *offset;
-	for (;comma < arglen && arg[comma] != ','; ++comma);
-	if (comma > *offset) {
-		int digit = *offset;
-		for (;digit < comma && !isdigit(arg[digit]); ++digit);
-		if (digit < comma) {
-			char *start = arg + digit, *error = NULL;
-			unsigned long long val = 0;
-			arg[comma] = 0;
-			val = strtoull(start, &error, 0);
-			arg[comma] = ',';
-			if (start[0] && error[0] == ',') { /*  Complete success */
-				if (!neinput_filter_contains(list, val)) {
-					if (brrlib_alloc((void **)&list->list, (list->count + 1) * sizeof(*list->list), 0))
-						return -1;
-					list->list[list->count++] = val;
-				}
-			}
-		}
-	}
-	*offset = comma + 1;
-	return 0;
-}
-static inline int
-i_set_filter(const char *const arg, int arglen, neinput_filter_t *const filter)
-{
-	int offset = 0;
-	while (offset < arglen) {
-		if (i_parse_index((char *)arg, arglen, filter, &offset))
-			return -1;
-	}
-	return 0;
-}
-
-void
-neinput_filter_clear(neinput_filter_t *const filter)
-{
-	if (filter) {
-		if (filter->list)
-			free(filter->list);
-		memset(filter, 0, sizeof(*filter));
-	}
-}
-int
-neinput_filter_contains(const neinput_filter_t *const filter, brru4 index)
-{
-	if (!filter || !filter->list)
-		return 0;
-	for (brru4 i = 0; i < filter->count; ++i) {
-		if (filter->list[i] == index)
-			return 1;
-	}
-	return 0;
-}
 
 void
 neinput_clear(neinput_t *const input)
 {
 	if (input) {
-		neinput_filter_clear(&input->filter);
+		nefilter_clear(&input->filter);
 		memset(input, 0, sizeof(*input));
 	}
 }
@@ -180,33 +105,35 @@ neinput_clear(neinput_t *const input)
 static inline int
 i_parse_library_data(neinput_library_t *const library, const char *const buffer, brrsz buffer_size)
 {
+	int s = codebook_library_check_type(buffer, buffer_size);
+	if (s == -1) {
+		Err(,"Codebook library '%s' is corrupt or isn't a codebook library", library->path.cstr);
+		return -1;
+	}
+
+	library->status.alternate = s;
 	int err = 0;
-	if (library->status.old) {
+	if (library->status.alternate) {
 		err = codebook_library_deserialize_alt(&library->library, buffer, buffer_size);
 	} else {
 		err = codebook_library_deserialize(&library->library, buffer, buffer_size);
 	}
 
-	if (err == CODEBOOK_CORRUPT) {
-		/* Try again with alternate method */
-		codebook_library_clear(&library->library);
-		library->status.old = !library->status.old;
-		if (library->status.old) {
-			err = codebook_library_deserialize_alt(&library->library, buffer, buffer_size);
-		} else {
-			err = codebook_library_deserialize(&library->library, buffer, buffer_size);
-		}
-	}
-
 	if (err) {
 		codebook_library_clear(&library->library);
 		switch (err) {
-			case CODEBOOK_CORRUPT: return I_UNRECOGNIZED_DATA;
-			case CODEBOOK_ERROR: return I_BUFFER_ERROR;
+			case CODEBOOK_ERROR:
+				Err(,"Error while processing codebook library '%s'", library->path.cstr); break;
+			case CODEBOOK_CORRUPT:
+				Err(,"Codebook library '%s' contains corrupt data", library->path.cstr); break;
+			default:
+				Err(,"Unrecognized error while processing codebook library '%s' : %d", library->path.cstr, err); break;
 		}
+		return -1;
 	}
-	return I_SUCCESS;
+	return 0;
 }
+
 int
 neinput_library_load(neinput_library_t *const library)
 {
@@ -218,14 +145,14 @@ neinput_library_load(neinput_library_t *const library)
 		return 0;
 
 	void *buffer = NULL;
-	brrsz bufsize = 0;
-	if (!(library->status.load_error = lib_read_entire_file(library->path, &buffer, &bufsize))) {
-		library->status.load_error = i_parse_library_data(library, buffer, bufsize);
+	if (!(library->status.load_error = nepath_read(&library->path, &buffer))) {
+		library->status.load_error = i_parse_library_data(library, buffer, library->path.st.size);
 		free(buffer);
 	}
 	library->status.loaded = !library->status.load_error;
 	return library->status.load_error;
 }
+
 void
 neinput_library_clear(neinput_library_t *const library)
 {
@@ -234,11 +161,12 @@ neinput_library_clear(neinput_library_t *const library)
 		memset(library, 0, sizeof(*library));
 	}
 }
+
 int
 neinput_load_codebooks(neinput_library_t *const libraries, const codebook_library_t **const library, brrsz index)
 {
 	if (!library)
-		return I_GENERIC_ERROR;
+		return -1;
 
 	*library = NULL;
 	if (libraries && index != -1) {
@@ -249,82 +177,104 @@ neinput_load_codebooks(neinput_library_t *const libraries, const codebook_librar
 		}
 		*library = &inlib->library;
 	}
-	return I_SUCCESS;
+	return 0;
 }
 
 static inline int
-i_add_library(nestate_t *const state, neinput_t *const current, const char *const arg, int arglen)
+i_add_library(nestate_t *const state, neinput_t *const current, const char *const arg)
 {
-	neinput_library_t next = {.path = arg, .path_length = arglen};
 	for (current->library_index = 0; current->library_index < state->n_libraries; ++current->library_index) {
-		if (0 == strcmp(state->libraries[current->library_index].path, arg))
+		if (0 == brrpathcmp(state->libraries[current->library_index].path.cstr, arg))
 			return 0;
 	}
+
 	/* Not found, add */
-	if (brrlib_alloc((void **)&state->libraries, (state->n_libraries + 1) * sizeof(next), 0))
+	neinput_library_t next = {0};
+	if (nepath_init(&next.path, arg))
 		return -1;
+
+	neinput_library_t *new = realloc(state->libraries, sizeof(*new) * (state->n_libraries + 1));
+	if (!new) {
+		Err(,"Failed to allocate space for new library '%s' : %s (%d)", arg, strerror(errno), errno);
+		return -1;
+	}
+
 	/* TODO add option to specify library type directly */
-	if (-1 != lib_cmp_ext(arg, arglen, 0, "ocbl", NULL))
-		next.status.old = 1;
-	state->libraries[state->n_libraries++] = next;
+	if (-1 != nepath_extension_cmp(&next.path, NULL, "ocbl", NULL))
+		next.status.alternate = 1;
+
+	new[state->n_libraries++] = next;
+	state->libraries = new;
 	return 0;
 }
+
 static inline int
-i_add_input(nestate_t *const state, neinput_t *const current, const char *const arg, int arglen)
+i_add_input(nestate_t *const state, neinput_t *const current, const char *const arg)
 {
 	neinput_t next = *current;
-	next.path = arg;
-	next.path_length = arglen;
+	if (nepath_init(&next.path, arg)) {
+		return -1;
+	}
+	if (next.path.st.type != brrpath_type_file) {
+		Err(,"Input '%s' is not a file", arg);
+		return 0;
+	}
+
 	for (brrsz i = 0; i < state->n_inputs; ++i) {
-		if (0 == strcmp(state->inputs[i].path, arg)) {
+		if (0 == brrpathcmp(state->inputs[i].path.cstr, next.path.cstr)) {
 			state->inputs[i] = next;
 			return 0;
 		}
 	}
+
 	/* Not found, add */
-	if (brrlib_alloc((void **)&state->inputs, (state->n_inputs + 1) * sizeof(next), 0))
+	neinput_t *new = realloc(state->inputs, sizeof(*new) * (state->n_inputs + 1));
+	if (!new) {
+		Err(,"Failed to allocate space for next input '%s' : %s (%d)", arg, strerror(errno), errno);
 		return -1;
-	state->inputs[state->n_inputs++] = next;
-	{
-		int n = strlen(next.path);
-		if (n > state->stats.input_path_max)
-			state->stats.input_path_max = n;
 	}
+	new[state->n_inputs++] = next;
+	state->inputs = new;
+
+	if (next.path.length > state->stats.input_path_max)
+		state->stats.input_path_max = next.path.length;
 	return 0;
 }
+
 int
 nestate_init(nestate_t *const state, int argc, char **argv)
 {
 	neinput_t current = state->default_input;
-	neinput_filter_t working_filter = {0};
+	nefilter_t working_filter = {0};
 	for (int i = 0; i < argc; ++i) {
-		char *arg = argv[i];
+		const char *arg = argv[i];
 		if (i_parse_argument(arg, state, &current)) {
 			continue;
 		} else if (state->settings.next_is_filter) {
 			working_filter.type = current.filter.type;
-			if (i_set_filter(arg, strlen(arg), &working_filter)) {
-				/* This probably doesn't need to be a fatal error */
+			if (nefilter_init(&working_filter, arg)) {
 				nestate_clear(state);
 				return -1;
 			}
 			current.filter = working_filter;
 			state->settings.next_is_filter = 0;
-		} else if (state->settings.next_is_library) {
-			if (i_add_library(state, &current, arg, strlen(arg))) {
-				nestate_clear(state);
-				return -1;
-			}
-			state->settings.next_is_library = 0;
 		} else {
-			if (i_add_input(state, &current, arg, strlen(arg))) {
-				nestate_clear(state);
-				return -1;
+			if (state->settings.next_is_library) {
+				if (i_add_library(state, &current, arg)) {
+					nestate_clear(state);
+					return -1;
+				}
+				state->settings.next_is_library = 0;
+			} else {
+				if (i_add_input(state, &current, arg)) {
+					nestate_clear(state);
+					return -1;
+				}
+				state->settings.next_is_file = 0;
+				working_filter = (nefilter_t){0};
+				if (state->settings.should_reset)
+					current = state->default_input;
 			}
-			state->settings.next_is_file = 0;
-			working_filter = (neinput_filter_t){0};
-			if (state->settings.should_reset)
-				nestate_clear(state);
 		}
 	}
 	state->stats.n_input_digits = brrnum_ndigits(state->n_inputs, 10, 0);

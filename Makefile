@@ -33,7 +33,7 @@ setup:
 $(ass_out_dir)/%.s: $(src_dir)/%.c ; $(cc_custom) $(project_cppflags) $(project_cflags) -S $< -o $@
 $(int_out_dir)/%.e: $(src_dir)/%.c ; $(cc_custom) $(project_cppflags) $(project_cflags) -E $< -o $@
 $(obj_out_dir)/%.o: $(src_dir)/%.c ; $(cc_custom) $(project_cppflags) $(project_cflags) -c $< -o $@
-$(ass_out) $(int_out) $(obj_out): $(addprefix $(src_dir)/,$(hdrs)) $(makefiles)
+$(ass_out) $(int_out) $(obj_out): vnd $(addprefix $(src_dir)/,$(hdrs)) $(makefiles)
 
 ass: info setup $(ass_out)
 int: info setup $(int_out)
@@ -227,3 +227,33 @@ vorbis-again: vorbis-clean vorbis
 vnd: vorbis
 vnd-clean: vorbis-clean
 .PHONY: vorbis vorbis-clean vorbis-again
+
+## xxHash
+#xxHash_dir := $(vnd_dir)/xxHash
+#xxHash_hdr := $(xxHash_dir)/xxhash.h
+#xxHash_out_dir := $(output_directory)/$(xxHash_dir)/include
+#xxHash_bin := $(xxHash_out_dir)/xxhash.h
+#
+#vnd_includes += '$(xxHash_out_dir)'
+#vnd_defines += -DXXH_INLINE_ALL -DXXH_STATIC_LINKING_ONLY -DXXH_NO_XXH3
+#
+#$(xxHash_out_dir):
+#	@$(mk_dir_tree) '$@' 2>$(null) ||:
+#
+#$(xxHash_bin): $(xxHash_out_dir)
+#	@$(echo) '################################################################################'
+#	@$(echo) 'xxHash INSTALL'
+#	@$(echo) '################################################################################'
+#	$(copy_file) '$(xxHash_hdr)' '$(xxHash_out_dir)'
+#xxHash: $(xxHash_bin)
+#xxHash-clean:
+#	@$(echo) '################################################################################'
+#	@$(echo) 'xxHash CLEAN'
+#	@$(echo) '################################################################################'
+#	$(rm_file) '$(xxHash_bin)'
+#	$(rm_recurse) '$(xxHash_out_dir)'
+#xxHash-again: xxHash-clean xxHash
+#
+#vnd: xxHash
+#vnd-clean: xxHash-clean
+#.PHONY: xxHash xxHash-clean xxHash-again

@@ -16,17 +16,12 @@ limitations under the License.
 
 #include "codebook_library.h"
 
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <brrtools/brrlib.h>
-#include <brrtools/brrlog.h>
-
-#include "lib.h"
-#include "packer.h"
-
 /* TODO Same issue as elsewhere, I can't verify how big-endian systems will
- * work with the (de)serializations, or if any modification is necessary */
+ * work with the (de)serializations, or if any modification is necessary at all */
 
 void
 packed_codebook_clear(packed_codebook_t *const pc)
@@ -47,7 +42,7 @@ packed_codebook_unpack(packed_codebook_t *const pc)
 		return CODEBOOK_ERROR;
 
 	if (pc->did_unpack)
-		return CODEBOOK_SUCCESS;
+		return 0;
 	if (pc->unpacked_data)
 		return CODEBOOK_CORRUPT;
 
@@ -61,11 +56,6 @@ packed_codebook_unpack(packed_codebook_t *const pc)
 	if ((err = packed_codebook_unpack_raw(&unpacker, &packer))) {
 		oggpack_writeclear(&packer);
 	} else {
-#if defined(NeWEMDEBUG)
-		BRRLOG_DEBUG("%sRead %4lld == %3lld of %lld",
-		    (oggpack_bits(unpacker)/8)+1!=pc->size?"!! ":"   ",
-		    oggpack_bits(unpacker), oggpack_bytes(unpacker), pc->size);
-#endif
 		pc->unpacked_data = packer.buffer;
 		pc->unpacked_bits = oggpack_bits(&packer);
 		pc->did_unpack = 1;
@@ -79,69 +69,62 @@ packed_codebook_unpack_raw(oggpack_buffer *const unpacker, oggpack_buffer *const
 	if (!unpacker)
 		return -1;
 
-	packer_pack(packer, 'B', 8); /* W Sync */
-	packer_pack(packer, 'C', 8); /* W Sync */
-	packer_pack(packer, 'V', 8); /* W Sync */
+	/* W Sync */
+	nepack_pack(packer, 'B', 8);
+	nepack_pack(packer, 'C', 8);
+	nepack_pack(packer, 'V', 8);
 
-	int dimensions = packer_transfer(unpacker,  4, packer, 16); /* R/W Dimensions */
-	int entries = packer_transfer(unpacker, 14, packer, 24);    /* R/W Entries */
-	int ordered = packer_transfer(unpacker, 1, packer, 1);      /* R/W Ordered flag */
+	int dimensions = nepack_transfer(unpacker,  4, packer, 16); /* T Dimensions */
+	int entries    = nepack_transfer(unpacker, 14, packer, 24); /* T Entries */
+	int ordered    = nepack_transfer(unpacker,  1, packer,  1); /* T Ordered flag */
 	if (ordered) {
 		/* Ordered codeword decode identical to spec */
-		int current_length = 1 + packer_transfer(unpacker, 5, packer, 5); /* R/W Start length */
+		int current_length = 1 + nepack_transfer(unpacker, 5, packer, 5); /* T Start length */
 		long current_entry = 0;
 		while (current_entry < entries) {
-			int number_bits = lib_count_bits(entries - current_entry);
-			long number = packer_transfer(unpacker, number_bits, packer, number_bits); /* R/W Magic number */
+			int number_bits = neutil_count_bits(entries - current_entry);
+			long number = nepack_transfer(unpacker, number_bits, packer, number_bits); /* T Magic number */
 			current_entry += number;
 			current_length++;
 		}
 		if (current_entry > entries)
 			return CODEBOOK_CORRUPT;
-
 	} else {
-		int codeword_length_bits = packer_unpack(unpacker, 3); /* R Codeword length bits */
+		int codeword_length_bits = nepack_unpack(unpacker, 3); /* R Codeword length bits */
 		if (codeword_length_bits < 0 || codeword_length_bits > 5)
 			return CODEBOOK_CORRUPT;
 
-		int sparse = packer_transfer(unpacker, 1, packer, 1);   /* R/W Sparse flag */
-		if (!sparse) {
-			/* R/W Nonsparse codeword lengths */
+		int sparse = nepack_transfer(unpacker, 1, packer, 1);   /* T Sparse flag */
+		if (sparse) { /* T Sparse codeword lengths */
 			for (int i = 0; i < entries; ++i) {
-				int length = packer_transfer(unpacker, codeword_length_bits, packer, 5);
-			}
-
-		} else {
-			/* R/W Sparse codeword lengths */
-			for (int i = 0; i < entries; ++i) {
-				/* R/W Used flag */
-				int used = packer_transfer(unpacker, 1, packer, 1);
-				if (used) {
-					int length = packer_transfer(unpacker, codeword_length_bits, packer, 5); /* R/W Codeword length */
+				int used = nepack_transfer(unpacker, 1, packer, 1); /* T Used flag */
+				if (used) { /* T Codeword length */
+					int length = nepack_transfer(unpacker, codeword_length_bits, packer, 5);
 				}
+			}
+		} else { /* T Nonparse codeword lengths */
+			for (int i = 0; i < entries; ++i) {
+				int length = nepack_transfer(unpacker, codeword_length_bits, packer, 5);
 			}
 		}
 	}
 
-	int lookup = packer_transfer(unpacker, 1, packer, 4); /* R/W Lookup type */
+	int lookup = nepack_transfer(unpacker, 1, packer, 4); /* T Lookup type */
 	if (lookup == 1) {
 		/* Lookup 1 decode identical to spec */
-		long minval_packed  =     packer_transfer(unpacker, 32, packer, 32); /* R/W Minimum value */
-		long delval_packed  =     packer_transfer(unpacker, 32, packer, 32); /* R/W Delta value */
-		int  value_bits     = 1 + packer_transfer(unpacker,  4, packer,  4); /* R/W Value bits */
-		int  sequence_flag  =     packer_transfer(unpacker,  1, packer,  1); /* R/W Sequence flag */
+		long minval_packed  =     nepack_transfer(unpacker, 32, packer, 32); /* T Minimum value */
+		long delval_packed  =     nepack_transfer(unpacker, 32, packer, 32); /* T Delta value */
+		int  value_bits     = 1 + nepack_transfer(unpacker,  4, packer,  4); /* T Value bits */
+		int  sequence_flag  =     nepack_transfer(unpacker,  1, packer,  1); /* T Sequence flag */
 
-		long lookup_values = lib_lookup1_values(entries, dimensions);
-		for (long i = 0; i < lookup_values; ++i) { /* R/W Codebook multiplicands */
-			long multiplicand = packer_transfer(unpacker, value_bits, packer, value_bits);
-		}
-
+		long lookup_values = neutil_lookup1(entries, dimensions);
+		nepack_transfer_lots(unpacker, packer, lookup_values * value_bits); /* T Codebook multiplicands */
 	} else if (lookup) {
 		/* Bad lookup value, can only be 0 or 1 */
 		return CODEBOOK_CORRUPT;
 	}
 
-	return CODEBOOK_SUCCESS;
+	return 0;
 }
 
 void
@@ -160,16 +143,32 @@ codebook_library_clear(codebook_library_t *const library)
 }
 
 int
+codebook_library_check_type(const void *const data, brru8 data_size)
+{
+	if (!data || data_size < 4)
+		return -1;
+
+	const char *const d = (const char *)data;
+	brru4 last_end = *(brru4 *)(d + data_size - 4);
+	if (last_end > data_size - 4) {
+		brru4 first_begin = *(brru4 *)(d);
+		if (first_begin < 4 || first_begin > data_size - 4)
+			return -1;
+		return 0;
+	}
+	return 1;
+}
+
+int
 codebook_library_deserialize_alt(codebook_library_t *const library, const void *const input_data, brru8 data_size)
 {
 	if (!input_data || !library || data_size < 4)
 		return CODEBOOK_ERROR;
 
 	const char *const data = (const char *)input_data;
+
 	/* End of the codebook table (start of the index table) */
 	brru4 last_end = *(brru4 *)(data + data_size - 4);
-	if (last_end > data_size - 4)
-		return CODEBOOK_CORRUPT;
 
 	/* Every 4 bytes from the the end of the codebook table 'last_end' to the end of the data
 	 * is a byte-offset to the end of a packed-codebook, all in sequential order. */
@@ -177,9 +176,10 @@ codebook_library_deserialize_alt(codebook_library_t *const library, const void *
 	brru4 count = (data_size - last_end) / sizeof(brru4);
 
 	codebook_library_t lib = {0};
-	if (brrlib_alloc((void **)&lib.codebooks, count * sizeof(*lib.codebooks), 1)) {
+	if (!(lib.codebooks = malloc(sizeof(*lib.codebooks) * count))) {
 		codebook_library_clear(&lib);
-		return CODEBOOK_ERROR;
+		Err(,"Failed to allocate space for %zu codebooks: %s (%d)", count, strerror(errno), errno);
+		return -1;
 	}
 
 	brru4 pc_start = 0;
@@ -192,9 +192,10 @@ codebook_library_deserialize_alt(codebook_library_t *const library, const void *
 		}
 
 		packed_codebook_t pc = {.size = pc_end - pc_start};
-		if (brrlib_alloc((void **)&pc.data, pc.size, 1)) {
+		if (!(pc.data = malloc(pc.size))) {
 			codebook_library_clear(&lib);
-			return CODEBOOK_ERROR;
+			Err(,"Failed to allocate space for codebook %zu: %s (%d)", lib.codebook_count, strerror(errno), errno);
+			return -1;
 		}
 		memcpy(pc.data, data + pc_start, pc.size);
 		lib.codebooks[lib.codebook_count] = pc;
@@ -202,7 +203,7 @@ codebook_library_deserialize_alt(codebook_library_t *const library, const void *
 		pc_start = pc_end;
 	}
 	*library = lib;
-	return CODEBOOK_SUCCESS;
+	return 0;
 }
 
 int
@@ -217,9 +218,10 @@ codebook_library_deserialize(codebook_library_t *const library, const void *cons
 	brru4 count = offset_table[0] / 4;
 
 	codebook_library_t lib = {0};
-	if (brrlib_alloc((void **)&lib.codebooks, count * sizeof(*lib.codebooks), 1)) {
+	if (!(lib.codebooks = malloc(sizeof(*lib.codebooks) * count))) {
 		codebook_library_clear(&lib);
-		return CODEBOOK_ERROR;
+		Err(,"Failed to allocate space for %zu codebooks: %s (%d)", count, strerror(errno), errno);
+		return -1;
 	}
 
 	/* Codebooks are loaded in reverse order so that I don't have to read the last one outside the loop. */
@@ -233,9 +235,10 @@ codebook_library_deserialize(codebook_library_t *const library, const void *cons
 		}
 
 		packed_codebook_t pc = {.size = pc_end - pc_start};
-		if (brrlib_alloc((void **)&pc.data, pc.size, 1)) {
+		if (!(pc.data = malloc(pc.size))) {
 			codebook_library_clear(&lib);
-			return CODEBOOK_ERROR;
+			Err(,"Failed to allocate space for codebook %zu: %s (%d)", lib.codebook_count, strerror(errno), errno);
+			return -1;
 		}
 		memcpy(pc.data, data + pc_start, pc.size);
 		lib.codebooks[i - 1] = pc;
@@ -243,7 +246,7 @@ codebook_library_deserialize(codebook_library_t *const library, const void *cons
 		pc_end = pc_start;
 	}
 	*library = lib;
-	return CODEBOOK_SUCCESS;
+	return 0;
 }
 
 int
@@ -258,8 +261,10 @@ codebook_library_serialize_alt(const codebook_library_t *const library, void **c
 	for (brru4 i = 0; i < lib.codebook_count; ++i)
 		total_size += lib.codebooks[i].size;
 
-	if (brrlib_alloc(output_data, total_size, 1))
-		return CODEBOOK_ERROR;
+	if (!(*output_data = malloc(total_size))) {
+		Err(,"Failed to allocate space for codebook serialization output: %s (%d)", strerror(errno), errno);
+		return -1;
+	}
 
 	char *const data = *(char **)output_data;
 	brru8 pc_start = 0;
@@ -273,7 +278,8 @@ codebook_library_serialize_alt(const codebook_library_t *const library, void **c
 
 	if (data_size)
 		*data_size = total_size;
-	return CODEBOOK_SUCCESS;
+
+	return 0;
 }
 
 int
@@ -288,8 +294,10 @@ codebook_library_serialize(const codebook_library_t *const library, void **const
 	for (brru4 i = 0; i < lib.codebook_count; ++i)
 		total_size += lib.codebooks[i].size;
 
-	if (brrlib_alloc(output_data, total_size, 1))
-		return CODEBOOK_ERROR;
+	if (!(*output_data = malloc(total_size))) {
+		Err(,"Failed to allocate space for codebook serialization output: %s (%d)", strerror(errno), errno);
+		return -1;
+	}
 
 	char *const data = *(char **)output_data;
 
@@ -304,5 +312,6 @@ codebook_library_serialize(const codebook_library_t *const library, void **const
 
 	if (data_size)
 		*data_size = total_size;
-	return CODEBOOK_SUCCESS;
+
+	return 0;
 }

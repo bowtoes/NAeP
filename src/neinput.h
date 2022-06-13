@@ -14,13 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef INPUT_H
-#define INPUT_H
+#ifndef NAeP_neinput_h
+#define NAeP_neinput_h
 
-#include <brrtools/brrtypes.h>
 #include <brrtools/brrlog.h>
 
 #include "codebook_library.h"
+#include "nepath.h"
+#include "neutil.h"
 
 /*
  * TODO
@@ -29,35 +30,19 @@ limitations under the License.
  * processed twice; this'll be something for brrpath to help with eventually.
  * */
 
-typedef enum neinput_filter_type {
-	neinput_filter_white = 0,
-	neinput_filter_black,
-} neinput_filter_type_t;
+typedef enum nedatatype {
+	nedatatype_auto = 0,
+	nedatatype_ogg,
+	nedatatype_wem,
+	nedatatype_wsp,
+	nedatatype_bnk,
+	nedatatype_arc,
+} nedatatype_t;
 
-/* TODO Eventually index white/blackisting can be replaced by a more flexible filtering system, similar to in 'countwsp' */
-typedef struct neinput_filter {
-	brru4 *list;
-	brru4 count;
-	neinput_filter_type_t type;
-} neinput_filter_t;
-
-void neinput_filter_clear(neinput_filter_t *const filter);
-int neinput_filter_contains(const neinput_filter_t *const filter, brru4 index);
-
-typedef enum neinput_type {
-	neinput_type_auto = 0,
-	neinput_type_ogg,
-	neinput_type_wem,
-	neinput_type_wsp,
-	neinput_type_bnk,
-} neinput_type_t;
-typedef brru1 neinput_type_int;
-
-typedef struct neinput {
+struct neinput {
 	brrsz library_index;              /* Which loaded codebook to use; defaults to 0. */
-	const char *path;
-	brru2 path_length;
-	neinput_type_int type;
+	nepath_t path;
+	nedatatype_t data_type;
 	brrlog_priority_int log_priority; /* Priority used if logging is enabled. */
 	struct {
 		brru2 log_enabled:1;          /* Is output logging enabled? */
@@ -70,32 +55,38 @@ typedef struct neinput {
 		brru2 inplace_ogg:1;          /* Should weem-to-ogg conversion be done in-place (replace)? */
 		brru2 inplace_regrain:1;      /* Should regranularized oggs replace the original? */
 	} flag;
-	neinput_filter_t filter;
-} neinput_t;
+	nefilter_t filter;
+};
 
-void neinput_clear(neinput_t *const input);
+void
+neinput_clear(neinput_t *const input);
 
-typedef struct neinput_library {
+struct neinput_library {
 	struct {
 		brru2 loaded:1;      /* Whether the library is valid and ready for use */
-		brru2 old:1;         /* Whether to use the old form of deserialization */
+		brru2 alternate:1;   /* If this library is stored in the alternate form */
 		brru2 load_error:14; /* If non-zero, the library failed to be loaded */
 	} status;
-	brru2 path_length;
-	const char *path;
+	nepath_t path;
 	codebook_library_t library;
-} neinput_library_t;
+};
 
-int neinput_library_load(neinput_library_t *const library);
-void neinput_library_clear(neinput_library_t *const library);
-int neinput_load_codebooks(neinput_library_t *const libraries, const codebook_library_t **const library, brrsz index);
+int
+neinput_library_load(neinput_library_t *const library);
 
-typedef struct neprocessstat {
+void
+neinput_library_clear(neinput_library_t *const library);
+
+int
+neinput_load_codebooks(neinput_library_t *const libraries, const codebook_library_t **const library, brrsz index);
+
+struct nestate_stat {
 	brrsz assigned;
 	brrsz succeeded;
 	brrsz failed;
-} nestate_stat_t;
-typedef struct nestate {
+};
+
+struct nestate {
 	neinput_t *inputs;
 	brrsz n_inputs;
 	const neinput_t default_input;
@@ -122,9 +113,16 @@ typedef struct nestate {
 		nestate_stat_t wem_extracts;
 		nestate_stat_t wem_converts;
 	} stats;
-} nestate_t;
+};
 
-int nestate_init(nestate_t *const state, int argc, char **argv);
-void nestate_clear(nestate_t *const state);
+int
+nestate_init(nestate_t *const state, int argc, char **argv);
 
-#endif /* INPUT_H */
+/* Does not zero-out stats */
+void
+nestate_clear(nestate_t *const state);
+
+void
+nestate_reset(nestate_t *const state);
+
+#endif /* NAeP_neinput_h */

@@ -14,23 +14,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef WSP_META_H
-#define WSP_META_H
+#ifndef NAeP_nerifflist_h
+#define NAeP_nerifflist_h
 
 #include <brrtools/brrtypes.h>
 
-#include "input.h"
+#include "neutil.h"
 #include "riff.h"
 
-typedef struct riffgeometry {
+struct riffgeometry {
 	brrsz buffer_offset; /* Offset into the data where the RIFF fourcc starts */
 	brru4 riff_size; /* Size of the RIFF chunk including fourcc and size */
 	riff_byteorder_t byteorder;
-} riffgeometry_t;
-typedef struct rifflist {
+};
+struct rifflist {
 	riffgeometry_t *riffs;
 	brrsz n_riffs;
-} rifflist_t;
+};
 
 /* Scans 'buffer' for all RIFF chunks contained within, and stores their position and size (geometry) in 'list'.
  * On error, leaves 'list' unaffected and returns an error code.
@@ -55,4 +55,4 @@ int rifflist_extract(
     const char *const output_root
 );
 
-#endif /* WSP_META_H */
+#endif /* NAeP_nerifflist_h */
