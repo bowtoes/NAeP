@@ -33,7 +33,7 @@ setup:
 $(ass_out_dir)/%.s: $(src_dir)/%.c ; $(cc_custom) $(project_cppflags) $(project_cflags) -S $< -o $@
 $(int_out_dir)/%.e: $(src_dir)/%.c ; $(cc_custom) $(project_cppflags) $(project_cflags) -E $< -o $@
 $(obj_out_dir)/%.o: $(src_dir)/%.c ; $(cc_custom) $(project_cppflags) $(project_cflags) -c $< -o $@
-$(ass_out) $(int_out) $(obj_out): vnd $(addprefix $(src_dir)/,$(hdrs)) $(makefiles)
+$(ass_out) $(int_out) $(obj_out): $(vnd_bins) $(addprefix $(src_dir)/,$(hdrs)) $(makefiles)
 
 ass: info setup $(ass_out)
 int: info setup $(int_out)
@@ -49,7 +49,7 @@ clean:
 	@$(rm_file) $(output_file) $(ass_out) $(int_out) $(obj_out) 2>$(null) ||:
 	@$(rm_recurse) $(build_directories) 2>$(null) ||:
 
-again: clean $(project)
+again: clean vnd-clean-light $(project)
 
 CLEAN: vnd-clean clean
 AGAIN: CLEAN all
@@ -65,7 +65,8 @@ uninstall:
 vnd:
 vnd-clean:
 vnd-again: vnd-clean vnd
-.PHONY: vnd vnd-clean vnd-again
+vnd-clean-light:
+.PHONY: vnd vnd-clean vnd-clean-light vnd-again
 
 ## Brrtools
 brrtools_dir := $(vnd_dir)/brrtools
@@ -105,6 +106,7 @@ brrtools-again: brrtools-clean brrtools
 
 vnd: brrtools
 vnd-clean: brrtools-clean
+vnd-clean-light: brrtools-clean
 .PHONY: brrtools brrtools-clean brrtools-again
 
 ## OGG

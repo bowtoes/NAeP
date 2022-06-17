@@ -14,7 +14,7 @@ override makefiles := platform.mk config.mk Makefile
 override project_major := 0
 override project_minor := 0
 override project_revis := 3
-override project_letter := a
+override project_letter := b
 override project_version := $(project_major).$(project_minor).$(project_revis)$(project_letter)
 override project_date := $(shell git show -s --date=format:'%Y/%m/%d %l:%M%p' --format=%ad)
 
@@ -27,6 +27,9 @@ srcs :=\
 	neinput.c\
 	nepath.c\
 	neutil.c\
+	nelog.c\
+	nefcc.c\
+	nefilter.c\
 	process.c\
 	process/bnk.c\
 	process/ogg.c\
@@ -41,11 +44,13 @@ hdrs :=\
 	neinput.h\
 	nepath.h\
 	neutil.h\
+	nelog.h\
+	nefcc.h\
+	nefilter.h\
 	process.h\
 	riff.h\
 	riff_extension.h\
 	rifflist.h\
-	typedefs.h\
 	wwise.h\
 
 ## These variables must be set to exclusively 0 to disable them

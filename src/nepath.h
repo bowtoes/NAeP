@@ -19,13 +19,11 @@ limitations under the License.
 
 #include <brrtools/brrpath.h>
 
-#include "neutil.h"
-
-struct nepath {
+typedef struct nepath {
 	const char *cstr;
 	brrsz length;
 	brrpath_stat_result_t st;
-};
+} nepath_t;
 
 int
 nepath_init(nepath_t *const path, const char *const arg);

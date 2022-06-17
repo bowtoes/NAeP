@@ -23,6 +23,8 @@ limitations under the License.
 #include <brrtools/brrnum.h>
 
 #include "neinput.h"
+#include "neutil.h"
+#include "nelog.h"
 #include "wwise.h"
 
 int
@@ -125,7 +127,7 @@ rifflist_convert(
 			Err(p,", skipping");
 		} else {
 			if (input->flag.add_comments) {
-				if ((err = wwriff_add_comment(&wwriff, "SourceFile=%s", input->path))) {
+				if ((err = wwriff_add_comment(&wwriff, "SourceFile=%s", input->path.cstr))) {
 					Err(,"Could not add 'SourceFile' comment");
 				} else if ((err = wwriff_add_comment(&wwriff, "OutputFile=%s", s_output_file))) {
 					Err(,"Could not add 'OutputFile' comment");

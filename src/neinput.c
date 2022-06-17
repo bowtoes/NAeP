@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 #include "neinput.h"
 
 #include <errno.h>
@@ -20,6 +21,8 @@ limitations under the License.
 #include <string.h>
 
 #include <brrtools/brrnum.h>
+
+#include "nelog.h"
 
 // Retruns 0 when an argument is not parsed, 1 when it is.
 static inline int
@@ -42,8 +45,9 @@ i_parse_argument(const char *const arg, nestate_t *const state, neinput_t *const
 	(_input_)->flag.log_enabled = (_input_)->flag.log_debug || (_input_)->log_priority;\
 } while (0)
 
+#define _toggle(_a_) ((_a_) = !(_a_))
 #define IF_CHECK_ARG(_cse_, ...) if (brrstringr_cstr_compare(arg, _cse_, __VA_ARGS__, NULL))
-#define CHECK_TOGGLE_ARG(_c_, _a_, ...) IF_CHECK_ARG((_c_), __VA_ARGS__) { (_a_) = !(_a_); return 1; }
+#define CHECK_TOGGLE_ARG(_c_, _a_, ...) IF_CHECK_ARG((_c_), __VA_ARGS__) { _toggle(_a_); return 1; }
 #define CHECK_SET_ARG(_c_, _a_, _v_, ...) IF_CHECK_ARG((_c_), __VA_ARGS__) { (_a_) = (_v_); return 1; }
 #define CHECK_RUN_ARG(_c_, _a_, ...) IF_CHECK_ARG((_c_), __VA_ARGS__) { _a_; }
 	else CHECK_RUN_ARG(0, return print_help(), "-h", "-help", "--help", "-v", "-version", "--version")
@@ -78,7 +82,7 @@ i_parse_argument(const char *const arg, nestate_t *const state, neinput_t *const
 	else CHECK_TOGGLE_ARG(1, current->flag.add_comments, "-co", "-comments")
 	else CHECK_TOGGLE_ARG(1, current->flag.log_debug, "-d", "-debug")
 	else CHECK_TOGGLE_ARG(1, current->flag.log_color_enabled, "-c", "-color")
-	else CHECK_TOGGLE_ARG(1, state->settings.log_style_enabled, "-C", "-state-color")
+	else CHECK_RUN_ARG(1, _toggle(state->settings.log_style_enabled); _toggle(gbrrlogctl.style_disabled); return 1, "-C", "-global-color")
 	else CHECK_TOGGLE_ARG(1, state->settings.report_card, "-r", "-report-card")
 	else CHECK_TOGGLE_ARG(1, state->settings.full_report, "+r", "-full-report")
 	else CHECK_RUN_ARG(1, _mod_priority(current, -1); return 1, "-q", "-quiet")

@@ -19,8 +19,8 @@ limitations under the License.
 #include <stdlib.h>
 
 #include "neinput.h"
+#include "nelog.h"
 #include "rifflist.h"
-#include "wwise.h"
 
 static char s_output_root[BRRPATH_MAX_PATH + 1] = {0};
 
@@ -54,18 +54,18 @@ neprocess_wsp(nestate_t *const state, const neinput_t *const input)
 	int err = 0;
 	state->stats.wsps.assigned++;
 	if (input->flag.dry_run) {
-		Style(np,meta_dry, "Extract WSP (dry) ");
+		SNor(np,meta_dry, "Extract WSP (dry) ");
 	} else {
-		Style(np,meta_wet, "Extracting WSP... ");
+		SNor(np,meta_wet, "Extracting WSP... ");
 		nepath_extension_replace(&input->path, NULL, 0, s_output_root);
 		err = i_extract_wsp(state, input);
 	}
 	if (!err) {
 		state->stats.wsps.succeeded++;
-		Style(np,meta_success, "Success!\n");
+		SNor(p,meta_success, "Success!");
 	} else {
 		state->stats.wsps.failed++;
-		Style(np,meta_failure, "Failure! (%d)\n", err);
+		SNor(p,meta_failure, "Failure! (%d)", err);
 	}
 	return err;
 }

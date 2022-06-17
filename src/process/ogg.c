@@ -22,6 +22,8 @@ limitations under the License.
 #include <vorbis/vorbisenc.h>
 
 #include "neinput.h"
+#include "nelog.h"
+#include "neutil.h"
 #include "wwise.h"
 
 /* TODO remove ginput_name and all references to it */
@@ -174,7 +176,7 @@ i_state_process(i_state_t *const state)
 		if (i_inc_packet(state)) {
 			vorbis_comment_clear(&vc);
 			vorbis_info_clear(&vi);
-			ExtraErr(,"Failed to get vorbis %s header", vorbis_header(current_header));
+			ExtraErr(,"Failed to get vorbis %s header", vorbishdr(current_header));
 			return -1;
 		}
 		if (current_header == vorbishdr_id) {
@@ -189,9 +191,9 @@ i_state_process(i_state_t *const state)
 			vorbis_comment_clear(&vc);
 			vorbis_info_clear(&vi);
 			switch (err) {
-				case E_VORBIS_HEADER_FAULT:     ExtraErr(,"Fault while synthesizing %s header from input", vorbis_header(current_header));
-				case E_VORBIS_HEADER_NOTVORBIS: ExtraErr(,"Got invalid %s header from input", vorbis_header(current_header));
-				case E_VORBIS_HEADER_BADHEADER: ExtraErr(,"Got bad/corrupt %s header from input", vorbis_header(current_header));
+				case E_VORBIS_HEADER_FAULT:     ExtraErr(,"Fault while synthesizing %s header from input", vorbishdr(current_header)); break;
+				case E_VORBIS_HEADER_NOTVORBIS: ExtraErr(,"Got invalid %s header from input", vorbishdr(current_header)); break;
+				case E_VORBIS_HEADER_BADHEADER: ExtraErr(,"Got bad/corrupt %s header from input", vorbishdr(current_header)); break;
 				default: break;
 			}
 			return -1;
@@ -199,7 +201,7 @@ i_state_process(i_state_t *const state)
 		if (E_OGG_SUCCESS != (err = ogg_stream_packetin(&state->output_stream, &state->current_packet))) {
 			vorbis_comment_clear(&vc);
 			vorbis_info_clear(&vi);
-			ExtraErr(,"Failed to copy vorbis %s header packet", vorbis_header(current_header));
+			ExtraErr(,"Failed to copy vorbis %s header packet", vorbishdr(current_header));
 			return -1;
 		}
 	}
@@ -239,16 +241,15 @@ i_regrain(void)
 }
 
 #define RVB_EXT "_rvb.ogg"
-
 int
 neprocess_ogg(nestate_t *const state, const neinput_t *const input)
 {
 	int err = 0;
 	state->stats.oggs.assigned++;
 	if (input->flag.dry_run) {
-		Style(np,meta_dry, "Regranularize OGG (dry) ");
+		SNor(p,meta_dry, "Regranularize OGG (dry) ");
 	} else {
-		Style(np,meta_wet, "Regranularizing OGG... ");
+		SNor(p,meta_wet, "Regranularizing OGG... ");
 		s_input_name = input->path.cstr;
 		if (input->flag.inplace_regrain) {
 			/* Overwrite input file */
@@ -262,10 +263,10 @@ neprocess_ogg(nestate_t *const state, const neinput_t *const input)
 
 	if (!err) {
 		state->stats.oggs.succeeded++;
-		Style(np,meta_success, "Success!\n");
+		SNor(p,meta_success, "Success!");
 	} else {
 		state->stats.oggs.failed++;
-		Style(np,meta_failure, " Failure! (%d)\n", err);
+		SNor(p,meta_failure, " Failure! (%d)", err);
 	}
 	return err;
 }

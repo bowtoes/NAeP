@@ -14,14 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef RIFF_CONSUMER_H
-#define RIFF_CONSUMER_H
+#ifndef NAeP_riff_h
+#define NAeP_riff_h
 
 #include <stdio.h>
 
 #include <brrtools/brrendian.h>
 
-#include "neutil.h"
+#include "nefcc.h"
+
+extern const fcc_t fcc_RIFF;
+extern const fcc_t fcc_RIFX;
+extern const fcc_t fcc_XFIR;
+extern const fcc_t fcc_FFIR;
 
 #if defined(RIFF_EXTENDED)
 # include RIFF_EXTENDED
@@ -113,6 +118,7 @@ typedef enum riff_byteorder {
 	riff_byteorder_count,
 } riff_byteorder_t;
 
+typedef void *(*riff_copier_t)(void *const destination, const void *const source, size_t n);
 #if BRRENDIAN_SYSTEM == BRRENDIAN_BIG
 # define _riff_copier_idx(_bo_) (4 - (_bo_))
 #else
@@ -138,8 +144,8 @@ typedef enum riff_status {
 } riff_status_t;
 
 /* Used to help read chunks into a riff struct */
-struct riff_datasync {
-	unsigned char *data;
+typedef struct riff_datasync {
+	const unsigned char *data;
 	brrsz storage;
 	brrsz stored;
 	brrsz consumed;
@@ -150,7 +156,7 @@ struct riff_datasync {
 
 	riff_byteorder_t byteorder;
 	riff_status_t status;
-};
+} riff_datasync_t;
 
 /* Returns 0 for correct input, -1 for bad input. */
 int
@@ -164,10 +170,6 @@ riff_datasync_from_buffer(riff_datasync_t *const datasync, unsigned char *const 
 int
 riff_datasync_seek(riff_datasync_t *const datasync, brrof offset);
 
-/* Returns NULL on error. */
-unsigned char *
-riff_datasync_buffer(riff_datasync_t *const datasync, brrsz size);
-
 /* Returns 0 on success or -1 on error. */
 int
 riff_datasync_apply(riff_datasync_t *const datasync, brrsz size);
@@ -180,7 +182,7 @@ riff_datasync_clear(riff_datasync_t *const datasync);
 #define RIFF_CHUNK_TYPE_LIST 2
 
 /* Basic information about the chunk currently being read */
-struct riff_chunkstate {
+typedef struct riff_chunkstate {
 	fcc_t chunkcc;      /* Fourcc of the chunk */
 	brru4 chunksize;    /* Size of the chunk's data */
 	brru4 chunk_index;  /* Index position of the chunk in the riff struct */
@@ -188,30 +190,32 @@ struct riff_chunkstate {
 	brru4 chunk_type:4; /* Which type of basic/list chunk is this? What it means depends on is_basic and is_list */
 	brru4 is_basic:1;   /* Whether the chunk is basic */
 	brru4 is_list:1;    /* Whether the chunk is a list */
-};
+} riff_chunkstate_t;
 
 void
 riff_chunkstate_zero(riff_chunkstate_t *const chunkstate);
 
 /* Storage for the data of a basic riff chunk */
-struct riff_basic_chunk {
+typedef struct riff_basic_chunk {
 	riff_basic_type_t type; /* Type of chunk */
 	brru4 size;             /* Size of chunk data in bytes */
-	unsigned char *data;             /* Chunk data, heap-allocated; freed through 'riff_clear' */
-};
+	brru4 offset;           /* Offset to the start of chunk data */
+	unsigned char *data;    /* Chunk data, heap-allocated; freed through 'riff_clear' */
+} riff_basic_chunk_t;
 
 /* A representation of a riff LIST chunk.
  * Stores only the index of the first chunk in the list, and the number of chunks in the list.
  * */
-struct riff_list_chunk {
+typedef struct riff_list_chunk {
 	riff_list_format_t format; /* Type of the list */
 	brru4 size;                /* Size of list data in bytes */
+	brru4 offset;              /* Offset to the start of chunk data */
 	brru4 first_basic_index;   /* Index in the riff struct of the first child chunk */
 	brru4 n_basics;            /* How many children this list has */
-};
+} riff_list_chunk_t;
 
 /* Storage for riff chunks */
-struct riff {
+typedef struct riff {
 	riff_basic_chunk_t *basics; /* Array of basic chunks */
 	riff_list_chunk_t *lists;   /* Array of LIST chunks */
 	brrsz n_basics;             /* Number of chunks in the basics array */
@@ -220,7 +224,7 @@ struct riff {
 	brru4 total_size;           /* Total size of the RIFF data */
 	riff_root_t root;           /* Type of RIFF file root chunk */
 	riff_format_t format;       /* Format specification of the RIFF file/data */
-};
+} riff_t;
 
 /* Returns 0 for correct input, -1 for bad input. */
 int
@@ -239,4 +243,4 @@ riff_consume_chunk(riff_t *const riff, riff_chunkstate_t *const chunkstate, riff
 void
 riff_clear(riff_t *const riff);
 
-#endif /* RIFF_CONSUMER_H */
+#endif /* NAeP_riff_h */

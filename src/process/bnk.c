@@ -19,8 +19,8 @@ limitations under the License.
 #include <stdlib.h>
 
 #include "neinput.h"
+#include "nelog.h"
 #include "rifflist.h"
-#include "wwise.h"
 
 static char s_output_root[BRRPATH_MAX_PATH + 1] = {0};
 
@@ -54,18 +54,18 @@ neprocess_bnk(nestate_t *const state, const neinput_t *const input)
 	int err = 0;
 	state->stats.bnks.assigned++;
 	if (input->flag.dry_run) {
-		Style(np,meta_dry, "Extract BNK (dry) ");
+		SNor(p,meta_dry, "Extract BNK (dry) ");
 	} else {
-		Style(np,meta_wet, "Extracting BNK... ");
+		SNor(p,meta_wet, "Extracting BNK... ");
 		nepath_extension_replace(&input->path, NULL, 0, s_output_root);
 		err = i_extract_bnk(state, input);
 	}
 	if (!err) {
 		state->stats.bnks.succeeded++;
-		Style(np,meta_success, "Success!\n");
+		SNor(,meta_success, "Success!");
 	} else {
 		state->stats.bnks.failed++;
-		Style(np,meta_failure, "Failure! (%d)\n", err);
+		SNor(,meta_failure, "Failure! (%d)", err);
 	}
 	return err;
 }

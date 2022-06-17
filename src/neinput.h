@@ -21,7 +21,7 @@ limitations under the License.
 
 #include "codebook_library.h"
 #include "nepath.h"
-#include "neutil.h"
+#include "nefilter.h"
 
 /*
  * TODO
@@ -39,7 +39,7 @@ typedef enum nedatatype {
 	nedatatype_arc,
 } nedatatype_t;
 
-struct neinput {
+typedef struct neinput {
 	brrsz library_index;              /* Which loaded codebook to use; defaults to 0. */
 	nepath_t path;
 	nedatatype_t data_type;
@@ -56,12 +56,12 @@ struct neinput {
 		brru2 inplace_regrain:1;      /* Should regranularized oggs replace the original? */
 	} flag;
 	nefilter_t filter;
-};
+} neinput_t;
 
 void
 neinput_clear(neinput_t *const input);
 
-struct neinput_library {
+typedef struct neinput_library {
 	struct {
 		brru2 loaded:1;      /* Whether the library is valid and ready for use */
 		brru2 alternate:1;   /* If this library is stored in the alternate form */
@@ -69,7 +69,7 @@ struct neinput_library {
 	} status;
 	nepath_t path;
 	codebook_library_t library;
-};
+} neinput_library_t;
 
 int
 neinput_library_load(neinput_library_t *const library);
@@ -80,13 +80,13 @@ neinput_library_clear(neinput_library_t *const library);
 int
 neinput_load_codebooks(neinput_library_t *const libraries, const codebook_library_t **const library, brrsz index);
 
-struct nestate_stat {
+typedef struct nestate_stat {
 	brrsz assigned;
 	brrsz succeeded;
 	brrsz failed;
-};
+} nestate_stat_t;
 
-struct nestate {
+typedef struct nestate {
 	neinput_t *inputs;
 	brrsz n_inputs;
 	const neinput_t default_input;
@@ -113,7 +113,7 @@ struct nestate {
 		nestate_stat_t wem_extracts;
 		nestate_stat_t wem_converts;
 	} stats;
-};
+} nestate_t;
 
 int
 nestate_init(nestate_t *const state, int argc, char **argv);

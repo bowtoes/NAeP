@@ -22,13 +22,14 @@ limitations under the License.
 
 #include <vorbis/vorbisenc.h>
 
-#include <brrtools/brrnum.h>
-
-#include "neutil.h"
 #include "neinput.h"
+#include "nelog.h"
+#include "neutil.h"
 #include "riff.h"
 
 #define COMMENT_MAX 1024
+
+#define _min(_x_, _y_) ((_x_)<(_y_)?(_x_):(_y_))
 
 #define VORBIS "vorbis"
 #define CODEBOOK "BCV"
@@ -69,7 +70,7 @@ i_packeteer_init(
     const unsigned char *const data,
     brrsz data_size,
     wwise_flags_t wem_flags,
-	brrsz offset
+    brrsz offset
 )
 {
 	if (!packet || !data)
@@ -175,7 +176,7 @@ i_init_vorb(wwriff_t *const wem, const unsigned char *const data, brru4 data_siz
 		if (data_size > sizeof(e))
 			ExtraDeb(,"Explicit vorbis initialization header size is %zu bytes (expected at most %zu).", data_size, sizeof(e));
 #endif
-		memcpy(&e, data, brrnum_umin(data_size, sizeof(e))); // TODO why this min?
+		memcpy(&e, data, _min(data_size, sizeof(e))); // TODO why this min?
 
 		w.vorb.sample_count = e.sample_count;
 		w.vorb.header_packets_offset = e.header_packets_offset;
@@ -198,7 +199,7 @@ i_init_fmt(wwise_fmt_t *const fmt, const unsigned char *const data, brru4 data_s
 	if (data_size > sizeof(*fmt))
 		ExtraDeb(,"fmt chunk size is %zu bytes (expected at most %zu).", data_size, sizeof(*fmt));
 #endif
-	memcpy(fmt, data, brrnum_umin(data_size, sizeof(*fmt)));
+	memcpy(fmt, data, _min(data_size, sizeof(*fmt)));
 }
 
 int
@@ -222,6 +223,7 @@ wwriff_init(wwriff_t *const wwriff, const riff_t *const rf)
 
 			/* Vorb init header data is contained in the fmt */
 			if (basic.size == 66) {
+				ExtraDeb(,"'vorb' chunk is implicit");
 				if (w.flags.vorb_initialized) {
 					Err(,"WwRIFF has both explicit and implicit 'vorb' chunks.");
 					return E_GENERIC;
@@ -318,9 +320,21 @@ wwriff_add_comment(wwriff_t *const wem, const char *const format, ...)
 	return 0;
 }
 
+#ifdef Ne_extra_debug
+#define PRINT_PACKET(_variant_,_packet_) do {\
+	ExtraDeb(_variant_,\
+		"ogg_packet #%lld : Size %lld | Granulepos %lld | BOS %i | EOS %i",\
+		(_packet_).packetno, (_packet_).bytes, (_packet_).granulepos, (_packet_).b_o_s, (_packet_).e_o_s);\
+} while (0)
+#else
+#define PRINT_PACKET(...)
+#endif
 static inline int
 i_init_ogg_packet(ogg_packet *const packet, oggpack_buffer *const packer, brru8 packetno, brru8 granule, brrbl end_of_stream)
 {
+#ifdef Ne_extra_debug
+	ogg_packet p =
+#endif
 	*packet = (ogg_packet) {
 		.packet = oggpack_get_buffer(packer),
 		.bytes = oggpack_bytes(packer),
@@ -329,30 +343,15 @@ i_init_ogg_packet(ogg_packet *const packet, oggpack_buffer *const packer, brru8 
 		.packetno = packetno,
 		.granulepos = granule,
 	};
+	PRINT_PACKET(,p);
 	return 0;
 }
-#ifdef Ne_extra_debug
-#define PRINT_PACKET(_packet_) do {\
-	ExtraDeb(,"    Packetno:   %lld", (_packet_).packetno);\
-	ExtraDeb(,"    Granulepos: %lld", (_packet_).granulepos);\
-	ExtraDeb(,"    BOS:        %i",   (_packet_).b_o_s);\
-	ExtraDeb(,"    EOS:        %i",   (_packet_).e_o_s);\
-	ExtraDeb(,"    Size:       %lld", (_packet_).bytes);\
-} while (0)
-#else
-#define PRINT_PACKET
-#endif
 static inline int
 i_insert_packet(ogg_stream_state *const streamer, ogg_packet *const packet)
 {
 #ifdef Ne_extra_debug
-	if (packet->b_o_s) {
-		ExtraDeb(,"Inserting BOS packet");
-		PRINT_PACKET(*packet);
-	}
-	if (packet->e_o_s) {
-		ExtraDeb(,"Inserting EOS packet");
-		PRINT_PACKET(*packet);
+	if (packet->b_o_s || packet->e_o_s) {
+		ExtraDeb(,"Inserting %s packet", packet->b_o_s?(packet->e_o_s?"BOS/EOS":"BOS    "):"    EOS");
 	}
 #endif
 	if (ogg_stream_packetin(streamer, packet)) {
@@ -365,11 +364,7 @@ static int
 i_insert_header(ogg_stream_state *const streamer, ogg_packet *const packet, vorbis_info *const vi, vorbis_comment *const vc)
 {
 	int err = 0;
-	ExtraDeb(,"Inserting vorbis %s header packet:", vorbishdr(packet->packetno));
-#ifdef Ne_extra_debug
-	if (packet->packetno != 0)
-		PRINT_PACKET(*packet);
-#endif
+	ExtraDeb(,"Inserting vorbis %8s packet", vorbishdr(packet->packetno));
 
 	if ((err = i_insert_packet(streamer, packet))) {
 		Err(,"Failed to insert vorbis %s header packet into output stream.", vorbishdr_names[packet->packetno]);
@@ -430,7 +425,7 @@ i_copy_comment_header(oggpack_buffer *const unpacker, oggpack_buffer *const pack
 	nepack_pack(packer, 3, 8); /* W Packet type */
 
 	/* R Vorbis str, should read 'vorbis' */
-	char vorbis[7] = {0};
+	char vorbis[6] = {0};
 	for (int i = 0; i < sizeof(VORBIS) - 1; ++i)
 		vorbis[i] = nepack_unpack(unpacker, 8);
 	/* W Vorbis str */
@@ -1033,7 +1028,7 @@ i_process_audio(ogg_stream_state *const streamer, wwriff_t *const wem, vorbis_in
 	brru8 packetno = 0;
 
 	int err = 0;
-	ExtraDeb(,"Stream mod packets");
+	SExtraDeb(,normal,"Stream mod packets");
 	while (packets_start < wem->data_size) {
 		int eos = 0;
 		if ((err = i_packeteer_init(&packeteer, wem->data + packets_start, packets_size, wem->flags, packets_start))) {
@@ -1071,7 +1066,8 @@ i_process_audio(ogg_stream_state *const streamer, wwriff_t *const wem, vorbis_in
 			prev_blockflag = wem->mode_blockflags[mode_number];
 		}
 
-		nepack_transfer_remaining(&unpacker, &packer);
+		long a = nepack_transfer_remaining(&unpacker, &packer);
+		ExtraDeb(,"Transferrined %lld remaining bytes", a);
 
 		/* This granule calculation is from revorb, not sure its source though; probably somewhere in vorbis docs, haven't found it */
 		/* I'll be honest; I really don't understand this at all. */
@@ -1079,7 +1075,6 @@ i_process_audio(ogg_stream_state *const streamer, wwriff_t *const wem, vorbis_in
 		i_init_ogg_packet(&packet, &packer, packetno + 3, 0, eos || next_start >= wem->data_size);
 
 		long current_block = vorbis_packet_blocksize(vi, &packet);
-
 		/* This line goes after the 'if' in original revorb, however putting it before incrementing total_block
 		 * gets rid of one error from ogginfo, the ".. headers incorrectly framed, terminal header page has non-zero granpos."
 		 * Honestly, it's probably just a fluke with this whole algorithm and that one test I did it on; */
@@ -1088,7 +1083,7 @@ i_process_audio(ogg_stream_state *const streamer, wwriff_t *const wem, vorbis_in
 		if (last_block)
 			total_block += (last_block + current_block) / 4;
 		last_block = current_block;
-		ExtraDeb(,"Granulepos: %llu | Block: %llu | Total block: %llu", packet.granulepos, current_block, total_block);
+		ExtraDeb(,"Block %lld | Total Block %lld", current_block, total_block);
 
 		if ((err = i_insert_packet(streamer, &packet))) {
 			oggpack_writeclear(&packer);

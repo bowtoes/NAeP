@@ -14,23 +14,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef NAeP_necodebook_library_h
-#define NAeP_necodebook_library_h
+#ifndef NAeP_codebook_library_h
+#define NAeP_codebook_library_h
 
 #include <ogg/ogg.h>
 
-#include "neutil.h"
+#include <brrtools/brrtypes.h>
 
 #define CODEBOOK_ERROR (-1)
 #define CODEBOOK_CORRUPT (-2)
 
-struct packed_codebook {
+typedef struct packed_codebook {
 	unsigned char *data;
 	unsigned char *unpacked_data;
 	brru8 unpacked_bits;
 	brru4 size;
 	int did_unpack;
-};
+} packed_codebook_t;
 
 /* -2 : decode error/corrupt data
  * -1 : error (allocation/argument)
@@ -48,10 +48,10 @@ packed_codebook_unpack_raw(oggpack_buffer *const unpacker, oggpack_buffer *const
 void
 packed_codebook_clear(packed_codebook_t *const pc);
 
-struct codebook_library {
+typedef struct codebook_library {
 	packed_codebook_t *codebooks;
 	brru4 codebook_count;
-};
+} codebook_library_t;
 
 void
 codebook_library_clear(codebook_library_t *const cb);
@@ -93,4 +93,4 @@ codebook_library_serialize_alt(const codebook_library_t *const library, void **c
 int
 codebook_library_serialize(const codebook_library_t *const library, void **const output_data, brru8 *const data_size);
 
-#endif /* NAeP_necodebook_library_h */
+#endif /* NAeP_codebook_library_h */

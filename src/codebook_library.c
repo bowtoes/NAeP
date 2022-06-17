@@ -20,6 +20,9 @@ limitations under the License.
 #include <stdlib.h>
 #include <string.h>
 
+#include "nelog.h"
+#include "neutil.h"
+
 /* TODO Same issue as elsewhere, I can't verify how big-endian systems will
  * work with the (de)serializations, or if any modification is necessary at all */
 
@@ -148,6 +151,7 @@ codebook_library_check_type(const void *const data, brru8 data_size)
 	if (!data || data_size < 4)
 		return -1;
 
+	/* I honestly have no idea how well this will work, need to test and redo */
 	const char *const d = (const char *)data;
 	brru4 last_end = *(brru4 *)(d + data_size - 4);
 	if (last_end > data_size - 4) {
@@ -157,6 +161,49 @@ codebook_library_check_type(const void *const data, brru8 data_size)
 		return 0;
 	}
 	return 1;
+}
+
+int
+codebook_library_deserialize(codebook_library_t *const library, const void *const input_data, brru8 data_size)
+{
+	if (!library || !input_data || data_size < 4)
+		return CODEBOOK_ERROR;
+
+	/* The offset table is at the start of the data this time, and each offset is the the start of a codebook,
+	 * rather than the end. */
+	const brru4 *offset_table = (const brru4*)input_data;
+	brru4 count = offset_table[0] / 4;
+
+	codebook_library_t lib = {0};
+	if (!(lib.codebooks = malloc(sizeof(*lib.codebooks) * count))) {
+		codebook_library_clear(&lib);
+		Err(,"Failed to allocate space for %zu codebooks: %s (%d)", count, strerror(errno), errno);
+		return -1;
+	}
+
+	/* Codebooks are loaded in reverse order so that I don't have to read the last one outside the loop. */
+	const char *data = (const char *)input_data;
+	brru4 pc_end = data_size;
+	for (brru4 i = count; i > 0; --i, ++lib.codebook_count) {
+		brru4 pc_start = offset_table[i - 1];
+		if (pc_end < pc_start || pc_start > data_size) {
+			codebook_library_clear(&lib);
+			return CODEBOOK_CORRUPT;
+		}
+
+		packed_codebook_t pc = {.size = pc_end - pc_start};
+		if (!(pc.data = malloc(pc.size))) {
+			codebook_library_clear(&lib);
+			Err(,"Failed to allocate space for codebook %zu: %s (%d)", lib.codebook_count, strerror(errno), errno);
+			return -1;
+		}
+		memcpy(pc.data, data + pc_start, pc.size);
+		lib.codebooks[i - 1] = pc;
+
+		pc_end = pc_start;
+	}
+	*library = lib;
+	return 0;
 }
 
 int
@@ -207,45 +254,36 @@ codebook_library_deserialize_alt(codebook_library_t *const library, const void *
 }
 
 int
-codebook_library_deserialize(codebook_library_t *const library, const void *const input_data, brru8 data_size)
+codebook_library_serialize(const codebook_library_t *const library, void **const output_data, brru8 *const data_size)
 {
-	if (!library || !input_data || data_size < 4)
+	if (!library || !output_data)
 		return CODEBOOK_ERROR;
 
-	/* The offset table is at the start of the data this time, and each offset is the the start of a codebook,
-	 * rather than the end. */
-	const brru4 *offset_table = (const brru4*)input_data;
-	brru4 count = offset_table[0] / 4;
+	const codebook_library_t lib = *library;
 
-	codebook_library_t lib = {0};
-	if (!(lib.codebooks = malloc(sizeof(*lib.codebooks) * count))) {
-		codebook_library_clear(&lib);
-		Err(,"Failed to allocate space for %zu codebooks: %s (%d)", count, strerror(errno), errno);
+	brru8 total_size = 4 * lib.codebook_count;
+	for (brru4 i = 0; i < lib.codebook_count; ++i)
+		total_size += lib.codebooks[i].size;
+
+	if (!(*output_data = malloc(total_size))) {
+		Err(,"Failed to allocate space for codebook serialization output: %s (%d)", strerror(errno), errno);
 		return -1;
 	}
 
-	/* Codebooks are loaded in reverse order so that I don't have to read the last one outside the loop. */
-	const char *data = (const char *)input_data;
-	brru4 pc_end = data_size;
-	for (brru4 i = count; i > 0; --i, ++lib.codebook_count) {
-		brru4 pc_start = offset_table[i - 1];
-		if (pc_end < pc_start || pc_start > data_size) {
-			codebook_library_clear(&lib);
-			return CODEBOOK_CORRUPT;
-		}
+	char *const data = *(char **)output_data;
 
-		packed_codebook_t pc = {.size = pc_end - pc_start};
-		if (!(pc.data = malloc(pc.size))) {
-			codebook_library_clear(&lib);
-			Err(,"Failed to allocate space for codebook %zu: %s (%d)", lib.codebook_count, strerror(errno), errno);
-			return -1;
-		}
-		memcpy(pc.data, data + pc_start, pc.size);
-		lib.codebooks[i - 1] = pc;
-
-		pc_end = pc_start;
+	brru8 pc_start = 4 * lib.codebook_count;
+	brru4 *offset_table = (brru4 *)data;
+	for (brru4 i = 0; i < lib.codebook_count; ++i) {
+		const packed_codebook_t pc = lib.codebooks[i];
+		memcpy(data + pc_start, pc.data, pc.size);
+		offset_table[i] = pc_start;
+		pc_start += pc.size;
 	}
-	*library = lib;
+
+	if (data_size)
+		*data_size = total_size;
+
 	return 0;
 }
 
@@ -274,40 +312,6 @@ codebook_library_serialize_alt(const codebook_library_t *const library, void **c
 		memcpy(data + pc_start, pc.data, pc.size);
 		pc_start += pc.size;
 		offset_table[i] = pc_start;
-	}
-
-	if (data_size)
-		*data_size = total_size;
-
-	return 0;
-}
-
-int
-codebook_library_serialize(const codebook_library_t *const library, void **const output_data, brru8 *const data_size)
-{
-	if (!library || !output_data)
-		return CODEBOOK_ERROR;
-
-	const codebook_library_t lib = *library;
-
-	brru8 total_size = 4 * lib.codebook_count;
-	for (brru4 i = 0; i < lib.codebook_count; ++i)
-		total_size += lib.codebooks[i].size;
-
-	if (!(*output_data = malloc(total_size))) {
-		Err(,"Failed to allocate space for codebook serialization output: %s (%d)", strerror(errno), errno);
-		return -1;
-	}
-
-	char *const data = *(char **)output_data;
-
-	brru8 pc_start = 4 * lib.codebook_count;
-	brru4 *offset_table = (brru4 *)data;
-	for (brru4 i = 0; i < lib.codebook_count; ++i) {
-		const packed_codebook_t pc = lib.codebooks[i];
-		memcpy(data + pc_start, pc.data, pc.size);
-		offset_table[i] = pc_start;
-		pc_start += pc.size;
 	}
 
 	if (data_size)

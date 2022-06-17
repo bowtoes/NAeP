@@ -19,7 +19,7 @@ limitations under the License.
 
 #include <ogg/ogg.h>
 
-#include "neutil.h"
+#include <brrtools/brrtypes.h>
 
 typedef enum vorbishdr {
 	vorbishdr_id = 0,
@@ -31,7 +31,7 @@ typedef enum vorbishdr {
 extern const char *const vorbishdr_names[3];
 #define vorbishdr(_index_) (vorbishdr_names[_index_])
 
-struct wwise_vorb {
+typedef struct wwise_vorb {
 	brru4 sample_count;
 	brru4 mod_signal;
 	brru4 header_packets_offset;
@@ -39,9 +39,9 @@ struct wwise_vorb {
 	brru4 uid;
 	brru1 blocksize_0;
 	brru1 blocksize_1;
-};
+} wwise_vorb_t;
 
-struct wwise_fmt {
+typedef struct wwise_fmt {
 	brru2 format_tag;
 	brru2 n_channels;
 	brru4 samples_per_sec;
@@ -61,18 +61,19 @@ struct wwise_fmt {
 		brru2 data3;
 		brru1 data4[8];
 	} guid;
-};
+} wwise_fmt_t;
 
-struct wwise_flags {
+typedef struct wwise_flags {
 	brru1 fmt_initialized:1;
 	brru1 vorb_initialized:1;
 	brru1 data_initialized:1;
 	brru1 mod_packets:1;         /* No idea what this means */
 	brru1 granule_present:1;     /* Whether data packets have 4-bytes for granule */
 	brru1 all_headers_present:1; /* If all vorbis headers are present at header_packets_offset or it's just the setup header */
-};
+} wwise_flags_t;
 
-struct wwriff {
+typedef struct brrstringr brrstringr_t;
+typedef struct wwriff {
 	wwise_flags_t flags;
 	int mode_count;              /* Storage for audio packet decode */
 	brru1 mode_blockflags[32];   /* Storage for audio packet decode */
@@ -82,8 +83,9 @@ struct wwriff {
 	wwise_fmt_t fmt;
 	brru4 n_comments;
 	brrstringr_t *comments;
-};
+} wwriff_t;
 
+typedef struct riff riff_t;
 /* Consumes the riff data 'rf', and parses it as WWRIFF data.
  * 'rf' is free to be cleared after initialization.
  * Returns:
@@ -100,6 +102,8 @@ void wwriff_clear(wwriff_t *const wwriff);
 
 int wwriff_add_comment(wwriff_t *const wwriff, const char *const format, ...);
 
+typedef struct neinput neinput_t;
+typedef struct codebook_library codebook_library_t;
 /* Converts the wwriff data 'in_riff' to an ogg stream in 'out_stream', using codebooks from 'library'.
  * 'input' is for output stream metadata (like which file the output is converted from, etc.).
  * */

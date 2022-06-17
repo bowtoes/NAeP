@@ -17,8 +17,13 @@ limitations under the License.
 #ifndef NAeP_neprocess_h
 #define NAeP_neprocess_h
 
-#include "neutil.h"
+#include "nefcc.h"
 
+extern const fcc_t fcc_OggS;
+extern const fcc_t fcc_BKHD;
+
+typedef struct neinput neinput_t;
+typedef struct nestate nestate_t;
 int neprocess_inputs(nestate_t *const state);
 
 int neprocess_ogg(nestate_t *const state, const neinput_t *const input);

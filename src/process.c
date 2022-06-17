@@ -19,9 +19,12 @@ limitations under the License.
 #include <errno.h>
 #include <stdio.h>
 
-#include <brrtools/brrlog.h>
-
 #include "neinput.h"
+#include "nelog.h"
+#include "riff.h"
+
+const fcc_t fcc_OggS = fcc_str(,"OggS");
+const fcc_t fcc_BKHD = fcc_str(,"BKHD");
 
 static inline int
 i_determine_input_type(neinput_t *const input)
@@ -50,17 +53,18 @@ i_determine_input_type(neinput_t *const input)
 			Err(,"Could not open '%s' to determine data type: %s (%d)", input->path.cstr, strerror(errno), errno);
 			return -1;
 		}
+		int e = 0;
 		if (4 != fread(&cc.v, 1, 4, fp)) {
-			fclose(fp);
 			if (ferror(fp)) {
 				Err(,"Failed to read fourcc from '%s' to determine data type: %s (%d)", input->path.cstr, strerror(errno), errno);
-				return -1;
 			} else {
 				Err(,"'%s' is too small to contain valid data");
-				return -1;
 			}
+			e = 1;
 		}
 		fclose(fp);
+		if (e)
+			return -1;
 	}
 
 	if (!fcccmp(cc, fcc_OggS)) {
@@ -104,17 +108,21 @@ neprocess_inputs(nestate_t *const state)
 		}
 
 		{ // Process input
+			int err = 0;
 			Nor(n,"Processing input ");
-			Style(np, extra_info, "%*zu / %zu", state->stats.n_input_digits, i+1, state->n_inputs);
+			SNor(np, extra_info, "%*zu / %zu", state->stats.n_input_digits, i+1, state->n_inputs);
+			Nor(np," ");
 
-			#define _log_boiler(_type_) Style(np,_type_, "%-*s", state->stats.input_path_max, input->path)
+			#define _log_boiler(_type_) do { SNor(np,_type_, "%-*s", state->stats.input_path_max, input->path); SNor(np,last," "); } while(0)
 			switch (input->data_type) {
-				case nedatatype_ogg: _log_boiler(ft_ogg); return neprocess_ogg(state, input);
-				case nedatatype_wem: _log_boiler(ft_wem); return neprocess_wem(state, input);
-				case nedatatype_wsp: _log_boiler(ft_wsp); return neprocess_wsp(state, input);
-				case nedatatype_bnk: _log_boiler(ft_bnk); return neprocess_bnk(state, input);
+				case nedatatype_ogg: _log_boiler(ft_ogg); err = neprocess_ogg(state, input); break;
+				case nedatatype_wem: _log_boiler(ft_wem); err = neprocess_wem(state, input); break;
+				case nedatatype_wsp: _log_boiler(ft_wsp); err = neprocess_wsp(state, input); break;
+				case nedatatype_bnk: _log_boiler(ft_bnk); err = neprocess_bnk(state, input); break;
 				default: break;
 			}
+			if (err)
+				return err;
 		}
 	}
 	return 0;

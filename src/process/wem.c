@@ -21,6 +21,8 @@ limitations under the License.
 #include <stdio.h>
 
 #include "neinput.h"
+#include "nelog.h"
+#include "neutil.h"
 #include "wwise.h"
 
 static char s_output_name[BRRPATH_MAX_PATH + 1] = {0};
@@ -37,15 +39,16 @@ i_convert_wem(neinput_library_t *const libraries, const neinput_t *const input)
 			return err;
 
 		err = neutil_buffer_to_wwriff(&wwriff, buffer, input->path.st.size);
+
 		free(buffer);
 		if (err)
 			return err;
 	}
 	if (input->flag.add_comments) {
-		if ((err = wwriff_add_comment(&wwriff, "SourceFile=%s", input->path))) {
-			BRRLOG_ERR("Failed to add comment to WWRIFF : %s (%d)", strerror(errno), errno);
+		if ((err = wwriff_add_comment(&wwriff, "SourceFile=%s", input->path.cstr))) {
+			Err(,"Failed to add comment to WWRIFF : %s (%d)", strerror(errno), errno);
 		} else if ((err = wwriff_add_comment(&wwriff, "OutputFile=%s", s_output_name))) {
-			BRRLOG_ERR("Failed to add comment to WWRIFF : %s (%d)", strerror(errno), errno);
+			Err(,"Failed to add comment to WWRIFF : %s (%d)", strerror(errno), errno);
 		}
 	}
 	if (!err) {
@@ -63,16 +66,15 @@ i_convert_wem(neinput_library_t *const libraries, const neinput_t *const input)
 }
 
 #define W2O_EXT ".ogg"
-
 int
 neprocess_wem(nestate_t *const state, const neinput_t *const input)
 {
 	int err = 0;
 	state->stats.wems.assigned++;
 	if (input->flag.dry_run) {
-		Style(np,meta_dry, "Convert WEM (dry) ");
+		SNor(np,meta_dry, "Convert WEM (dry) ");
 	} else {
-		Style(np,meta_wet, "Converting WEM... ");
+		SNor(np,meta_wet, "Converting WEM... ");
 		if (input->flag.inplace_ogg) {
 			/* Overwrite input file */
 			snprintf(s_output_name, sizeof(s_output_name), "%s", input->path.cstr);
@@ -84,10 +86,10 @@ neprocess_wem(nestate_t *const state, const neinput_t *const input)
 	}
 	if (!err) {
 		state->stats.wems.succeeded++;
-		Style(p,meta_success, "Success!");
+		SNor(p,meta_success, "Success!");
 	} else {
 		state->stats.wems.failed++;
-		Style(p,meta_failure, "Failure! (%d)", err);
+		SNor(p,meta_failure, "Failure! (%d)", err);
 	}
 	return err;
 }
