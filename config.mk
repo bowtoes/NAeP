@@ -15,7 +15,7 @@ override project_major := 0
 override project_minor := 0
 override project_revis := 3
 override project_letter := b
-override project_version := $(project_major).$(project_minor).$(project_revis)$(project_letter)
+override project_version := $(project_major).$(project_minor).$(project_revis)$(if $(project_letter),/$(project_letter),)
 override project_date := $(shell git show -s --date=format:'%Y/%m/%d %l:%M%p' --format=%ad)
 
 src_dir := src
@@ -105,7 +105,7 @@ else
  c_defines := -DWIN32_LEAN_AND_MEAN $(c_defines)
 endif
 
-ifneq ($(PEDANTIC),0)
+ifneq ($(pedantic),0)
  c_warnings := -pedantic -pedantic-errors -Wpedantic $(c_warnings)
  c_defines += -D$(uproject)_pedantic
 endif
@@ -219,6 +219,7 @@ output_defines ?= $(output_directory)/$(build_defines)
 build_imports ?= $(output_base_name).dll.lib
 output_imports ?= $(output_directory)/$(build_imports)
 
+# undef config/platform-only defs, they shouldn't be used in the Makefile
 override dVerifySetting :=
 override dGenExe :=
 override dUnixWindowsVar :=

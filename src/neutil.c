@@ -195,3 +195,6 @@ neutil_buffer_to_wwriff(wwriff_t *const wwriff, const void *const buffer, brrsz 
 	*wwriff = wf;
 	return 0;
 }
+
+extern inline brru8 nemath_umin(brru8, brru8);
+extern inline brrs8 nemath_smin(brrs8, brrs8);

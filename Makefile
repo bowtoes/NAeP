@@ -53,6 +53,7 @@ again: clean vnd-clean-light $(project)
 
 CLEAN: vnd-clean clean
 AGAIN: CLEAN all
+.PHONY: clean again CLEAN AGAIN
 
 install: all
 	@$(mk_dir_tree) '$(prefix)/bin'
@@ -60,6 +61,7 @@ install: all
 	@$(strip_exe) '$(prefix)/bin/$(output_name)'
 uninstall:
 	@$(rm_file) '$(prefix)/bin/$(output_name)'
+.PHONY: install uninstall
 
 ### Vendor shit
 vnd:

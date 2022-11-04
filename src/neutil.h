@@ -76,4 +76,11 @@ typedef struct wwriff wwriff_t;
 int
 neutil_buffer_to_wwriff(wwriff_t *const wwriff, const void *const buffer, brrsz buffer_size);
 
+#define neutil_min(_x_, _y_) ((_x_)<(_y_)?(_x_):(_y_))
+
+inline brru8
+nemath_umin(brru8 x, brru8 y) { return neutil_min(x, y); }
+inline brrs8
+nemath_smin(brrs8 x, brrs8 y) { return neutil_min(x, y); }
+
 #endif /* NAeP_neutil_h */

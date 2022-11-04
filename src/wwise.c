@@ -29,8 +29,6 @@ limitations under the License.
 
 #define COMMENT_MAX 1024
 
-#define _min(_x_, _y_) ((_x_)<(_y_)?(_x_):(_y_))
-
 #define VORBIS "vorbis"
 #define CODEBOOK "BCV"
 
@@ -176,7 +174,7 @@ i_init_vorb(wwriff_t *const wem, const unsigned char *const data, brru4 data_siz
 		if (data_size > sizeof(e))
 			ExtraDeb(,"Explicit vorbis initialization header size is %zu bytes (expected at most %zu).", data_size, sizeof(e));
 #endif
-		memcpy(&e, data, _min(data_size, sizeof(e))); // TODO why this min?
+		memcpy(&e, data, neutil_min(data_size, sizeof(e))); // TODO why this min?
 
 		w.vorb.sample_count = e.sample_count;
 		w.vorb.header_packets_offset = e.header_packets_offset;
@@ -199,7 +197,7 @@ i_init_fmt(wwise_fmt_t *const fmt, const unsigned char *const data, brru4 data_s
 	if (data_size > sizeof(*fmt))
 		ExtraDeb(,"fmt chunk size is %zu bytes (expected at most %zu).", data_size, sizeof(*fmt));
 #endif
-	memcpy(fmt, data, _min(data_size, sizeof(*fmt)));
+	memcpy(fmt, data, neutil_min(data_size, sizeof(*fmt)));
 }
 
 int

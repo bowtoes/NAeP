@@ -125,12 +125,12 @@ If you look through the various `.mk` files, you'll see a plethora of various
 settings that can be customized (they're assigned with `?=`); here are only the
 primary ones for build customization:
 
-| Host    | Target  | Requirements                       | Command                                |
-| :---    |  ---:   | :---                               | :---                                   |
-| Unix    | Unix    | GNU Make and C-toolchain           | `make [target=unix] [host=unix] ...`   |
-| Unix    | Windows | GNU Make and `mingw-w64` toolchain | `make target=windows [host=unix] ...`  |
-| Windows | Unix    | N/A                                | Not implemented                        |
-| Windows | Windows | `MSYS2`/`CygWin`/`MinGW`           | `make target=windows host=windows ...` |
+| Host    | Target  | Command                                |
+| :---    |  ---:   | :---                                   |
+| Unix    | Unix    | `make [target=unix] [host=unix] ...`   |
+| Unix    | Windows | `make target=windows [host=unix] ...`  |
+| Windows | Unix    | Not implemented                        |
+| Windows | Windows | `make target=windows host=windows ...` |
 
 *Note:* When first compiling, or when cross-compiling, `libogg` and `libvorbis`
 will need to be configured for the correct host/target pair; this is done
@@ -138,9 +138,14 @@ automatically the first time, but must be specified manually when
 cross-compiling. This is done by defining the Make variable `LIBRECONFIG`.  
 Be aware that library reconfiguring will take some time.
 
-Host and target architectures and be specified with `host_bit` and `target_bit`
-respectively, either `32` or `64`; changing these is also cause to reconfigure
-`libogg` and `libvorbis`.
+Host and target architectures can be specified with `host_bit` and `target_bit`
+respectively, either `32` or `64`; choosing target systems/architectures
+different from your host will require the appropriate toolchain to be installed
+(32-bit toolchain for 32-bit targets built on 64-bit machines and vice-versa,
+Windows toolchain for Windows targets built on unix machines, etc.).
+
+Changing targets between builds necessitates setting `LIBRECONFIG` to properly
+configure `libogg` and `libvorbis`.
 
 **Disclaimer:** I only have a Linux distribution, so I can't/am too lazy to
 test building on Windows or other Unixes (don't be surprised if it doesn't
@@ -150,8 +155,11 @@ work).
 * Bug testing, (Buster) crash testing, log testing, all testing.
 * Better output/process logging.
 * More consistent application of logging settings.
-* A better output filtering feature.
+* Improved processed output filtering feature(s).
 * Better documentation, everywhere.
+* Options to specify system-installed [`libogg`][libogg] & [`libvorbis`][libvorbis], so they need not
+  be compiled manually; will be a headache to get working for Windows
+  systems.
 
 ## References
 * Ogg regranularization was initially done using a wrapper around [revorb][revorb]

@@ -109,16 +109,17 @@ neprocess_inputs(nestate_t *const state)
 
 		{ // Process input
 			int err = 0;
+
 			Nor(n,"Processing input ");
 			SNor(np, extra_info, "%*zu / %zu", state->stats.n_input_digits, i+1, state->n_inputs);
 			Nor(np," ");
 
 			#define _log_boiler(_type_) do { SNor(np,_type_, "%-*s", state->stats.input_path_max, input->path); SNor(np,last," "); } while(0)
 			switch (input->data_type) {
-				case nedatatype_ogg: _log_boiler(ft_ogg); err = neprocess_ogg(state, input); break;
-				case nedatatype_wem: _log_boiler(ft_wem); err = neprocess_wem(state, input); break;
-				case nedatatype_wsp: _log_boiler(ft_wsp); err = neprocess_wsp(state, input); break;
-				case nedatatype_bnk: _log_boiler(ft_bnk); err = neprocess_bnk(state, input); break;
+				case nedatatype_ogg: _log_boiler(ft_ogg); /* flush_log_queue(); */ err = neprocess_ogg(state, input); break;
+				case nedatatype_wem: _log_boiler(ft_wem); /* flush_log_queue(); */ err = neprocess_wem(state, input); break;
+				case nedatatype_wsp: _log_boiler(ft_wsp); /* flush_log_queue(); */ err = neprocess_wsp(state, input); break;
+				case nedatatype_bnk: _log_boiler(ft_bnk); /* flush_log_queue(); */ err = neprocess_bnk(state, input); break;
 				default: break;
 			}
 			if (err)
