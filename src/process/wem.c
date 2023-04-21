@@ -1,31 +1,22 @@
-/*
-Copyright 2021 BowToes (bow.toes@mailfence.com)
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+/* Copyright (c), bowtoes (bow.toes@mailfence.com)
+Apache 2.0 license, http://www.apache.org/licenses/LICENSE-2.0
+Full license can be found in 'license' file */
 
 #include "process.h"
 
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+
+#include <brrtools/brrfile.h>
 
 #include "neinput.h"
 #include "nelog.h"
 #include "neutil.h"
 #include "wwise.h"
 
-static char s_output_name[BRRPATH_MAX_PATH + 1] = {0};
+static char s_output_name[brrpath_max_path + 1] = {0};
 
 static int
 i_convert_wem(neinput_library_t *const libraries, const neinput_t *const input)
@@ -35,17 +26,19 @@ i_convert_wem(neinput_library_t *const libraries, const neinput_t *const input)
 	{
 		unsigned char *buffer = NULL;
 
-		if ((err = nepath_read(&input->path, (void **)&buffer)))
-			return err;
+		if (BRRSZ_MAX == (err = brrfile_read(input->path.full, &input->path.inf, (void **)&buffer))) {
+			Err(,"%s", brrapi_error_message(nemessage, nemessage_len));
+			return -1;
+		}
 
-		err = neutil_buffer_to_wwriff(&wwriff, buffer, input->path.st.size);
+		err = neutil_buffer_to_wwriff(&wwriff, buffer, brrpath_get_size(input->path.size));
 
 		free(buffer);
 		if (err)
 			return err;
 	}
-	if (input->flag.add_comments) {
-		if ((err = wwriff_add_comment(&wwriff, "SourceFile=%s", input->path.cstr))) {
+	if (input->cfg.add_comments) {
+		if ((err = wwriff_add_comment(&wwriff, "SourceFile=%s", input->path.full))) {
 			Err(,"Failed to add comment to WWRIFF : %s (%d)", strerror(errno), errno);
 		} else if ((err = wwriff_add_comment(&wwriff, "OutputFile=%s", s_output_name))) {
 			Err(,"Failed to add comment to WWRIFF : %s (%d)", strerror(errno), errno);
@@ -71,25 +64,25 @@ neprocess_wem(nestate_t *const state, const neinput_t *const input)
 {
 	int err = 0;
 	state->stats.wems.assigned++;
-	if (input->flag.dry_run) {
-		SNor(np,meta_dry, "Convert WEM (dry) ");
+	if (input->cfg.dry_run) {
+		Nor(np, "(!" nest_meta_dry ":Convert WEM (dry)!) ");
 	} else {
-		SNor(np,meta_wet, "Converting WEM... ");
-		if (input->flag.inplace_ogg) {
+		Nor(np,"(!"nest_meta_wet":Converting WEM...!) ");
+		if (input->cfg.inplace_ogg) {
 			/* Overwrite input file */
-			snprintf(s_output_name, sizeof(s_output_name), "%s", input->path.cstr);
+			snprintf(s_output_name, sizeof(s_output_name), "%s", input->path.full);
 		} else {
 			/* Output to [file_path/base_name].ogg */
-			nepath_extension_replace(&input->path, W2O_EXT, sizeof(W2O_EXT) - 1, s_output_name);
+			neutil_replace_extension(&input->path, W2O_EXT, sizeof(W2O_EXT) - 1, 1, s_output_name, sizeof(s_output_name) - 1);
 		}
 		err = i_convert_wem(state->libraries, input);
 	}
 	if (!err) {
 		state->stats.wems.succeeded++;
-		SNor(p,meta_success, "Success!");
+		Nor(p,"(!"nest_meta_success":Success!!)");
 	} else {
 		state->stats.wems.failed++;
-		SNor(p,meta_failure, "Failure! (%d)", err);
+		Nor(p,"(!"nest_meta_failure":Failure! (%d)!)", err);
 	}
 	return err;
 }

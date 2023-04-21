@@ -14,7 +14,7 @@ override makefiles := platform.mk config.mk Makefile
 override project_major := 0
 override project_minor := 0
 override project_revis := 3
-override project_letter := b
+override project_letter := c
 override project_version := $(project_major).$(project_minor).$(project_revis)$(if $(project_letter),/$(project_letter),)
 override project_date := $(shell git show -s --date=format:'%Y/%m/%d %l:%M%p' --format=%ad)
 
@@ -25,7 +25,6 @@ srcs :=\
 	main.c\
 	codebook_library.c\
 	neinput.c\
-	nepath.c\
 	neutil.c\
 	nelog.c\
 	nefcc.c\
@@ -42,7 +41,6 @@ srcs :=\
 hdrs :=\
 	codebook_library.h\
 	neinput.h\
-	nepath.h\
 	neutil.h\
 	nelog.h\
 	nefcc.h\
@@ -60,7 +58,15 @@ pedantic ?= 1
 do_strip ?= 1
 # Enable debug compiler flags
 debug ?= 0
-extra_debug ?= 0
+ifneq ($(debug),0)
+ ifneq ($(debug),1)
+  extra_debug ?=1
+ else
+  extra_debug ?=0
+ endif
+else
+ extra_debug ?=0
+ endif
 # Enable valgrind memcheck-compitable debug flags (only takes effect when debug != 0)
 memcheck ?= 0
 
@@ -106,7 +112,7 @@ else
 endif
 
 ifneq ($(pedantic),0)
- c_warnings := -pedantic -pedantic-errors -Wpedantic $(c_warnings)
+ c_warnings := -pedantic -pedantic-errors -Wpedantic -Wno-missing-braces -Wno-unused-but-set-variable $(c_warnings)
  c_defines += -D$(uproject)_pedantic
 endif
 

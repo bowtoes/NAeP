@@ -1,26 +1,14 @@
-/*
-Copyright 2021-2022 BowToes (bow.toes@mailfence.com)
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+/* Copyright (c), bowtoes (bow.toes@mailfence.com)
+Apache 2.0 license, http://www.apache.org/licenses/LICENSE-2.0
+Full license can be found in 'license' file */
 
 #ifndef NAeP_neinput_h
 #define NAeP_neinput_h
 
 #include <brrtools/brrlog.h>
+#include <brrtools/brrpath.h>
 
 #include "codebook_library.h"
-#include "nepath.h"
 #include "nefilter.h"
 
 /*
@@ -40,10 +28,7 @@ typedef enum nedatatype {
 } nedatatype_t;
 
 typedef struct neinput {
-	brrsz library_index;              /* Which loaded codebook to use; defaults to 0. */
-	nepath_t path;
-	nedatatype_t data_type;
-	brrlog_priority_int log_priority; /* Priority used if logging is enabled. */
+	int log_label;                    /* Priority used if logging is enabled. */
 	struct {
 		brru2 log_enabled:1;          /* Is output logging enabled? */
 		brru2 log_color_enabled:1;    /* Is log coloring enabled? */
@@ -54,28 +39,31 @@ typedef struct neinput {
 		brru2 auto_ogg:1;             /* Should output weems automatically be converted to ogg? */
 		brru2 inplace_ogg:1;          /* Should weem-to-ogg conversion be done in-place (replace)? */
 		brru2 inplace_regrain:1;      /* Should regranularized oggs replace the original? */
-	} flag;
-	nefilter_t filter;
+		brru2 data_type:7;            /* The kind of data this input represents. */
+	} cfg;
+	brrsz library_index;              /* Which loaded codebook to use; defaults to 0. */
+	nefilter_t filter; /* TODO what is a filter */
+	brrpath_t path;
 } neinput_t;
 
 void
-neinput_clear(neinput_t *const input);
+neinput_free(neinput_t *const input);
 
 typedef struct neinput_library {
+	brrpath_t path;
+	codebook_library_t library;
 	struct {
 		brru2 loaded:1;      /* Whether the library is valid and ready for use */
 		brru2 alternate:1;   /* If this library is stored in the alternate form */
-		brru2 load_error:14; /* If non-zero, the library failed to be loaded */
+		brru2 load_error;    /* If non-zero, the library failed to be loaded */
 	} status;
-	nepath_t path;
-	codebook_library_t library;
 } neinput_library_t;
 
 int
 neinput_library_load(neinput_library_t *const library);
 
 void
-neinput_library_clear(neinput_library_t *const library);
+neinput_library_free(neinput_library_t *const library);
 
 int
 neinput_load_codebooks(neinput_library_t *const libraries, const codebook_library_t **const library, brrsz index);
@@ -87,9 +75,9 @@ typedef struct nestate_stat {
 } nestate_stat_t;
 
 typedef struct nestate {
+	const neinput_t default_input;
 	neinput_t *inputs;
 	brrsz n_inputs;
-	const neinput_t default_input;
 	neinput_library_t *libraries;
 	brrsz n_libraries;
 
@@ -103,7 +91,7 @@ typedef struct nestate {
 		brru8 report_card:1;
 		brru8 full_report:1;
 	/* < Byte boundary > */
-	} settings;
+	} cfg;
 
 	struct {
 		brrsz input_path_max; /* For log padding */

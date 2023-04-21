@@ -1,9 +1,12 @@
 [submodule "vnd/brrtools"]
 	path = vnd/brrtools
-	url = https://www.github.com/bowtoes/brrtools.git
+	url = https://github.com/bowtoes/brrtools
 [submodule "vnd/ogg"]
 	path = vnd/ogg
 	url = https://gitlab.xiph.org/xiph/ogg.git
 [submodule "vnd/vorbis"]
 	path = vnd/vorbis
 	url = https://gitlab.xiph.org/xiph/vorbis.git
+[submodule "vnd/zstd"]
+	path = vnd/zstd
+	url = https://github.com/facebook/zstd.git

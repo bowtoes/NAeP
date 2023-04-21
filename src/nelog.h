@@ -1,18 +1,6 @@
-/*
-Copyright 2021-2022 BowToes (bow.toes@mailfence.com)
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+/* Copyright (c), bowtoes (bow.toes@mailfence.com)
+Apache 2.0 license, http://www.apache.org/licenses/LICENSE-2.0
+Full license can be found in 'license' file */
 
 #ifndef NAeP_nelog_h
 #define NAeP_nelog_h
@@ -26,100 +14,88 @@ print_usage(void);
 int
 print_help(void);
 
-#define nestylefg_e(_type_) nestylefg_##_type_
-#define nestylebg_e(_type_) nestylebg_##_type_
-#define nestylest_e(_type_) nestylest_##_type_
-#define nestylefn_e(_type_) nestylefn_##_type_
-#define nestylefg(_type_) ((brrlog_color_t)nestylefg_e(_type_))
-#define nestylebg(_type_) ((brrlog_color_t)nestylebg_e(_type_))
-#define nestylest(_type_) ((brrlog_style_t)nestylest_e(_type_))
-#define nestylefn(_type_) ((brrlog_font_t)nestylefn_e(_type_))
-#define nestyleprm(_type_) nestylefg(_type_), nestylebg(_type_), nestylest(_type_), nestylefn(_type_)
-#define nestylefmt(_type_) ((brrlog_format_t){nestyleprm(_type_)})
+extern brrlog_style_t style_extra_manual;
+extern brrlog_style_t style_extra_inplace;
+extern brrlog_style_t style_extra_separate;
 
-#define _style_def(_type_, _fg_, _bg_, _st_, _fn_) \
-typedef enum nestyle_##_type_ {\
-	nestylefg_e(_type_) = brrlog_color_##_fg_,\
-	nestylebg_e(_type_) = brrlog_color_##_bg_,\
-	nestylest_e(_type_) = brrlog_style_##_st_,\
-	nestylefn_e(_type_) = brrlog_font_##_fn_,\
-} nestyle_##_type_##_t
+extern brrlog_style_t style_extra_enabled;
+extern brrlog_style_t style_extra_disabled;
+extern brrlog_style_t style_extra_path;
+extern brrlog_style_t style_extra_info;
 
-_style_def(normal, normal, normal, normal, normal);
-_style_def(last,   last,   last,   last,   last);
+extern brrlog_style_t style_meta_success;
+extern brrlog_style_t style_meta_failure;
+extern brrlog_style_t style_meta_dry;
+extern brrlog_style_t style_meta_wet;
 
-_style_def(ft_ogg,  blue,    normal, normal, normal);
-_style_def(ft_wem,  green,   normal, normal, normal);
-_style_def(ft_wsp,  yellow,  normal, normal, normal);
-_style_def(ft_bnk,  red,     normal, normal, normal);
-_style_def(ft_auto, magenta, normal, bold,   normal);
+#define nest_normal ""
 
-_style_def(meta_success, green,  normal, bold,   normal);
-_style_def(meta_failure, red,    normal, bold,   normal);
-_style_def(meta_dry,     yellow, normal, bold,   normal);
-_style_def(meta_wet,     cyan,   normal, normal, normal);
+#define nest_meta_success "f=gs=b"
+#define nest_meta_failure "f=rs=b"
+#define nest_meta_dry "f=ys=b"
+#define nest_meta_wet "f=c"
 
-_style_def(extra_manual,   red,     normal, normal, normal);
-_style_def(extra_inplace,  yellow,  normal, normal, normal);
-_style_def(extra_separate, cyan,    normal, normal, normal);
+#define nest_extra_manual "f=r"
+#define nest_extra_inplace "f=y"
+#define nest_extra_separate "f=c"
 
-_style_def(extra_enabled,  green,   normal, normal, normal);
-_style_def(extra_disabled, red,     normal, normal, normal);
-_style_def(extra_path,     cyan,    normal, normal, normal);
-_style_def(extra_info,     magenta, normal, normal, normal);
+#define nest_extra_enabled "f=g"
+#define nest_extra_disabled "f=r"
+#define nest_extra_path "f=c"
+#define nest_extra_info "f=m"
 
-#define _log(_level_, _style_, ...)   BRRLOG_MESSAGET(gbrrlog_level(_level_), nestylefmt(_style_), __VA_ARGS__)
-#define _logn(_level_, _style_, ...)  BRRLOG_MESSAGETN(gbrrlog_level(_level_), nestylefmt(_style_), __VA_ARGS__)
-#define _logp(_level_, _style_, ...)  BRRLOG_MESSAGETP(gbrrlog_level(_level_), nestylefmt(_style_), __VA_ARGS__)
-#define _lognp(_level_, _style_, ...) BRRLOG_MESSAGETNP(gbrrlog_level(_level_), nestylefmt(_style_), __VA_ARGS__)
+#define nest_filetype_ogg  "f=b"
+#define nest_filetype_wem  "f=g"
+#define nest_filetype_wsp  "f=y"
+#define nest_filetype_bnk  "f=r"
+#define nest_filetype_auto "f=ms=b"
 
-#define Logg(_variant_, _level_, _style_, ...) _log##_variant_(_level_, _style_, __VA_ARGS__)
-#define Style(_variant_, _style_, ...)   Logg(_variant_, last, _style_, __VA_ARGS__)
-#define Log(_variant_, _level_, ...)     Logg(_variant_, _level_, last, __VA_ARGS__)
+#define nemessage_len 4096
+extern char nemessage[nemessage_len + 1];
 
-#define Cri(_variant_, ...) Logg(_variant_, critical, normal, __VA_ARGS__)
-#define Err(_variant_, ...) Logg(_variant_, error,    normal, __VA_ARGS__)
-#define War(_variant_, ...) Logg(_variant_, warning,  normal, __VA_ARGS__)
-#define Nor(_variant_, ...) Logg(_variant_, normal,   normal, __VA_ARGS__)
-#define Deb(_variant_, ...) Logg(_variant_, debug,    normal, __VA_ARGS__)
-#define Lst(_variant_, ...) Logg(_variant_, last,     normal, __VA_ARGS__)
+#define logpri_critical 1
+#define logpri_error    2
+#define logpri_warning  3
+#define logpri_normal   4
+#define logpri_info     5
+#define logpri_debug    6
+#define logpri_programmer_error 0
 
-#define SCri(_variant_, ...) Logg(_variant_, critical, __VA_ARGS__)
-#define SErr(_variant_, ...) Logg(_variant_, error,    __VA_ARGS__)
-#define SWar(_variant_, ...) Logg(_variant_, warning,  __VA_ARGS__)
-#define SNor(_variant_, ...) Logg(_variant_, normal,   __VA_ARGS__)
-#define SDeb(_variant_, ...) Logg(_variant_, debug,    __VA_ARGS__)
-#define SLst(_variant_, ...) Logg(_variant_, last,     __VA_ARGS__)
+#define logpri_min logpri_programmer_error
+#define logpri_max logpri_debug
+#define logpri_default logpri_normal
+
+int
+nelog_init(int style_enabled);
 
 #ifdef Ne_extra_debug
-#define ExtraCri(_variant_, ...) Log(_variant_, critical, __VA_ARGS__)
-#define ExtraErr(_variant_, ...) Log(_variant_, error,    __VA_ARGS__)
-#define ExtraWar(_variant_, ...) Log(_variant_, warning,  __VA_ARGS__)
-#define ExtraNor(_variant_, ...) Log(_variant_, normal,   __VA_ARGS__)
-#define ExtraDeb(_variant_, ...) Log(_variant_, debug,    __VA_ARGS__)
-#define ExtraLst(_variant_, ...) Log(_variant_, last,     __VA_ARGS__)
-
-#define SExtraCri(_variant_, ...) Logg(_variant_, critical, __VA_ARGS__)
-#define SExtraErr(_variant_, ...) Logg(_variant_, error,    __VA_ARGS__)
-#define SExtraWar(_variant_, ...) Logg(_variant_, warning,  __VA_ARGS__)
-#define SExtraNor(_variant_, ...) Logg(_variant_, normal,   __VA_ARGS__)
-#define SExtraDeb(_variant_, ...) Logg(_variant_, debug,    __VA_ARGS__)
-#define SExtraLst(_variant_, ...) Logg(_variant_, last,     __VA_ARGS__)
+#define XLog(...) brrlog(__VA_ARGS__)
+#define SXLog(...) brrlogs(__VA_ARGS__)
 #else
-#define ExtraCri(_variant_, ...)
-#define ExtraErr(_variant_, ...)
-#define ExtraWar(_variant_, ...)
-#define ExtraNor(_variant_, ...)
-#define ExtraDeb(_variant_, ...)
-#define ExtraLst(_variant_, ...)
-
-#define SExtraCri(_variant_, ...)
-#define SExtraErr(_variant_, ...)
-#define SExtraWar(_variant_, ...)
-#define SExtraNor(_variant_, ...)
-#define SExtraDeb(_variant_, ...)
-#define SExtraLst(_variant_, ...)
+#define XLog(...)
+#define SXLog(...)
 #endif
+
+#ifdef Ne_zero_debug
+#define Pro(_t_, ...)
+#else
+#define Pro(_t_, ...)      brrlog(_t_, logpri_programmer_error, __VA_ARGS__)
+#endif
+
+#define Cri(_t_, ...)      brrlog(_t_, logpri_critical, __VA_ARGS__)
+#define Err(_t_, ...)      brrlog(_t_, logpri_error,    __VA_ARGS__)
+#define War(_t_, ...)      brrlog(_t_, logpri_warning,  __VA_ARGS__)
+#define Nor(_t_, ...)      brrlog(_t_, logpri_normal,   __VA_ARGS__)
+#define Inf(_t_, ...)      brrlog(_t_, logpri_info,     __VA_ARGS__)
+#define Deb(_t_, ...)      brrlog(_t_, logpri_debug,    __VA_ARGS__)
+
+#define XPro(...) Pro(__VA_ARGS__)
+#define XCri( _t_, ...)      XLog(_t_, logpri_critical, __VA_ARGS__)
+#define XErr( _t_, ...)      XLog(_t_, logpri_error,    __VA_ARGS__)
+#define XWar( _t_, ...)      XLog(_t_, logpri_warning,  __VA_ARGS__)
+#define XNor( _t_, ...)      XLog(_t_, logpri_normal,   __VA_ARGS__)
+#define XInf( _t_, ...)      XLog(_t_, logpri_info,     __VA_ARGS__)
+#define XDeb( _t_, ...)      XLog(_t_, logpri_debug,    __VA_ARGS__)
 
 #define ExtraPlace() do { ExtraDeb(,"Function '%s', in '%s' @ %i", __func__, __FILE__, __LINE__); } while (0)
 

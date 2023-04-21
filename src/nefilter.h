@@ -1,25 +1,13 @@
-/*
-Copyright 2021-2022 BowToes (bow.toes@mailfence.com)
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+/* Copyright (c), bowtoes (bow.toes@mailfence.com)
+Apache 2.0 license, http://www.apache.org/licenses/LICENSE-2.0
+Full license can be found in 'license' file */
 
 #ifndef NAeP_nefilter_h
 #define NAeP_nefilter_h
 
 #include <brrtools/brrtypes.h>
 
-typedef brru4 nefilter_index;
+typedef brru4 nefilter_index_t;
 typedef enum nefilter_type {
 	nefilter_white = 0,
 	nefilter_black,
@@ -27,7 +15,7 @@ typedef enum nefilter_type {
 
 /* TODO Eventually index white/blackisting can be replaced by a more flexible filtering system, similar to in 'countwsp' */
 typedef struct nefilter {
-	nefilter_index *list;
+	nefilter_index_t *list;
 	brru4 count;
 	nefilter_type_t type;
 } nefilter_t;

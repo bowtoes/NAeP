@@ -1,25 +1,13 @@
-/*
-Copyright 2021-2022 BowToes (bow.toes@mailfence.com)
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+/* Copyright (c), bowtoes (bow.toes@mailfence.com)
+Apache 2.0 license, http://www.apache.org/licenses/LICENSE-2.0
+Full license can be found in 'license' file */
 
 #ifndef NAeP_newwise_h
 #define NAeP_newwise_h
 
 #include <ogg/ogg.h>
 
-#include <brrtools/brrtypes.h>
+#include <brrtools/brrstr.h>
 
 typedef enum vorbishdr {
 	vorbishdr_id = 0,
@@ -63,26 +51,33 @@ typedef struct wwise_fmt {
 	} guid;
 } wwise_fmt_t;
 
-typedef struct wwise_flags {
-	brru1 fmt_initialized:1;
-	brru1 vorb_initialized:1;
-	brru1 data_initialized:1;
-	brru1 mod_packets:1;         /* No idea what this means */
-	brru1 granule_present:1;     /* Whether data packets have 4-bytes for granule */
-	brru1 all_headers_present:1; /* If all vorbis headers are present at header_packets_offset or it's just the setup header */
-} wwise_flags_t;
+#define wwise_flags union {\
+	brru1 _;\
+	struct {\
+		brru1 fmt_initialized:1;\
+		brru1 vorb_initialized:1;\
+		brru1 data_initialized:1;\
+		brru1 mod_packets:1;         /* No idea what this means */\
+		brru1 granule_present:1;     /* Whether data packets have 4-bytes for granule */\
+		brru1 all_headers_present:1; /* If all vorbis headers are present at header_packets_offset or it's just the setup header */\
+	};\
+}
 
-typedef struct brrstringr brrstringr_t;
+typedef wwise_flags wwise_flags_t;
+
 typedef struct wwriff {
-	wwise_flags_t flags;
-	int mode_count;              /* Storage for audio packet decode */
-	brru1 mode_blockflags[32];   /* Storage for audio packet decode */
-	unsigned char *data;
-	brru4 data_size;
 	wwise_vorb_t vorb;
 	wwise_fmt_t fmt;
+	unsigned char *data;
+	brrstr_t *comments;
+	brru4 data_size;
 	brru4 n_comments;
-	brrstringr_t *comments;
+	int mode_count;              /* Storage for audio packet decode */
+	brru1 mode_blockflags[32];   /* Storage for audio packet decode */
+	union {
+		wwise_flags;
+		wwise_flags_t flags;
+	};
 } wwriff_t;
 
 typedef struct riff riff_t;

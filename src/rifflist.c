@@ -1,24 +1,13 @@
-/*
-Copyright 2021-2022 BowToes (bow.toes@mailfence.com)
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+/* Copyright (c), bowtoes (bow.toes@mailfence.com)
+Apache 2.0 license, http://www.apache.org/licenses/LICENSE-2.0
+Full license can be found in 'license' file */
 
 #include "rifflist.h"
 
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <brrtools/brrnum.h>
 
@@ -69,7 +58,7 @@ rifflist_scan(rifflist_t *const out_list, const unsigned char *const buffer, brr
 
 		offset += current.riff_size;
 	}
-	ExtraDeb(,"Scanned list of %zu WwRIFFs...", l.n_riffs);
+	XDeb(,"Scanned list of %zu WwRIFFs...", l.n_riffs);
 
 	*out_list = l;
 	return 0;
@@ -89,7 +78,7 @@ rifflist_clear(rifflist_t *const list)
  *   Processing file.wsp... . . . X X . . . . X . . . X . . X X . ... etc.
  * */
 
-static char s_output_file[BRRPATH_MAX_PATH + 1] = {0};
+static char s_output_file[brrpath_max_path + 1] = {0};
 #define OUTPUT_FORMAT "_%0*zu"
 int
 rifflist_convert(
@@ -104,13 +93,13 @@ rifflist_convert(
 	if (!buffer || !list || !state || !input || !output_root)
 		return -1;
 
-	int digits = brrnum_ndigits(list->n_riffs, 10, 1);
-	ExtraDeb(,"Converting WwRIFF list...");
+	int digits = brrnum_udigits(list->n_riffs, 10);
+	XDeb(,"Converting WwRIFF list...");
 	for (brrsz i = 0; i < list->n_riffs; ++i) {
 		if (input->filter.count) {
 			int contained = nefilter_contains(&input->filter, i);
 			if ((contained && input->filter.type) || (!contained && !input->filter.type)) {
-				ExtraDeb(,"WwRIFF %zu was filtered due to %slist", i, input->filter.type?"black":"white");
+				XDeb(,"WwRIFF %zu was filtered due to %slist", i, input->filter.type?"black":"white");
 				continue;
 			}
 		}
@@ -122,28 +111,22 @@ rifflist_convert(
 		wwriff_t wwriff = {0};
 		const riffgeometry_t *const geom = &list->riffs[i];
 		if ((err = neutil_buffer_to_wwriff(&wwriff, buffer + geom->buffer_offset, geom->riff_size))) {
-			Err(n,"Could not parse WwRIFF ");
-			Style(np,extra_info, "#%*zu", digits, i);
-			Err(p,", skipping");
+			Err(,"Could not parse WWRIFF (!f=m:#%*zu!), skipping.", digits, i);
 		} else {
-			if (input->flag.add_comments) {
-				if ((err = wwriff_add_comment(&wwriff, "SourceFile=%s", input->path.cstr))) {
-					Err(,"Could not add 'SourceFile' comment");
+			if (input->cfg.add_comments) {
+				if ((err = wwriff_add_comment(&wwriff, "SourceFile=%s", input->path.full))) {
+					Err(,"Could not add 'SourceFile' comment.");
 				} else if ((err = wwriff_add_comment(&wwriff, "OutputFile=%s", s_output_file))) {
-					Err(,"Could not add 'OutputFile' comment");
+					Err(,"Could not add 'OutputFile' comment.");
 				}
 			}
 			if (!err) {
 				ogg_stream_state streamer;
 				if ((err = wwise_convert_wwriff(&wwriff, &streamer, library, input))) {
-					Err(n,"Could not convert WwRIFF ");
-					Style(np,extra_info, "#%*zu", digits, i);
-					Err(p,", skipping.");
+					Err(,"Could not conver WWRIFF (!f=m:#%*zu!), skipping.", digits, i);
 				} else {
 					if ((err = neutil_write_ogg(&streamer, s_output_file))) {
-						Err(n,"Could not write converted WwRIFF ");
-						Style(np,extra_info, "#%*zu", digits, i);
-						Err(p,", skipping.");
+						Err(,"Could not write converted WWRIFF (!f=m:#%*zu!), skipping.", digits, i);
 					}
 					ogg_stream_clear(&streamer);
 				}
@@ -152,10 +135,10 @@ rifflist_convert(
 		}
 
 		if (!err) {
-			ExtraDeb(,"Successfuly converted WwRIFF to '%s'", s_output_file);
+			XDeb(,"Successfuly converted WwRIFF to '%s'", s_output_file);
 			state->stats.wem_converts.succeeded++;
 		} else {
-			ExtraDeb(,"Failed to convert WwRIFF to '%s'", s_output_file);
+			XDeb(,"Failed to convert WwRIFF to '%s'", s_output_file);
 			state->stats.wem_converts.failed++;
 		}
 	}
@@ -173,8 +156,8 @@ rifflist_extract(
 	if (!buffer || !list || !state || !input || !output_root)
 		return -1;
 
-	int digits = brrnum_ndigits(list->n_riffs, 10, 0);
-	ExtraDeb(,"Extracting WwRIFF list...");
+	int digits = brrnum_udigits(list->n_riffs, 10);
+	XDeb(,"Xcting WwRIFF list...");
 	for (brrsz i = 0; i < list->n_riffs; ++i) {
 		const riffgeometry_t *const wem = &list->riffs[i];
 		brrsz wrote = 0;
@@ -191,20 +174,16 @@ rifflist_extract(
 		state->stats.wem_extracts.assigned++;
 
 		if (!(output = fopen(s_output_file, "wb"))) {
-			Err(n,"Failed to open output WEM ");
-			Style(np,extra_info, "#%*zu", digits, i);
-			Err(p," (%s), skipping", s_output_file);
+			Err(,"Failed to open output WEM (!f=m:#%*zu!) ((!f=y:'%s'!)), skipping", digits, i, s_output_file);
 			state->stats.wem_extracts.failed++;
 		} else {
 			if (wem->riff_size != (wrote = fwrite(buffer + wem->buffer_offset, 1, wem->riff_size, output))) {
-				Err(n,"Failed to write to output WEM ");
-				Style(np,extra_info, "#%*zu", digits, i);
-				Err(p," (%s), skipping", s_output_file);
+				Err(,"Failed to write to output WEM (!f=m:#%*zu!) ((!f=y:'%s'!)), skipping", digits, i, s_output_file);
 
-				ExtraDeb(,"Failed to extract WwRIFF to '%s'", s_output_file);
+				XDeb(,"Failed to extract WwRIFF to '%s'", s_output_file);
 				state->stats.wem_extracts.failed++;
 			} else {
-				ExtraDeb(,"Successfuly extracted WwRIFF to '%s'", s_output_file);
+				XDeb(,"Successfuly extracted WwRIFF to '%s'", s_output_file);
 				state->stats.wem_extracts.succeeded++;
 			}
 			fclose(output);

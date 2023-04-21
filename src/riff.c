@@ -1,18 +1,6 @@
-/*
-Copyright 2021-2022 BowToes (bow.toes@mailfence.com)
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-	http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+/* Copyright (c), bowtoes (bow.toes@mailfence.com)
+Apache 2.0 license, http://www.apache.org/licenses/LICENSE-2.0
+Full license can be found in 'license' file */
 
 #define _riff_keepsies
 #include "riff.h"
@@ -21,8 +9,6 @@ limitations under the License.
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <brrtools/brrdata.h>
 
 #include "nelog.h"
 
@@ -54,24 +40,32 @@ _riff_boiler_gen(_getter_boiler)
 #undef _array_processor
 
 static void*
-cpy_rvs(void *restrict const dst, const void *restrict const src, size_t size)
+cpy_rvs(void *restrict const dst, const void *restrict const src, brrsz size)
 {
 	memcpy(dst, src, size);
-	brrdata_reverse_bytes(dst, size);
+	for (brrsz i = 0; i < size / 2; ++i) {
+		char a = ((char*)dst)[i];
+		((char*)dst)[i] = ((char*)dst)[size - i - 1];
+		((char*)dst)[size - i - 1] = a;
+	}
 	return dst;
 }
 static void*
 move_rvs(void *const dst, const void *const src, size_t size)
 {
 	memmove(dst, src, size);
-	brrdata_reverse_bytes(dst, size);
+	for (brrsz i = 0; i < size / 2; ++i) {
+		char a = ((char*)dst)[i];
+		((char*)dst)[i] = ((char*)dst)[size - i - 1];
+		((char*)dst)[size - i - 1] = a;
+	}
 	return dst;
 }
 #define straight memcpy
 #define reverse cpy_rvs
 const riff_copier_t _riff_copy_table[] = {
-	           /* ---> LE                           */
-	           /*                           <--- BE */
+	           /*[<------ LE ------>][                ]*/
+	           /*[                  ][<----- BE ----->]*/
 	/* FourCC */ straight, straight, reverse,  reverse,
 	/* Data   */ straight, reverse,  straight, reverse,
 };
@@ -86,26 +80,13 @@ riff_cc_byteorder(fcc_t cc)
 	return riff_byteorder_unrecognized;
 }
 
-void
-riff_chunkstate_zero(riff_chunkstate_t *const chunkstate)
-{
-	if (chunkstate)
-		memset(chunkstate, 0, sizeof(*chunkstate));
-}
-
-int
-riff_datasync_check(const riff_datasync_t *const datasync)
-{
-	if (!datasync || datasync->consumed > datasync->stored || datasync->stored > datasync->storage)
-		return -1;
-	return 0;
-}
-
 int
 riff_datasync_from_buffer(riff_datasync_t *const datasync, unsigned char *const buffer, brrsz buffer_size)
 {
-	if (riff_datasync_check(datasync))
+	if (riff_datasync_check(datasync)) {
+		Pro(,"RIFF Bad datasync in datasync_from_buffer");
 		return -1;
+	}
 
 	if (!buffer || !buffer_size)
 		return 0;
@@ -171,6 +152,13 @@ riff_init(riff_t *const rf)
 	if (rf)
 		memset(rf, 0, sizeof(*rf));
 	return 0;
+}
+
+void
+riff_chunkstate_zero(riff_chunkstate_t *const chunkstate)
+{
+	if (chunkstate)
+		memset(chunkstate, 0, sizeof(*chunkstate));
 }
 
 int

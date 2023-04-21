@@ -1,25 +1,15 @@
-/*
-Copyright 2021 BowToes (bow.toes@mailfence.com)
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+/* Copyright (c), bowtoes (bow.toes@mailfence.com)
+Apache 2.0 license, http://www.apache.org/licenses/LICENSE-2.0
+Full license can be found in 'license' file */
 
 #include "process.h"
 
 #include <errno.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <vorbis/vorbisenc.h>
+#include <brrtools/brrnum.h>
 
 #include "neinput.h"
 #include "nelog.h"
@@ -28,7 +18,7 @@ limitations under the License.
 
 /* TODO remove ginput_name and all references to it */
 static const char *s_input_name = NULL;
-static char s_output_name[BRRPATH_MAX_PATH + 1] = {0};
+static char s_output_name[brrpath_max_path + 1] = {0};
 
 // There should be extended error logging that I think should be optional
 // I'm thinking a tiered error system, with '+E, +error' and '-E, -error' like with the quiet options
@@ -61,24 +51,24 @@ i_inc_page(i_state_t *const state)
 	while (E_OGG_OUT_SUCCESS != (err = ogg_sync_pageout(&state->sync, &state->current_page)) && !feof(state->input)) {
 		char *sync_buffer = NULL;
 		if (!(sync_buffer = ogg_sync_buffer(&state->sync, SYNC_BUFFER_SIZE))) {
-			ExtraErr(,"Could not init sync buffer");
+			XErr(,"Could not init sync buffer");
 			return -1;
 		}
 
 		bytes_read = fread(sync_buffer, 1, SYNC_BUFFER_SIZE, state->input);
 		if (ferror(state->input)) {
-			ExtraErr(,"Failed to read page from input : %s", strerror(errno));
+			XErr(,"Failed to read page from input : %s", strerror(errno));
 			return -1;
 		}
 
 		if (E_OGG_SUCCESS != ogg_sync_wrote(&state->sync, bytes_read)) {
-			ExtraErr(,"Failed to apply input page buffer");
+			XErr(,"Failed to apply input page buffer");
 			return -1;
 		}
 	}
 
 	if (feof(state->input) && bytes_read != 0 && err != E_OGG_OUT_SUCCESS) {
-		ExtraErr(,"Last page truncated");
+		XErr(,"Last page truncated");
 		return -1;
 	}
 	return 0;
@@ -146,17 +136,17 @@ i_state_init(i_state_t *const state, const char *const input)
 	long page_ser = ogg_page_serialno(&s.current_page);
 	if (E_OGG_SUCCESS != ogg_stream_init(&s.input_stream, page_ser)) {
 		i_state_clear(&s);
-		ExtraErr(,"Could not init input stream ");
+		XErr(,"Could not init input stream ");
 		return -1;
 	}
 	if (E_OGG_SUCCESS != ogg_stream_pagein(&s.input_stream, &s.current_page)) {
 		i_state_clear(&s);
-		ExtraErr(,"Could not read first input page");
+		XErr(,"Could not read first input page");
 		return -1;
 	}
 	if (E_OGG_SUCCESS != ogg_stream_init(&s.output_stream, page_ser)) {
 		i_state_clear(&s);
-		ExtraErr(,"Could not init output stream");
+		XErr(,"Could not init output stream");
 		return -1;
 	}
 	*state = s;
@@ -176,14 +166,14 @@ i_state_process(i_state_t *const state)
 		if (i_inc_packet(state)) {
 			vorbis_comment_clear(&vc);
 			vorbis_info_clear(&vi);
-			ExtraErr(,"Failed to get vorbis %s header", vorbishdr(current_header));
+			XErr(,"Failed to get vorbis %s header", vorbishdr(current_header));
 			return -1;
 		}
 		if (current_header == vorbishdr_id) {
 			if (!vorbis_synthesis_idheader(&state->current_packet)) {
 				vorbis_comment_clear(&vc);
 				vorbis_info_clear(&vi);
-				ExtraErr(,"Bad vorbis ID header");
+				XErr(,"Bad vorbis ID header");
 				return -1;
 			}
 		}
@@ -191,9 +181,9 @@ i_state_process(i_state_t *const state)
 			vorbis_comment_clear(&vc);
 			vorbis_info_clear(&vi);
 			switch (err) {
-				case E_VORBIS_HEADER_FAULT:     ExtraErr(,"Fault while synthesizing %s header from input", vorbishdr(current_header)); break;
-				case E_VORBIS_HEADER_NOTVORBIS: ExtraErr(,"Got invalid %s header from input", vorbishdr(current_header)); break;
-				case E_VORBIS_HEADER_BADHEADER: ExtraErr(,"Got bad/corrupt %s header from input", vorbishdr(current_header)); break;
+				case E_VORBIS_HEADER_FAULT:     XErr(,"Fault while synthesizing %s header from input", vorbishdr(current_header)); break;
+				case E_VORBIS_HEADER_NOTVORBIS: XErr(,"Got invalid %s header from input", vorbishdr(current_header)); break;
+				case E_VORBIS_HEADER_BADHEADER: XErr(,"Got bad/corrupt %s header from input", vorbishdr(current_header)); break;
 				default: break;
 			}
 			return -1;
@@ -201,7 +191,7 @@ i_state_process(i_state_t *const state)
 		if (E_OGG_SUCCESS != (err = ogg_stream_packetin(&state->output_stream, &state->current_packet))) {
 			vorbis_comment_clear(&vc);
 			vorbis_info_clear(&vi);
-			ExtraErr(,"Failed to copy vorbis %s header packet", vorbishdr(current_header));
+			XErr(,"Failed to copy vorbis %s header packet", vorbishdr(current_header));
 			return -1;
 		}
 	}
@@ -219,7 +209,7 @@ i_state_process(i_state_t *const state)
 		if (last_block)
 			total_block += (last_block + current_block) / 4;
 		last_block = current_block;
-		ExtraDeb(,"Granulepos: %llu | Block: %llu | Total block: %llu", state->current_packet.granulepos, current_block, total_block);
+		XDeb(,"Granulepos: %llu | Block: %llu | Total block: %llu", state->current_packet.granulepos, current_block, total_block);
 		if (E_OGG_SUCCESS != ogg_stream_packetin(&state->output_stream, &state->current_packet))
 			return -1;
 	}
@@ -246,27 +236,29 @@ neprocess_ogg(nestate_t *const state, const neinput_t *const input)
 {
 	int err = 0;
 	state->stats.oggs.assigned++;
-	if (input->flag.dry_run) {
-		SNor(p,meta_dry, "Regranularize OGG (dry) ");
+	if (input->cfg.dry_run) {
+		Nor(p,"(!"nest_meta_dry":Regranularize OGG (dry)!) ");
 	} else {
-		SNor(p,meta_wet, "Regranularizing OGG... ");
-		s_input_name = input->path.cstr;
-		if (input->flag.inplace_regrain) {
+		Nor(p,"(!"nest_meta_wet":Regranularizing OGG...!) ");
+		s_input_name = input->path.full;
+		if (input->cfg.inplace_regrain) {
 			/* Overwrite input file */
-			snprintf(s_output_name, sizeof(s_output_name), "%s", input->path.cstr);
+			brrsz l = brrnum_umin(sizeof(s_output_name)-1, input->path.len);
+			memcpy(s_output_name, input->path.full, l);
+			s_output_name[l] = 0;
 		} else {
 			/* Output to [file_path/base_name]_rvb.ogg */
-			nepath_extension_replace(&input->path, RVB_EXT, sizeof(RVB_EXT) - 1, s_output_name);
+			neutil_replace_extension(&input->path, RVB_EXT, sizeof(RVB_EXT) - 1, 1, s_output_name, sizeof(s_output_name) - 1);
 		}
 		err = i_regrain();
 	}
 
 	if (!err) {
 		state->stats.oggs.succeeded++;
-		SNor(p,meta_success, "Success!");
+		Nor(p,"(!"nest_meta_success":Success!!)");
 	} else {
 		state->stats.oggs.failed++;
-		SNor(p,meta_failure, " Failure! (%d)", err);
+		Nor(p,"(!"nest_meta_failure": Failure! (%d)!)", err);
 	}
 	return err;
 }

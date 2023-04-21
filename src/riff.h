@@ -1,25 +1,14 @@
-/*
-Copyright 2021-2022 BowToes (bow.toes@mailfence.com)
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+/* Copyright (c), bowtoes (bow.toes@mailfence.com)
+Apache 2.0 license, http://www.apache.org/licenses/LICENSE-2.0
+Full license can be found in 'license' file */
 
 #ifndef NAeP_riff_h
 #define NAeP_riff_h
 
 #include <stdio.h>
 
-#include <brrtools/brrendian.h>
+#include <brrtools/brrapi.h>
+#include <brrtools/brrplat.h>
 
 #include "nefcc.h"
 
@@ -119,7 +108,7 @@ typedef enum riff_byteorder {
 } riff_byteorder_t;
 
 typedef void *(*riff_copier_t)(void *const destination, const void *const source, size_t n);
-#if BRRENDIAN_SYSTEM == BRRENDIAN_BIG
+#if brrplat_endian == brrplat_endian_big
 # define _riff_copier_idx(_bo_) (4 - (_bo_))
 #else
 # define _riff_copier_idx(_bo_) ((_bo_) - 1)
@@ -159,8 +148,13 @@ typedef struct riff_datasync {
 } riff_datasync_t;
 
 /* Returns 0 for correct input, -1 for bad input. */
-int
-riff_datasync_check(const riff_datasync_t *const datasync);
+static BRR_inline int
+riff_datasync_check(const riff_datasync_t *const datasync)
+{
+	if (!datasync || datasync->consumed > datasync->stored || datasync->stored > datasync->storage)
+		return -1;
+	return 0;
+}
 
 /* Returns 0 on success or -1 on bad input. */
 int
@@ -197,10 +191,10 @@ riff_chunkstate_zero(riff_chunkstate_t *const chunkstate);
 
 /* Storage for the data of a basic riff chunk */
 typedef struct riff_basic_chunk {
+	unsigned char *data;    /* Chunk data, heap-allocated; freed through 'riff_clear' */
 	riff_basic_type_t type; /* Type of chunk */
 	brru4 size;             /* Size of chunk data in bytes */
 	brru4 offset;           /* Offset to the start of chunk data */
-	unsigned char *data;    /* Chunk data, heap-allocated; freed through 'riff_clear' */
 } riff_basic_chunk_t;
 
 /* A representation of a riff LIST chunk.

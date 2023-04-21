@@ -1,18 +1,6 @@
-/*
-Copyright 2021-2022 BowToes (bow.toes@mailfence.com)
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+/* Copyright (c), bowtoes (bow.toes@mailfence.com)
+Apache 2.0 license, http://www.apache.org/licenses/LICENSE-2.0
+Full license can be found in 'license' file */
 
 #ifndef NAeP_neutil_h
 #define NAeP_neutil_h
@@ -20,6 +8,7 @@ limitations under the License.
 #include <ogg/ogg.h>
 
 #include <brrtools/brrtypes.h>
+#include <brrtools/brrpath.h>
 
 #define E_OGG_SUCCESS        ( 0)
 #define E_OGG_FAILURE        (-1)
@@ -75,6 +64,15 @@ neutil_buffer_to_riff(riff_t *const wwriff, const void *const buffer, brrsz buff
 typedef struct wwriff wwriff_t;
 int
 neutil_buffer_to_wwriff(wwriff_t *const wwriff, const void *const buffer, brrsz buffer_size);
+
+int
+neutil_replace_extension(
+	const brrpath_t *const path,
+	const char *const new,
+	brrsz len,
+	int short_extension,
+	char *dst,
+	brrsz maxlen);
 
 #define neutil_min(_x_, _y_) ((_x_)<(_y_)?(_x_):(_y_))
 

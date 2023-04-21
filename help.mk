@@ -122,6 +122,9 @@ _info:
 #@$(echo) 'Build Mode         :$(target_mode)'
 	@$(echo) 'Build Tree. . . . . . . .  $(build_tree)'
 	@$(echo) 'Debug Build . . . . . . .  $(if $(debug:0=),On,Off)'
+ifneq ($(debug),0)
+	@$(echo) 'Extra Debug Information .  $(if $(extra_debug:0=),On,Off)'
+endif
 	@$(echo) 'Memcheck Flags  . . . . .  $(if $(debug:0=),$(if $(memcheck:0=),On,Off),Off)'
 _build_info:
 	@$(echo) 'C Compiler (CC) . . . . .  $(cc_custom)'

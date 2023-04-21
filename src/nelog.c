@@ -2,6 +2,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+
+#include <brrtools/brrmacro.h>
+
+#define ERROR_BUFFER_SIZE 4096
+static char error_buffer[ERROR_BUFFER_SIZE] = {0};
 
 #define USAGE "Usage: NAeP [[OPTION ...] FILE ...] ..." \
 "\nNAeP - NieR:Automated extraction Precept_v"Ne_version"" \
@@ -65,5 +72,49 @@ print_help(void)
 {
 	fprintf(stdout, USAGE"\n"HELP"\n");
 	exit(0);
+	return 0;
+}
+
+
+char nemessage[nemessage_len + 1] = {0};
+
+int
+nelog_init(int style_enabled)
+{
+	#define _brrlog_try_pri(_lbl_, _style_, _pfx_, _dst_, _type_) do {\
+		if (brrlog_priority_mod(_lbl_, (brrlog_priority_t){ .style=_style_, .pfx=_pfx_, .dst={ .dst=_dst_, .type=_type_, } })) {\
+			int e = brrapi_error_code();\
+			if (e == BRRAPI_E_LIBC) {\
+				fprintf(stderr, "Failed to initilaize brrlog priority %i '%s': %s (%i)\n", _lbl_, _pfx_?_pfx_:"", strerror(errno), errno);\
+			} else {\
+				fprintf(stderr, "Failed to initilaize brrlog priority %i '%s': %s (%i)\n", _lbl_, _pfx_?_pfx_:"", brrapi_error_message(error_buffer, ERROR_BUFFER_SIZE), e);\
+			}\
+			brrlog_deinit();\
+			return 1;\
+		}\
+	} while (0)
+
+	{
+		brrlog_cfg_t c = brrlog_default_cfg;
+		c.style_enabled = style_enabled != 0;
+		c.flush_enabled = 1;
+		c.min_label = logpri_min;
+		if (brrlog_init(c, "(!", "!)")) {
+			fprintf(stderr, "Failed to initialize brrlog: %s (%i)\n", strerror(errno), errno);
+			return 1;
+		}
+	}
+
+	#define _nostyle {0}
+	_brrlog_try_pri(logpri_programmer_error, _nostyle, "(!f=ms=r:[PROGRAM]:!)     ", stderr, brrlog_dst_stream);
+	_brrlog_try_pri(logpri_critical,         _nostyle, "(!f=rs=r:[CRITICAL]:!)    ", stderr, brrlog_dst_stream);
+	_brrlog_try_pri(logpri_error,            _nostyle, "(!f=rs=b:[ERROR]:!)       ", stderr, brrlog_dst_stream);
+	_brrlog_try_pri(logpri_warning,          _nostyle, "(!f=y   :[CAUTION]:!)     ", stderr, brrlog_dst_stream);
+	_brrlog_try_pri(logpri_normal,           _nostyle, NULL, stderr, brrlog_dst_stream);
+	_brrlog_try_pri(logpri_info,             _nostyle, "(!f=b   :[INFORMATION]:!) ", stderr, brrlog_dst_stream);
+	_brrlog_try_pri(logpri_debug,            _nostyle, "(!f=ys=b:[DEBUG]:!)       ", stderr, brrlog_dst_stream);
+	#undef _nostyle
+
+	#undef _brrlog_try_pri
 	return 0;
 }

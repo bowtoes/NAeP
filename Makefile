@@ -30,9 +30,9 @@ setup:
 	@$(mk_dir_tree) $(build_directories) 2>$(null) ||:
 .PHONY: all setup
 
-$(ass_out_dir)/%.s: $(src_dir)/%.c ; $(cc_custom) $(project_cppflags) $(project_cflags) -S $< -o $@
-$(int_out_dir)/%.e: $(src_dir)/%.c ; $(cc_custom) $(project_cppflags) $(project_cflags) -E $< -o $@
-$(obj_out_dir)/%.o: $(src_dir)/%.c ; $(cc_custom) $(project_cppflags) $(project_cflags) -c $< -o $@
+$(ass_out_dir)/%.s: $(src_dir)/%.c | setup; $(cc_custom) $(project_cppflags) $(project_cflags) -S $< -o $@
+$(int_out_dir)/%.e: $(src_dir)/%.c | setup; $(cc_custom) $(project_cppflags) $(project_cflags) -E $< -o $@
+$(obj_out_dir)/%.o: $(src_dir)/%.c | setup; $(cc_custom) $(project_cppflags) $(project_cflags) -c $< -o $@
 $(ass_out) $(int_out) $(obj_out): $(vnd_bins) $(addprefix $(src_dir)/,$(hdrs)) $(makefiles)
 
 ass: info setup $(ass_out)
@@ -41,7 +41,7 @@ obj: info setup $(obj_out)
 aio: ass int obj
 .PHONY: ass int obj aio
 
-$(output_file): vnd $(obj_out) $(makefiles) $(addprefix $(src_dir)/,$(hdrs))
+$(output_file): $(addprefix $(src_dir)/,$(hdrs)) $(makefiles) vnd $(obj_out)
 	$(cc_custom) -o $@ $(obj_out) $(vnd_bins) $(project_ldflags)
 $(project): setup $(output_file)
 
@@ -51,7 +51,7 @@ clean:
 
 again: clean vnd-clean-light $(project)
 
-CLEAN: vnd-clean clean
+CLEAN: clean vnd-clean
 AGAIN: CLEAN all
 .PHONY: clean again CLEAN AGAIN
 
@@ -80,20 +80,24 @@ vnd_bins += '$(brrtools_bin)'
 
 brrtools_flags :=\
 	prefix='$(brrtools_out_dir)'\
-	PEDANTIC=1\
-	DO_STRIP=1\
-	DO_LDCONFIG=0\
+	pedantic=1\
+	do_strip=$(if $(debug:0=),1,0)\
+	debug=$(if $(debug:0=),0,1)\
+	extra_debug=$(extra_debug)\
+	do_ldconfig=0\
+	std=$(std)
 	PIC=$(PIC)\
-	HOST=$(if $(host:unix=),WINDOWS,UNIX)\
-	HOST_BIT=$(host_bit)\
-	TARGET=$(if $(target:unix=),WINDOWS,UNIX)\
-	TARGET_BIT=$(target_bit)\
-	TARGET_MODE=STATIC\
-	TARGET_PART_WINDOWS_STATIC='.a'
+	host=$(host)\
+	host_bit=$(host_bit)\
+	target=$(target)\
+	target_bit=$(target_bit)\
+	target_mode=static\
+	output_ext='.a'
+
 ifneq ($(debug),0)
- brrtools_flags += DEBUG=$(debug)
+ brrtools_flags += debug=$(debug)
  ifneq ($(memcheck),0)
-  brrtools_flags += MEMCHECK=$(memcheck)
+  brrtools_flags += memcheck=$(memcheck)
  endif
 endif
 

@@ -1,23 +1,12 @@
-/*
-Copyright 2021-2022 BowToes (bow.toes@mailfence.com)
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+/* Copyright (c), bowtoes (bow.toes@mailfence.com)
+Apache 2.0 license, http://www.apache.org/licenses/LICENSE-2.0
+Full license can be found in 'license' file */
 
 #include "neutil.h"
 
 #include <errno.h>
 #include <string.h>
+#include <brrtools/brrnum.h>
 
 #include "nelog.h"
 #include "wwise.h"
@@ -111,6 +100,7 @@ neutil_write_ogg(ogg_stream_state *const stream, const char *const file)
 {
 	if (!stream || !file)
 		return -1;
+
 	FILE *f = fopen(file, "wb");
 	if (!f) {
 		Err(,"Could not open Ogg stream destination '%s': %s (%d)", file, strerror(errno), errno);
@@ -148,7 +138,9 @@ i_consume_next_buffer_chunk(riff_t *const riff, riff_chunkstate_t *const chunkst
 			case riff_status_system_error:
 			case riff_status_not_riff:
 			case riff_status_corrupt:
-			default: return -1;
+			default:
+				Pro(,"RIFF consume chunk error %d", datasync->status);
+				return -1;
 		}
 	}
 	return 0;
@@ -193,6 +185,46 @@ neutil_buffer_to_wwriff(wwriff_t *const wwriff, const void *const buffer, brrsz 
 	}
 	riff_clear(&rf);
 	*wwriff = wf;
+	return 0;
+}
+
+int
+neutil_replace_extension(
+	const brrpath_t *const path,
+	const char *const new,
+	brrsz len,
+	int short_extension,
+	char *dst,
+	brrsz maxlen)
+{
+	const char *pe = brrpath_end(path) + 1;
+	const char *e = short_extension ? brrpath_short_ext_start(path) : brrpath_ext_start(path);
+	const brrsz el = (brrsz)pe - (brrsz)e; /* Length of the extension that is being removed */
+	brrsz bl = path->len - el; /* Length of all that before the extension dot, the start of where the new extension will be placed*/
+	brrsz nl;
+	int d = 0;
+	if (!e) { /* Extension does not exist, add it and the dot. */
+		if (new) return 0;
+		nl = path->len + 1 + len;
+		d = 1;
+		bl++;
+	} else if (e == pe) {
+		if (!new) { /* remove dot */
+			nl = path->len - 1;
+		} else {
+			if (!len) return 0;
+			nl = path->len + len; /* append extension */
+		}
+	} else if (!new) { /* Remove extension and dot */
+		nl = path->len - 1 - el;
+	} else { /* Replace extension */
+		nl = path->len - el + len;
+	}
+	const brrsz max_input = brrnum_umin(nl, maxlen);
+	memcpy(dst, path->full, max_input + 1);
+	if (d) dst[path->len] = '.';
+	if (new && len) memcpy(dst + bl, new, len);
+	dst[max_input] = 0;
 	return 0;
 }
 

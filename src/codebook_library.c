@@ -1,18 +1,6 @@
-/*
-Copyright 2021-2022 BowToes (bow.toes@mailfence.com)
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+/* Copyright (c), bowtoes (bow.toes@mailfence.com)
+Apache 2.0 license, http://www.apache.org/licenses/LICENSE-2.0
+Full license can be found in 'license' file */
 
 #include "codebook_library.h"
 
@@ -81,7 +69,7 @@ packed_codebook_unpack_raw(oggpack_buffer *const unpacker, oggpack_buffer *const
 	int entries    = nepack_transfer(unpacker, 14, packer, 24); /* T Entries */
 	int ordered    = nepack_transfer(unpacker,  1, packer,  1); /* T Ordered flag */
 	if (ordered) {
-		/* Ordered codeword decode identical to spec */
+		/* Ordered codeword decode identical to spec (3.2.1) */
 		int current_length = 1 + nepack_transfer(unpacker, 5, packer, 5); /* T Start length */
 		long current_entry = 0;
 		while (current_entry < entries) {
